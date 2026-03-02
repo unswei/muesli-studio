@@ -20,10 +20,13 @@ Implemented in this milestone:
   - connect to WebSocket endpoint (`ws://host:port/events`)
   - append live events to the same replay engine
   - auto-follow newest tick toggle
+  - auto-reconnect with exponential backoff
+  - connection history controls for unstable links
 - inspector scaffold (`apps/inspector`):
   - CMake target `mbt_inspector`
   - demo canonical event emitter
   - WebSocket broadcast + JSONL sink of identical payloads
+  - integration test proving WS/JSONL payload equivalence
 
 Deferred to later milestones:
 
@@ -50,6 +53,7 @@ Load `tools/fixtures/minimal_run.jsonl` in studio.
 cmake --preset default -S apps/inspector
 cmake --build apps/inspector/build --config Release
 apps/inspector/build/mbt_inspector --ws :8765 --log /tmp/live.jsonl --demo-ticks 200
+pnpm inspector:test
 ```
 
 Then connect from studio to `ws://localhost:8765/events`.

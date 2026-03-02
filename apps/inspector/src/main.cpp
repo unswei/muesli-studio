@@ -8,11 +8,13 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <mutex>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <vector>
 
 namespace {
 std::atomic<bool> g_running{true};
@@ -24,6 +26,7 @@ struct Options {
   std::string run_loop;
   std::int32_t demo_ticks = 0;
   std::int32_t tick_ms = 250;
+  std::int32_t startup_delay_ms = 0;
   bool quiet = false;
 };
 
@@ -70,7 +73,7 @@ std::string JsonEscape(const std::string& input) {
 
 std::string UsageText() {
   return "Usage: mbt_inspector [--connect <backend>] [--ws <host:port|:port>] [--log <path>] "
-         "[--run-loop <cfg>] [--demo-ticks <n>] [--tick-ms <n>] [--quiet]";
+         "[--run-loop <cfg>] [--demo-ticks <n>] [--tick-ms <n>] [--startup-delay-ms <n>] [--quiet]";
 }
 
 [[noreturn]] void ThrowUsageError(const std::string& message) {
@@ -111,6 +114,11 @@ Options ParseArgs(int argc, char** argv) {
       options.tick_ms = std::stoi(nextValue(arg));
       if (options.tick_ms <= 0) {
         ThrowUsageError("--tick-ms must be > 0");
+      }
+    } else if (arg == "--startup-delay-ms") {
+      options.startup_delay_ms = std::stoi(nextValue(arg));
+      if (options.startup_delay_ms < 0) {
+        ThrowUsageError("--startup-delay-ms must be >= 0");
       }
     } else if (arg == "--quiet") {
       options.quiet = true;
@@ -191,16 +199,29 @@ int main(int argc, char** argv) {
 
     ix::initNetSystem();
 
+    std::mutex replay_cache_mutex;
+    std::vector<std::string> replay_cache;
+
     ix::WebSocketServer server(bind.port, bind.host);
     server.setOnClientMessageCallback(
-        [&](std::shared_ptr<ix::ConnectionState> connection_state, ix::WebSocket& /*websocket*/,
+        [&](std::shared_ptr<ix::ConnectionState> connection_state, ix::WebSocket& websocket,
             const ix::WebSocketMessagePtr& msg) {
           if (options.quiet) {
+            if (msg->type == ix::WebSocketMessageType::Open) {
+              std::lock_guard<std::mutex> lock(replay_cache_mutex);
+              for (const auto& cached_event : replay_cache) {
+                websocket.send(cached_event);
+              }
+            }
             return;
           }
 
           if (msg->type == ix::WebSocketMessageType::Open) {
             std::cerr << "client connected: " << connection_state->getId() << "\n";
+            std::lock_guard<std::mutex> lock(replay_cache_mutex);
+            for (const auto& cached_event : replay_cache) {
+              websocket.send(cached_event);
+            }
           } else if (msg->type == ix::WebSocketMessageType::Close) {
             std::cerr << "client disconnected: " << connection_state->getId() << "\n";
           }
@@ -224,7 +245,12 @@ int main(int argc, char** argv) {
     std::int32_t tick = 0;
     const std::string run_id = "run-" + std::to_string(UnixMsNow());
 
-    auto emit = [&](const std::string& payload) {
+    auto emit = [&](const std::string& payload, bool cache_for_new_clients = false) {
+      if (cache_for_new_clients) {
+        std::lock_guard<std::mutex> lock(replay_cache_mutex);
+        replay_cache.push_back(payload);
+      }
+
       if (log_file.good()) {
         log_file << payload << '\n';
         log_file.flush();
@@ -241,6 +267,10 @@ int main(int argc, char** argv) {
       }
     };
 
+    if (options.startup_delay_ms > 0) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(options.startup_delay_ms));
+    }
+
     {
       std::ostringstream data;
       const double tick_hz = 1000.0 / static_cast<double>(options.tick_ms);
@@ -252,7 +282,7 @@ int main(int argc, char** argv) {
            << "\"backend\":\"" << JsonEscape(options.backend) << "\""
            << '}';
 
-      emit(BuildEnvelope("run_start", run_id, UnixMsNow(), seq++, std::nullopt, data.str()));
+      emit(BuildEnvelope("run_start", run_id, UnixMsNow(), seq++, std::nullopt, data.str()), true);
     }
 
     {
@@ -270,7 +300,7 @@ int main(int argc, char** argv) {
           "\"dsl\":\"sequence(root){ nav(); pickup(); }\""
           "}";
 
-      emit(BuildEnvelope("bt_def", run_id, UnixMsNow(), seq++, std::nullopt, data));
+      emit(BuildEnvelope("bt_def", run_id, UnixMsNow(), seq++, std::nullopt, data), true);
     }
 
     while (g_running.load() && (options.demo_ticks == 0 || tick < options.demo_ticks)) {

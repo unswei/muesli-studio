@@ -3,8 +3,7 @@
 ## P1 follow-up
 
 - [ ] replace inspector demo emitter with direct muesli-bt runtime integration
-- [ ] add inspector unit/integration tests for WS framing and JSONL sink equivalence
-- [ ] add studio reconnect/backoff and connection history controls for unstable links
+- [ ] add runtime-backed integration tests once inspector is linked to muesli-bt
 
 ## P2 editing
 
@@ -15,5 +14,4 @@
 ## engineering follow-up
 
 - [ ] add sidecar index strategy for very large logs
-- [ ] add inspector CI test job once deterministic inspector tests are in place
 - [ ] add broader studio rendering snapshots beyond tick/status golden coverage

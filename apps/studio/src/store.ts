@@ -3,6 +3,13 @@ import { parseJsonlEvents, ReplayStore, type JsonlParseError } from '@muesli/rep
 import { create } from 'zustand';
 
 export type LiveStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+export type LiveHistoryLevel = 'info' | 'warning' | 'error';
+
+export interface LiveHistoryEntry {
+  atUnixMs: number;
+  level: LiveHistoryLevel;
+  message: string;
+}
 
 interface StudioState {
   replay: ReplayStore | null;
@@ -14,7 +21,9 @@ interface StudioState {
   liveUrl: string;
   liveStatus: LiveStatus;
   liveAutoFollow: boolean;
+  liveReconnectEnabled: boolean;
   liveLastError: string | null;
+  liveHistory: LiveHistoryEntry[];
   loadJsonl: (text: string) => void;
   appendLiveEvents: (events: ValidatedMbtEvent[]) => void;
   setSelectedTick: (tick: number) => void;
@@ -22,6 +31,9 @@ interface StudioState {
   setLiveUrl: (url: string) => void;
   setLiveStatus: (status: LiveStatus, error?: string | null) => void;
   setLiveAutoFollow: (enabled: boolean) => void;
+  setLiveReconnectEnabled: (enabled: boolean) => void;
+  addLiveHistory: (entry: Omit<LiveHistoryEntry, 'atUnixMs'> & { atUnixMs?: number }) => void;
+  clearLiveHistory: () => void;
   addParseError: (error: JsonlParseError) => void;
 }
 
@@ -35,7 +47,9 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   liveUrl: 'ws://localhost:8765/events',
   liveStatus: 'disconnected',
   liveAutoFollow: true,
+  liveReconnectEnabled: true,
   liveLastError: null,
+  liveHistory: [],
 
   loadJsonl: (text) => {
     const result = parseJsonlEvents(text);
@@ -112,6 +126,27 @@ export const useStudioStore = create<StudioState>((set, get) => ({
         selectedTick: maxTick,
       };
     });
+  },
+
+  setLiveReconnectEnabled: (enabled) => {
+    set({ liveReconnectEnabled: enabled });
+  },
+
+  addLiveHistory: (entry) => {
+    set((state) => ({
+      liveHistory: [
+        ...state.liveHistory,
+        {
+          atUnixMs: entry.atUnixMs ?? Date.now(),
+          level: entry.level,
+          message: entry.message,
+        },
+      ].slice(-200),
+    }));
+  },
+
+  clearLiveHistory: () => {
+    set({ liveHistory: [] });
   },
 
   addParseError: (error) => {

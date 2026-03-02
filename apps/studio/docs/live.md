@@ -14,6 +14,8 @@ Use this mode when you need real-time visibility while preserving replay compati
 - incoming messages are parsed as canonical event payloads (single-line or JSONL batches)
 - validated events are appended to the in-memory replay store
 - when auto-follow is enabled, studio keeps the selected tick pinned to the newest tick
+- if a connection drops unexpectedly, studio retries with exponential backoff (when auto-reconnect is enabled)
+- live controls include a connection history panel to inspect retries and errors
 
 ## api / syntax
 
@@ -33,6 +35,7 @@ apps/inspector/build/mbt_inspector --ws :8765 --log /tmp/live.jsonl --demo-ticks
 
 - malformed live payloads are skipped and surfaced in ingest warnings
 - moving the tick scrubber disables auto-follow until re-enabled
+- disabling auto-reconnect prevents automatic retry after unexpected closes
 
 ## see also
 

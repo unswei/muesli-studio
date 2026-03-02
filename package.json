@@ -12,10 +12,12 @@
     "build": "pnpm --filter @muesli/studio build",
     "inspector:configure": "cmake --preset default -S apps/inspector",
     "inspector:build": "cmake --build apps/inspector/build --config Release",
-    "inspector:smoke": "apps/inspector/build/mbt_inspector --ws :8877 --demo-ticks 2 --tick-ms 10 --log apps/inspector/build/smoke.jsonl --quiet"
+    "inspector:smoke": "apps/inspector/build/mbt_inspector --ws :8877 --demo-ticks 2 --tick-ms 10 --log apps/inspector/build/smoke.jsonl --quiet",
+    "inspector:test": "node apps/inspector/tests/ws-jsonl-equivalence.mjs"
   },
   "devDependencies": {
     "ajv": "^8.17.1",
-    "json-schema-to-typescript": "^15.0.4"
+    "json-schema-to-typescript": "^15.0.4",
+    "ws": "^8.18.3"
   }
 }

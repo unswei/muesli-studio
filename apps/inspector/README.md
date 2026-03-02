@@ -31,6 +31,7 @@ Key options:
 - `--run-loop <cfg>`: reserved for runtime loop config
 - `--demo-ticks <n>`: number of demo ticks (`0` means run until interrupted)
 - `--tick-ms <n>`: interval per tick in milliseconds
+- `--startup-delay-ms <n>`: delay before first emitted event (useful for integration tests and client bootstrap)
 
 ## example
 
@@ -43,9 +44,20 @@ apps/inspector/build/mbt_inspector --ws :8765 --log /tmp/live-run.jsonl --demo-t
 ## gotchas
 
 - the server accepts `/events` path but does not require it
+- newly connected clients receive cached `run_start` and `bt_def` envelopes for replay bootstrap
 - this is a bootstrap bridge, not yet linked to muesli-bt runtime internals
 
 ## see also
 
 - [studio replay docs](../studio/docs/replay.md)
 - [schema contract](../../schema/mbt.evt.v1.schema.json)
+
+## testing
+
+After building inspector, run:
+
+```bash
+pnpm inspector:test
+```
+
+This integration check asserts WebSocket payloads and JSONL sink lines are identical.

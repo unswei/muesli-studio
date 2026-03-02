@@ -19,3 +19,6 @@ All notable changes to this project will be documented in this file.
 - `apps/inspector` scaffold with CMake target `mbt_inspector` using ixwebsocket
 - inspector demo bridge that emits canonical `mbt.evt.v1` events to both WebSocket clients and optional JSONL sink
 - live-ingest parser helpers and tests for payload decoding, validation, and store auto-follow behaviour
+- studio live reconnection controls with exponential backoff and connection history log
+- inspector integration test validating WebSocket framing and JSONL sink equivalence
+- CI inspector job now runs WS/JSONL equivalence integration test

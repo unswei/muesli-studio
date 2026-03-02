@@ -52,6 +52,20 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
 
+      - name: setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.5.2
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: install
+        run: pnpm install --frozen-lockfile
+
       - name: configure inspector
         run: cmake --preset default -S apps/inspector
 
@@ -66,3 +80,6 @@ jobs:
           test -s apps/inspector/build/ci-smoke.jsonl
           grep -n '"type":"run_start"' apps/inspector/build/ci-smoke.jsonl
           grep -n '"type":"bt_def"' apps/inspector/build/ci-smoke.jsonl
+
+      - name: verify WS/JSONL equivalence
+        run: pnpm inspector:test

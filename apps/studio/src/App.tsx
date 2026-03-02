@@ -16,7 +16,9 @@ export function App() {
   const liveUrl = useStudioStore((state) => state.liveUrl);
   const liveStatus = useStudioStore((state) => state.liveStatus);
   const liveAutoFollow = useStudioStore((state) => state.liveAutoFollow);
+  const liveReconnectEnabled = useStudioStore((state) => state.liveReconnectEnabled);
   const liveLastError = useStudioStore((state) => state.liveLastError);
+  const liveHistory = useStudioStore((state) => state.liveHistory);
   const loadJsonl = useStudioStore((state) => state.loadJsonl);
   const appendLiveEvents = useStudioStore((state) => state.appendLiveEvents);
   const setSelectedTick = useStudioStore((state) => state.setSelectedTick);
@@ -24,9 +26,15 @@ export function App() {
   const setLiveUrl = useStudioStore((state) => state.setLiveUrl);
   const setLiveStatus = useStudioStore((state) => state.setLiveStatus);
   const setLiveAutoFollow = useStudioStore((state) => state.setLiveAutoFollow);
+  const setLiveReconnectEnabled = useStudioStore((state) => state.setLiveReconnectEnabled);
+  const addLiveHistory = useStudioStore((state) => state.addLiveHistory);
+  const clearLiveHistory = useStudioStore((state) => state.clearLiveHistory);
   const addParseError = useStudioStore((state) => state.addParseError);
 
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectEnabledRef = useRef(liveReconnectEnabled);
+  const manualDisconnectRef = useRef(false);
 
   const treeSummary = useMemo(() => {
     if (!replay?.btDef) {
@@ -49,7 +57,23 @@ export function App() {
     loadJsonl(text);
   };
 
+  useEffect(() => {
+    reconnectEnabledRef.current = liveReconnectEnabled;
+  }, [liveReconnectEnabled]);
+
+  const clearReconnectTimer = useCallback(() => {
+    if (!reconnectTimerRef.current) {
+      return;
+    }
+
+    clearTimeout(reconnectTimerRef.current);
+    reconnectTimerRef.current = null;
+  }, []);
+
   const disconnectLive = useCallback(() => {
+    manualDisconnectRef.current = true;
+    clearReconnectTimer();
+
     const ws = wsRef.current;
     if (ws) {
       ws.onopen = null;
@@ -60,17 +84,30 @@ export function App() {
       wsRef.current = null;
     }
 
+    addLiveHistory({ level: 'info', message: 'Disconnected by user' });
     setLiveStatus('disconnected');
-  }, [setLiveStatus]);
+  }, [addLiveHistory, clearReconnectTimer, setLiveStatus]);
 
-  const connectLive = useCallback(() => {
+  const connectLive = useCallback((attempt = 0) => {
     if (!liveUrl.trim()) {
       setLiveStatus('error', 'WebSocket URL is empty');
       return;
     }
 
-    if (wsRef.current) {
-      disconnectLive();
+    if (attempt === 0) {
+      manualDisconnectRef.current = false;
+      clearReconnectTimer();
+      addLiveHistory({ level: 'info', message: `Connecting to ${liveUrl.trim()}` });
+    }
+
+    const existing = wsRef.current;
+    if (existing) {
+      existing.onopen = null;
+      existing.onmessage = null;
+      existing.onerror = null;
+      existing.onclose = null;
+      existing.close(1000, 'reconnect');
+      wsRef.current = null;
     }
 
     setLiveStatus('connecting');
@@ -79,7 +116,9 @@ export function App() {
     wsRef.current = ws;
 
     ws.onopen = () => {
+      clearReconnectTimer();
       setLiveStatus('connected');
+      addLiveHistory({ level: 'info', message: `Connected to ${liveUrl.trim()}` });
     };
 
     ws.onmessage = async (event) => {
@@ -101,6 +140,7 @@ export function App() {
 
     ws.onerror = () => {
       setLiveStatus('error', 'WebSocket error');
+      addLiveHistory({ level: 'error', message: 'WebSocket error' });
     };
 
     ws.onclose = (event) => {
@@ -110,13 +150,36 @@ export function App() {
 
       if (event.code === 1000 || event.code === 1005) {
         setLiveStatus('disconnected');
+        if (!manualDisconnectRef.current) {
+          addLiveHistory({ level: 'warning', message: `Connection closed (${event.code})` });
+        }
         return;
       }
 
       const reason = event.reason ? ` (${event.reason})` : '';
-      setLiveStatus('error', `connection closed: ${event.code}${reason}`);
+      const closeMessage = `connection closed: ${event.code}${reason}`;
+      setLiveStatus('error', closeMessage);
+      addLiveHistory({ level: 'warning', message: closeMessage });
+
+      if (manualDisconnectRef.current || !reconnectEnabledRef.current) {
+        return;
+      }
+
+      const nextAttempt = attempt + 1;
+      const delayMs = Math.min(10_000, 500 * 2 ** Math.min(nextAttempt - 1, 6));
+      addLiveHistory({ level: 'info', message: `Retry ${nextAttempt} in ${delayMs}ms` });
+
+      clearReconnectTimer();
+      reconnectTimerRef.current = setTimeout(() => {
+        reconnectTimerRef.current = null;
+        connectLive(nextAttempt);
+      }, delayMs);
     };
-  }, [addParseError, appendLiveEvents, disconnectLive, liveUrl, setLiveStatus]);
+  }, [addLiveHistory, addParseError, appendLiveEvents, clearReconnectTimer, liveUrl, setLiveStatus]);
+
+  const connectLiveManual = useCallback(() => {
+    connectLive(0);
+  }, [connectLive]);
 
   useEffect(() => {
     return () => {
@@ -125,8 +188,10 @@ export function App() {
         ws.close(1000, 'component unmount');
         wsRef.current = null;
       }
+
+      clearReconnectTimer();
     };
-  }, []);
+  }, [clearReconnectTimer]);
 
   return (
     <main className="app-shell">
@@ -155,7 +220,7 @@ export function App() {
             />
           </label>
 
-          <button type="button" onClick={connectLive} disabled={liveStatus === 'connecting' || liveStatus === 'connected'}>
+          <button type="button" onClick={connectLiveManual} disabled={liveStatus === 'connecting' || liveStatus === 'connected'}>
             connect
           </button>
           <button type="button" onClick={disconnectLive} disabled={liveStatus === 'disconnected'}>
@@ -166,11 +231,34 @@ export function App() {
             <input type="checkbox" checked={liveAutoFollow} onChange={(event) => setLiveAutoFollow(event.target.checked)} />
             auto-follow
           </label>
+          <label className="checkbox">
+            <input type="checkbox" checked={liveReconnectEnabled} onChange={(event) => setLiveReconnectEnabled(event.target.checked)} />
+            auto-reconnect
+          </label>
+          <button type="button" onClick={clearLiveHistory}>
+            clear history
+          </button>
         </div>
         <p className="muted">
           status: <code>{liveStatus}</code>
           {liveLastError ? ` - ${liveLastError}` : ''}
         </p>
+        <div className="history-list compact">
+          {liveHistory.length === 0 ? (
+            <p className="muted">No connection history yet.</p>
+          ) : (
+            <ul>
+              {liveHistory
+                .slice(-8)
+                .reverse()
+                .map((entry) => (
+                  <li key={`${entry.atUnixMs}:${entry.message}`}>
+                    [{new Date(entry.atUnixMs).toLocaleTimeString()}] {entry.level}: {entry.message}
+                  </li>
+                ))}
+            </ul>
+          )}
+        </div>
       </section>
 
       {parseErrors.length > 0 ? (

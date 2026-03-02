@@ -188,6 +188,14 @@ button:disabled {
   overflow: auto;
 }
 
+.history-list.compact {
+  max-height: 150px;
+  border-top: 1px solid #d7dee6;
+  margin-top: 0.35rem;
+  padding-top: 0.45rem;
+  font-size: 0.84rem;
+}
+
 .empty {
   min-height: 260px;
   display: grid;

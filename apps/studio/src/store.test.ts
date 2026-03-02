@@ -15,7 +15,9 @@ function resetStore(): void {
     liveUrl: 'ws://localhost:8765/events',
     liveStatus: 'disconnected',
     liveAutoFollow: true,
+    liveReconnectEnabled: true,
     liveLastError: null,
+    liveHistory: [],
   });
 }
 
@@ -91,5 +93,21 @@ describe('studio live store behaviour', () => {
     useStudioStore.getState().appendLiveEvents([tick2]);
     expect(useStudioStore.getState().selectedTick).toBe(0);
     expect(useStudioStore.getState().replay?.maxTick).toBe(2);
+  });
+
+  it('tracks live reconnect settings and history entries', () => {
+    resetStore();
+
+    useStudioStore.getState().setLiveReconnectEnabled(false);
+    useStudioStore.getState().addLiveHistory({ level: 'info', message: 'Connecting to ws://localhost:8765/events', atUnixMs: 123 });
+    useStudioStore.getState().addLiveHistory({ level: 'warning', message: 'Retry 1 in 500ms', atUnixMs: 124 });
+
+    const state = useStudioStore.getState();
+    expect(state.liveReconnectEnabled).toBe(false);
+    expect(state.liveHistory).toHaveLength(2);
+    expect(state.liveHistory[0]?.message).toContain('Connecting');
+
+    useStudioStore.getState().clearLiveHistory();
+    expect(useStudioStore.getState().liveHistory).toHaveLength(0);
   });
 });

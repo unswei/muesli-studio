@@ -14,6 +14,9 @@ importers:
       json-schema-to-typescript:
         specifier: ^15.0.4
         version: 15.0.4
+      ws:
+        specifier: ^8.18.3
+        version: 8.19.0
 
   apps/studio:
     dependencies:
