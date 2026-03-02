@@ -130,7 +130,11 @@ jobs:
 
       - name: resolve Webots home
         run: |
-          webots_app="$(brew list --cask webots | head -n 1)"
+          webots_app="/Applications/Webots.app"
+          if [[ ! -d "${webots_app}/Contents/lib/controller" ]]; then
+            cask_prefix="$(brew --prefix --cask webots)"
+            webots_app="$(find "${cask_prefix}/Caskroom/webots" -maxdepth 4 -type d -name Webots.app | head -n 1)"
+          fi
           test -n "${webots_app}"
           test -d "${webots_app}/Contents/lib/controller"
           echo "WEBOTS_HOME=${webots_app}/Contents" >> "${GITHUB_ENV}"
