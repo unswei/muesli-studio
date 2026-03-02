@@ -24,7 +24,7 @@ Input protocol: `mbt.evt.v1` JSON events over WebSocket text frames.
 1. Start inspector:
 
 ```bash
-/Users/z3550628/Code/2026/muesli-studio/apps/inspector/build/mbt_inspector --ws :8765 --log /tmp/live.jsonl --demo-ticks 100
+apps/inspector/build/mbt_inspector --ws :8765 --log /tmp/live.jsonl --demo-ticks 100
 ```
 
 2. Start studio and click connect to `ws://localhost:8765/events`.
@@ -36,5 +36,5 @@ Input protocol: `mbt.evt.v1` JSON events over WebSocket text frames.
 
 ## see also
 
-- [replay mode](/Users/z3550628/Code/2026/muesli-studio/apps/studio/docs/replay.md)
-- [inspector bridge](/Users/z3550628/Code/2026/muesli-studio/apps/inspector/README.md)
+- [replay mode](./replay.md)
+- [inspector bridge](../../inspector/README.md)

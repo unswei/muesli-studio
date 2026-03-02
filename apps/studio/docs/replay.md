@@ -22,7 +22,7 @@ Input: `.jsonl` where each line matches `mbt.evt.v1`.
 
 ## example
 
-Load [`tools/fixtures/minimal_run.jsonl`](/Users/z3550628/Code/2026/muesli-studio/tools/fixtures/minimal_run.jsonl), then scrub ticks `0..1`.
+Load [`tools/fixtures/minimal_run.jsonl`](../../../tools/fixtures/minimal_run.jsonl), then scrub ticks `0..1`.
 
 ## gotchas
 
@@ -31,6 +31,6 @@ Load [`tools/fixtures/minimal_run.jsonl`](/Users/z3550628/Code/2026/muesli-studi
 
 ## see also
 
-- [`schema/mbt.evt.v1.schema.json`](/Users/z3550628/Code/2026/muesli-studio/schema/mbt.evt.v1.schema.json)
-- [`packages/replay`](/Users/z3550628/Code/2026/muesli-studio/packages/replay)
-- [`live monitoring`](/Users/z3550628/Code/2026/muesli-studio/apps/studio/docs/live.md)
+- [`schema/mbt.evt.v1.schema.json`](../../../schema/mbt.evt.v1.schema.json)
+- [`packages/replay`](../../../packages/replay)
+- [`live monitoring`](./live.md)

@@ -14,7 +14,7 @@ Use this schema when:
 
 ## how it works
 
-Each line in a canonical log is a single JSON object matching one event variant in [`mbt.evt.v1.schema.json`](/Users/z3550628/Code/2026/muesli-studio/schema/mbt.evt.v1.schema.json).
+Each line in a canonical log is a single JSON object matching one event variant in [`mbt.evt.v1.schema.json`](./mbt.evt.v1.schema.json).
 
 The event envelope is fixed:
 
@@ -44,5 +44,5 @@ The event envelope is fixed:
 
 ## see also
 
-- [`packages/protocol`](/Users/z3550628/Code/2026/muesli-studio/packages/protocol)
-- [`tools/fixtures`](/Users/z3550628/Code/2026/muesli-studio/tools/fixtures)
+- [`packages/protocol`](../packages/protocol)
+- [`tools/fixtures`](../tools/fixtures)

@@ -35,9 +35,9 @@ Key options:
 ## example
 
 ```bash
-cmake --preset default -S /Users/z3550628/Code/2026/muesli-studio/apps/inspector
-cmake --build --preset default -S /Users/z3550628/Code/2026/muesli-studio/apps/inspector
-/Users/z3550628/Code/2026/muesli-studio/apps/inspector/build/mbt_inspector --ws :8765 --log /tmp/live-run.jsonl --demo-ticks 50
+cmake --preset default -S apps/inspector
+cmake --build apps/inspector/build --config Release
+apps/inspector/build/mbt_inspector --ws :8765 --log /tmp/live-run.jsonl --demo-ticks 50
 ```
 
 ## gotchas
@@ -47,5 +47,5 @@ cmake --build --preset default -S /Users/z3550628/Code/2026/muesli-studio/apps/i
 
 ## see also
 
-- [studio replay docs](/Users/z3550628/Code/2026/muesli-studio/apps/studio/docs/replay.md)
-- [schema contract](/Users/z3550628/Code/2026/muesli-studio/schema/mbt.evt.v1.schema.json)
+- [studio replay docs](../studio/docs/replay.md)
+- [schema contract](../../schema/mbt.evt.v1.schema.json)

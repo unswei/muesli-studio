@@ -47,9 +47,9 @@ Load `tools/fixtures/minimal_run.jsonl` in studio.
 ### live mode
 
 ```bash
-cmake --preset default -S /Users/z3550628/Code/2026/muesli-studio/apps/inspector
-cmake --build --preset default -S /Users/z3550628/Code/2026/muesli-studio/apps/inspector
-/Users/z3550628/Code/2026/muesli-studio/apps/inspector/build/mbt_inspector --ws :8765 --log /tmp/live.jsonl --demo-ticks 200
+cmake --preset default -S apps/inspector
+cmake --build apps/inspector/build --config Release
+apps/inspector/build/mbt_inspector --ws :8765 --log /tmp/live.jsonl --demo-ticks 200
 ```
 
 Then connect from studio to `ws://localhost:8765/events`.
