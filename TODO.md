@@ -1,11 +1,10 @@
 # todo
 
-## P1 live monitoring
+## P1 follow-up
 
-- [ ] scaffold `apps/inspector` with CMake target `mbt_inspector`
-- [ ] add WebSocket event bridge endpoint and JSONL sink wiring in inspector
-- [ ] add studio live mode (`ws://host:port/events`) feeding the same replay engine
-- [ ] add auto-follow toggle for newest tick in live mode
+- [ ] replace inspector demo emitter with direct muesli-bt runtime integration
+- [ ] add inspector unit/integration tests for WS framing and JSONL sink equivalence
+- [ ] add studio reconnect/backoff and connection history controls for unstable links
 
 ## P2 editing
 
@@ -16,5 +15,5 @@
 ## engineering follow-up
 
 - [ ] add sidecar index strategy for very large logs
-- [ ] extend CI coverage for `P1` inspector build/tests once `apps/inspector` exists
+- [ ] add inspector CI test job once deterministic inspector tests are in place
 - [ ] add broader studio rendering snapshots beyond tick/status golden coverage

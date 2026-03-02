@@ -9,7 +9,10 @@
     "lint": "pnpm --filter @muesli/protocol lint && pnpm --filter @muesli/replay lint && pnpm --filter @muesli/ui lint && pnpm --filter @muesli/studio lint",
     "typecheck": "pnpm --filter @muesli/protocol typecheck && pnpm --filter @muesli/replay typecheck && pnpm --filter @muesli/ui typecheck && pnpm --filter @muesli/studio typecheck",
     "test": "pnpm --filter @muesli/protocol test && pnpm --filter @muesli/replay test && pnpm --filter @muesli/ui test && pnpm --filter @muesli/studio test",
-    "build": "pnpm --filter @muesli/studio build"
+    "build": "pnpm --filter @muesli/studio build",
+    "inspector:configure": "cmake --preset default -S apps/inspector",
+    "inspector:build": "cmake --build apps/inspector/build --config Release",
+    "inspector:smoke": "apps/inspector/build/mbt_inspector --ws :8877 --demo-ticks 2 --tick-ms 10 --log apps/inspector/build/smoke.jsonl --quiet"
   },
   "devDependencies": {
     "ajv": "^8.17.1",

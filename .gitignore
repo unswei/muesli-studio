@@ -48,3 +48,4 @@ AGENTS.md
 node_modules/
 dist/
 coverage/
+apps/inspector/build/

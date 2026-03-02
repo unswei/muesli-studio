@@ -1,4 +1,4 @@
-name: p0-ci
+name: ci
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  validate:
+  studio-and-packages:
     runs-on: ubuntu-latest
 
     steps:
@@ -44,3 +44,25 @@ jobs:
 
       - name: build studio
         run: pnpm build
+
+  inspector-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: configure inspector
+        run: cmake --preset default -S apps/inspector
+
+      - name: build inspector
+        run: cmake --build apps/inspector/build --config Release
+
+      - name: smoke test inspector
+        run: apps/inspector/build/mbt_inspector --ws :8877 --demo-ticks 2 --tick-ms 10 --log apps/inspector/build/ci-smoke.jsonl --quiet
+
+      - name: assert inspector emitted canonical events
+        run: |
+          test -s apps/inspector/build/ci-smoke.jsonl
+          grep -n '"type":"run_start"' apps/inspector/build/ci-smoke.jsonl
+          grep -n '"type":"bt_def"' apps/inspector/build/ci-smoke.jsonl

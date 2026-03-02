@@ -33,3 +33,4 @@ Load [`tools/fixtures/minimal_run.jsonl`](/Users/z3550628/Code/2026/muesli-studi
 
 - [`schema/mbt.evt.v1.schema.json`](/Users/z3550628/Code/2026/muesli-studio/schema/mbt.evt.v1.schema.json)
 - [`packages/replay`](/Users/z3550628/Code/2026/muesli-studio/packages/replay)
+- [`live monitoring`](/Users/z3550628/Code/2026/muesli-studio/apps/studio/docs/live.md)
