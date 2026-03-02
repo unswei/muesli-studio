@@ -103,6 +103,56 @@ jobs:
       - name: verify WS/JSONL equivalence
         run: pnpm inspector:test
 
+  inspector-build-webots:
+    if: github.event_name != 'schedule'
+    runs-on: macos-latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.5.2
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: install
+        run: pnpm install --frozen-lockfile
+
+      - name: install webots SDK
+        run: brew install --cask webots
+
+      - name: resolve Webots home
+        run: |
+          webots_app="$(brew list --cask webots | head -n 1)"
+          test -n "${webots_app}"
+          test -d "${webots_app}/Contents/lib/controller"
+          echo "WEBOTS_HOME=${webots_app}/Contents" >> "${GITHUB_ENV}"
+
+      - name: configure inspector
+        run: cmake --preset default -S apps/inspector
+
+      - name: build inspector
+        run: cmake --build apps/inspector/build --config Release
+
+      - name: smoke test inspector with Webots attach
+        run: apps/inspector/build/mbt_inspector --attach webots --ws :8878 --run-loop '{"max_ticks":2}' --tick-hz 100 --seed 7 --log apps/inspector/build/ci-smoke-webots.jsonl --quiet
+
+      - name: assert inspector emitted canonical events for Webots
+        run: |
+          test -s apps/inspector/build/ci-smoke-webots.jsonl
+          grep -n '"type":"run_start"' apps/inspector/build/ci-smoke-webots.jsonl
+          grep -n '"type":"bt_def"' apps/inspector/build/ci-smoke-webots.jsonl
+
+      - name: verify WS/JSONL equivalence for Webots
+        run: pnpm inspector:test --attach webots --ticks 3 --tick-hz 100 --timeout-ms 8000
+
   inspector-build-main:
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest

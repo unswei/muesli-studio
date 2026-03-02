@@ -14,6 +14,59 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..', '..', '..');
 const inspectorPath = path.join(rootDir, 'apps', 'inspector', 'build', 'mbt_inspector');
 
+function parseArgs(argv) {
+  const options = {
+    attach: 'mock',
+    ticks: 4,
+    tickHz: 125,
+    seed: 7,
+    startupDelayMs: 200,
+    timeoutMs: 5000,
+    inspector: inspectorPath,
+  };
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    const next = argv[index + 1];
+    if (!arg.startsWith('--')) {
+      throw new Error(`Unexpected positional argument: ${arg}`);
+    }
+    if (next === undefined) {
+      throw new Error(`Missing value for ${arg}`);
+    }
+
+    switch (arg) {
+      case '--attach':
+        options.attach = next;
+        break;
+      case '--ticks':
+        options.ticks = Number.parseInt(next, 10);
+        break;
+      case '--tick-hz':
+        options.tickHz = Number.parseInt(next, 10);
+        break;
+      case '--seed':
+        options.seed = Number.parseInt(next, 10);
+        break;
+      case '--startup-delay-ms':
+        options.startupDelayMs = Number.parseInt(next, 10);
+        break;
+      case '--timeout-ms':
+        options.timeoutMs = Number.parseInt(next, 10);
+        break;
+      case '--inspector':
+        options.inspector = next;
+        break;
+      default:
+        throw new Error(`Unknown option: ${arg}`);
+    }
+
+    index += 1;
+  }
+
+  return options;
+}
+
 function assert(condition, message) {
   if (!condition) {
     throw new Error(message);
@@ -108,7 +161,8 @@ function waitForPortReady(port, timeoutMs) {
 }
 
 async function run() {
-  await access(inspectorPath);
+  const options = parseArgs(process.argv.slice(2));
+  await access(options.inspector);
 
   const port = await getFreePort();
   const tempDir = await mkdtemp(path.join(tmpdir(), 'mbt-inspector-test-'));
@@ -121,23 +175,23 @@ async function run() {
 
   const args = [
     '--attach',
-    'mock',
+    options.attach,
     '--ws',
     `:${port}`,
     '--run-loop',
-    '{"max_ticks":4}',
+    JSON.stringify({ max_ticks: options.ticks }),
     '--tick-hz',
-    '125',
+    String(options.tickHz),
     '--seed',
-    '7',
+    String(options.seed),
     '--startup-delay-ms',
-    '200',
+    String(options.startupDelayMs),
     '--log',
     logPath,
     '--quiet',
   ];
 
-  const child = spawn(inspectorPath, args, {
+  const child = spawn(options.inspector, args, {
     cwd: rootDir,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -157,7 +211,7 @@ async function run() {
 
   try {
     await waitForOpen(socket, 3000);
-    const result = await waitForExit(child, 5000);
+    const result = await waitForExit(child, options.timeoutMs);
     assert(result.code === 0, `Inspector exited with code ${result.code ?? 'null'} signal ${result.signal ?? 'null'}\n${stderr}`);
 
     socket.close();

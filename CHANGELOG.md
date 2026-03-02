@@ -33,3 +33,6 @@ All notable changes to this project will be documented in this file.
 - fixture set refreshed from canonical `muesli-bt` fixture logs
 - inspector now consumes exported `muesli_bt::integration_pybullet` when available and uses backend-specific default run-loop DSL for `--attach pybullet`
 - inspector now consumes exported `muesli_bt::integration_webots` when available and falls back with explicit attach error when Webots SDK/integration target is absent
+- pinned `muesli-bt` revision updated to include exported integration-target packaging fixes for Webots
+- Webots-enabled CI lane on macOS now installs Webots SDK and exercises `--attach webots` with WS/JSONL equivalence checks
+- inspector WS/JSONL equivalence harness now supports runtime arguments (`--attach`, tick controls, timeout) for backend-specific CI coverage
