@@ -1,0 +1,7 @@
+{"schema":"mbt.evt.v1","type":"run_start","run_id":"run-planner","unix_ms":1711000000000,"seq":0,"data":{"git_sha":"feedface","host":"planner-host","tick_hz":10,"tree_hash":"tree-plan","backend":"webots"}}
+{"schema":"mbt.evt.v1","type":"bt_def","run_id":"run-planner","unix_ms":1711000000001,"seq":1,"data":{"nodes":[{"id":"root","name":"Root","kind":"Selector"},{"id":"plan","name":"Plan","kind":"PlannerNode","parent_id":"root"}],"edges":[{"from":"root","to":"plan"}],"dsl":"selector(root){ plan(); }"}}
+{"schema":"mbt.evt.v1","type":"tick_begin","run_id":"run-planner","unix_ms":1711000000010,"seq":2,"tick":0,"data":{}}
+{"schema":"mbt.evt.v1","type":"node_status","run_id":"run-planner","unix_ms":1711000000011,"seq":3,"tick":0,"data":{"node_id":"plan","status":"running"}}
+{"schema":"mbt.evt.v1","type":"planner_v1","run_id":"run-planner","unix_ms":1711000000012,"seq":4,"tick":0,"data":{"budget_ms":20,"time_used_ms":13.4,"confidence":0.78,"summary":"evaluated 8 candidates"}}
+{"schema":"mbt.evt.v1","type":"node_status","run_id":"run-planner","unix_ms":1711000000013,"seq":5,"tick":0,"data":{"node_id":"plan","status":"success","outcome":"ok"}}
+{"schema":"mbt.evt.v1","type":"tick_end","run_id":"run-planner","unix_ms":1711000000014,"seq":6,"tick":0,"data":{}}

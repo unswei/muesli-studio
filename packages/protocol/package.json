@@ -1,0 +1,27 @@
+{
+  "name": "@muesli/protocol",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/types.ts",
+    "./validate": "./src/validate.ts",
+    "./utils": "./src/utils.ts"
+  },
+  "scripts": {
+    "gen:types": "node ../../tools/gen_types/generate-protocol-types.mjs",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "json-schema-to-typescript": "^15.0.4",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.8",
+    "@types/node": "^22.13.9"
+  }
+}

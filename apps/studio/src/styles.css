@@ -1,0 +1,170 @@
+:root {
+  --bg: #f7f8fa;
+  --panel: #ffffff;
+  --panel-border: #cdd5df;
+  --text: #16202a;
+  --muted: #5c6978;
+  --accent: #0d6a88;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at top, #eef5fb 0%, #f8fafc 50%, #f4f7fb 100%);
+  color: var(--text);
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 1.7rem;
+}
+
+h2 {
+  font-size: 1rem;
+  margin-bottom: 0.65rem;
+  text-transform: lowercase;
+}
+
+h3 {
+  font-size: 0.88rem;
+  margin-bottom: 0.5rem;
+  text-transform: lowercase;
+}
+
+code {
+  font-family: "IBM Plex Mono", "Consolas", monospace;
+}
+
+.app-shell {
+  max-width: 1340px;
+  margin: 0 auto;
+  padding: 1rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.file-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.8rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--panel-border);
+  background: var(--panel);
+  font-size: 0.9rem;
+}
+
+.file-input span {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 0.75rem;
+  padding: 0.9rem;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.error-panel {
+  border-color: #d8adad;
+  background: #fff5f5;
+}
+
+.controls {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+
+.tick-row {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.tick-row input {
+  width: 100%;
+}
+
+.content-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 2fr 1fr;
+}
+
+.tree-panel {
+  grid-row: span 2;
+}
+
+.split-panel {
+  min-height: 220px;
+}
+
+.split-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.history-list {
+  max-height: 220px;
+  overflow: auto;
+}
+
+.empty {
+  min-height: 260px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+
+ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+@media (max-width: 960px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tree-panel {
+    grid-row: auto;
+  }
+
+  .split-grid {
+    grid-template-columns: 1fr;
+  }
+}

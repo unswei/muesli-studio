@@ -1,0 +1,8 @@
+{"schema":"mbt.evt.v1","type":"run_start","run_id":"run-scheduler","unix_ms":1712000000000,"seq":0,"data":{"git_sha":"cafebabe","host":"sched-host","tick_hz":5,"tree_hash":"tree-sched","backend":"pybullet"}}
+{"schema":"mbt.evt.v1","type":"bt_def","run_id":"run-scheduler","unix_ms":1712000000001,"seq":1,"data":{"nodes":[{"id":"root","name":"Root","kind":"Sequence"},{"id":"async","name":"AsyncTask","kind":"Action","parent_id":"root"}],"edges":[{"from":"root","to":"async"}],"dsl":"sequence(root){ async(); }"}}
+{"schema":"mbt.evt.v1","type":"tick_begin","run_id":"run-scheduler","unix_ms":1712000000010,"seq":2,"tick":0,"data":{}}
+{"schema":"mbt.evt.v1","type":"sched_submit","run_id":"run-scheduler","unix_ms":1712000000011,"seq":3,"tick":0,"data":{"job_id":"job-1","node_id":"async","queue":"default"}}
+{"schema":"mbt.evt.v1","type":"sched_start","run_id":"run-scheduler","unix_ms":1712000000012,"seq":4,"tick":0,"data":{"job_id":"job-1","worker":"worker-a"}}
+{"schema":"mbt.evt.v1","type":"sched_finish","run_id":"run-scheduler","unix_ms":1712000000013,"seq":5,"tick":0,"data":{"job_id":"job-1","outcome":"ok","duration_ms":3.6}}
+{"schema":"mbt.evt.v1","type":"node_status","run_id":"run-scheduler","unix_ms":1712000000014,"seq":6,"tick":0,"data":{"node_id":"async","status":"success","outcome":"ok"}}
+{"schema":"mbt.evt.v1","type":"tick_end","run_id":"run-scheduler","unix_ms":1712000000015,"seq":7,"tick":0,"data":{}}

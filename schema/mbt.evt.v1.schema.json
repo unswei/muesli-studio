@@ -1,0 +1,526 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://muesli.dev/schema/mbt.evt.v1.schema.json",
+  "title": "MbtEvtV1Event",
+  "description": "Canonical event stream payload for muesli-bt replay and monitoring.",
+  "oneOf": [
+    { "$ref": "#/$defs/run_start_event" },
+    { "$ref": "#/$defs/bt_def_event" },
+    { "$ref": "#/$defs/tick_begin_event" },
+    { "$ref": "#/$defs/tick_end_event" },
+    { "$ref": "#/$defs/node_status_event" },
+    { "$ref": "#/$defs/bb_write_event" },
+    { "$ref": "#/$defs/bb_delete_event" },
+    { "$ref": "#/$defs/bb_snapshot_event" },
+    { "$ref": "#/$defs/sched_submit_event" },
+    { "$ref": "#/$defs/sched_start_event" },
+    { "$ref": "#/$defs/sched_finish_event" },
+    { "$ref": "#/$defs/sched_cancel_event" },
+    { "$ref": "#/$defs/planner_v1_event" },
+    { "$ref": "#/$defs/vla_submit_event" },
+    { "$ref": "#/$defs/vla_poll_event" },
+    { "$ref": "#/$defs/vla_cancel_event" },
+    { "$ref": "#/$defs/vla_result_event" },
+    { "$ref": "#/$defs/error_event" }
+  ],
+  "$defs": {
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "run_start",
+        "bt_def",
+        "tick_begin",
+        "tick_end",
+        "node_status",
+        "bb_write",
+        "bb_delete",
+        "bb_snapshot",
+        "sched_submit",
+        "sched_start",
+        "sched_finish",
+        "sched_cancel",
+        "planner_v1",
+        "vla_submit",
+        "vla_poll",
+        "vla_cancel",
+        "vla_result",
+        "error"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["idle", "running", "success", "failure", "skipped"]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["info", "warning", "error", "fatal"]
+    },
+    "outcome": {
+      "type": "string",
+      "enum": ["ok", "error", "timeout", "cancelled"]
+    },
+    "blackboard_value": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["digest"],
+      "properties": {
+        "digest": {
+          "type": "string",
+          "minLength": 1
+        },
+        "preview": {
+          "type": "string"
+        }
+      }
+    },
+    "event_base": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "type", "run_id", "unix_ms", "seq", "data"],
+      "properties": {
+        "schema": {
+          "type": "string",
+          "const": "mbt.evt.v1"
+        },
+        "type": {
+          "$ref": "#/$defs/event_type"
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unix_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tick": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "data": {
+          "type": "object"
+        }
+      }
+    },
+    "run_start_event": {
+      "allOf": [
+        { "$ref": "#/$defs/event_base" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "run_start" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["git_sha", "host", "tick_hz", "tree_hash"],
+              "properties": {
+                "git_sha": { "type": "string", "minLength": 1 },
+                "host": { "type": "string", "minLength": 1 },
+                "tick_hz": { "type": "number", "exclusiveMinimum": 0 },
+                "tree_hash": { "type": "string", "minLength": 1 },
+                "backend": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "bt_node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "kind"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "minLength": 1 },
+        "parent_id": { "type": "string" },
+        "source": { "type": "string" }
+      }
+    },
+    "bt_edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to"],
+      "properties": {
+        "from": { "type": "string", "minLength": 1 },
+        "to": { "type": "string", "minLength": 1 }
+      }
+    },
+    "bt_def_event": {
+      "allOf": [
+        { "$ref": "#/$defs/event_base" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "bt_def" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["nodes", "edges"],
+              "properties": {
+                "nodes": {
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/bt_node" }
+                },
+                "edges": {
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/bt_edge" }
+                },
+                "dsl": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "tick_begin_event": {
+      "allOf": [
+        { "$ref": "#/$defs/event_base" },
+        {
+          "type": "object",
+          "required": ["tick"],
+          "properties": {
+            "type": { "const": "tick_begin" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "wall_ms": { "type": "number", "minimum": 0 }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "tick_end_event": {
+      "allOf": [
+        { "$ref": "#/$defs/event_base" },
+        {
+          "type": "object",
+          "required": ["tick"],
+          "properties": {
+            "type": { "const": "tick_end" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "wall_ms": { "type": "number", "minimum": 0 }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "node_status_event": {
+      "allOf": [
+        { "$ref": "#/$defs/event_base" },
+        {
+          "type": "object",
+          "required": ["tick"],
+          "properties": {
+            "type": { "const": "node_status" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["node_id", "status"],
+              "properties": {
+                "node_id": { "type": "string", "minLength": 1 },
+                "status": { "$ref": "#/$defs/status" },
+                "outcome": { "$ref": "#/$defs/outcome" },
+                "duration_ms": { "type": "number", "minimum": 0 },
+                "message": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "bb_write_event": {
+      "allOf": [
+        { "$ref": "#/$defs/event_base" },
+        {
+          "type": "object",
+          "required": ["tick"],
+          "properties": {
+            "type": { "const": "bb_write" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["key", "digest"],
+              "properties": {
+                "key": { "type": "string", "minLength": 1 },
+                "digest": { "type": "string", "minLength": 1 },
+                "preview": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "bb_delete_event": {
+      "allOf": [
+        { "$ref": "#/$defs/event_base" },
+        {
+          "type": "object",
+          "required": ["tick"],
+          "properties": {
+            "type": { "const": "bb_delete" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["key"],
+              "properties": {
+                "key": { "type": "string", "minLength": 1 },
+                "reason": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "bb_snapshot_event": {
+      "allOf": [
+        { "$ref": "#/$defs/event_base" },
+        {
+          "type": "object",
+          "required": ["tick"],
+          "properties": {
+            "type": { "const": "bb_snapshot" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["values"],
+              "properties": {
+                "values": {
+                  "type": "object",
+                  "additionalProperties": { "$ref": "#/$defs/blackboard_value" }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "sched_submit_event": {
+      "allOf": [
+        { "$ref": "#/$defs/event_base" },
+        {
+          "type": "object",
+          "required": ["tick"],
+          "properties": {
+            "type": { "const": "sched_submit" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["job_id"],
+              "properties": {
+                "job_id": { "type": "string", "minLength": 1 },
+                "node_id": { "type": "string" },
+                "queue": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "sched_start_event": {
+      "allOf": [
+        { "$ref": "#/$defs/event_base" },
+        {
+          "type": "object",
+          "required": ["tick"],
+          "properties": {
+            "type": { "const": "sched_start" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["job_id"],
+              "properties": {
+                "job_id": { "type": "string", "minLength": 1 },
+                "worker": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "sched_finish_event": {
+      "allOf": [
+        { "$ref": "#/$defs/event_base" },
+        {
+          "type": "object",
+          "required": ["tick"],
+          "properties": {
+            "type": { "const": "sched_finish" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["job_id", "outcome"],
+              "properties": {
+                "job_id": { "type": "string", "minLength": 1 },
+                "outcome": { "$ref": "#/$defs/outcome" },
+                "duration_ms": { "type": "number", "minimum": 0 }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "sched_cancel_event": {
+      "allOf": [
+        { "$ref": "#/$defs/event_base" },
+        {
+          "type": "object",
+          "required": ["tick"],
+          "properties": {
+            "type": { "const": "sched_cancel" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["job_id"],
+              "properties": {
+                "job_id": { "type": "string", "minLength": 1 },
+                "reason": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "planner_v1_event": {
+      "allOf": [
+        { "$ref": "#/$defs/event_base" },
+        {
+          "type": "object",
+          "required": ["tick"],
+          "properties": {
+            "type": { "const": "planner_v1" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["budget_ms", "time_used_ms", "confidence"],
+              "properties": {
+                "budget_ms": { "type": "number", "minimum": 0 },
+                "time_used_ms": { "type": "number", "minimum": 0 },
+                "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+                "summary": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "vla_submit_event": {
+      "allOf": [
+        { "$ref": "#/$defs/event_base" },
+        {
+          "type": "object",
+          "required": ["tick"],
+          "properties": {
+            "type": { "const": "vla_submit" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["request_id", "service"],
+              "properties": {
+                "request_id": { "type": "string", "minLength": 1 },
+                "service": { "type": "string", "minLength": 1 },
+                "prompt": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "vla_poll_event": {
+      "allOf": [
+        { "$ref": "#/$defs/event_base" },
+        {
+          "type": "object",
+          "required": ["tick"],
+          "properties": {
+            "type": { "const": "vla_poll" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["request_id"],
+              "properties": {
+                "request_id": { "type": "string", "minLength": 1 },
+                "status": { "$ref": "#/$defs/status" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "vla_cancel_event": {
+      "allOf": [
+        { "$ref": "#/$defs/event_base" },
+        {
+          "type": "object",
+          "required": ["tick"],
+          "properties": {
+            "type": { "const": "vla_cancel" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["request_id"],
+              "properties": {
+                "request_id": { "type": "string", "minLength": 1 },
+                "reason": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "vla_result_event": {
+      "allOf": [
+        { "$ref": "#/$defs/event_base" },
+        {
+          "type": "object",
+          "required": ["tick"],
+          "properties": {
+            "type": { "const": "vla_result" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["request_id", "outcome"],
+              "properties": {
+                "request_id": { "type": "string", "minLength": 1 },
+                "outcome": { "$ref": "#/$defs/outcome" },
+                "summary": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "error_event": {
+      "allOf": [
+        { "$ref": "#/$defs/event_base" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "const": "error" },
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["severity", "message"],
+              "properties": {
+                "severity": { "$ref": "#/$defs/severity" },
+                "message": { "type": "string", "minLength": 1 },
+                "code": { "type": "string" },
+                "node_id": { "type": "string" }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

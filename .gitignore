@@ -1,3 +1,7 @@
+.instructions/
+AGENTS.md
+*~
+
 # Prerequisites
 *.d
 
@@ -39,3 +43,8 @@
 
 # debug information files
 *.dwo
+
+# JavaScript / TypeScript
+node_modules/
+dist/
+coverage/
