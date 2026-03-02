@@ -26,7 +26,7 @@ Input protocol: `mbt.evt.v1` JSON events over WebSocket text frames.
 1. Start inspector:
 
 ```bash
-apps/inspector/build/mbt_inspector --ws :8765 --log /tmp/live.jsonl --demo-ticks 100
+apps/inspector/build/mbt_inspector --attach mock --ws :8765 --run-loop '{"max_ticks":100}' --tick-hz 20 --log /tmp/live.jsonl
 ```
 
 2. Start studio and click connect to `ws://localhost:8765/events`.

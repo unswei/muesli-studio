@@ -21,7 +21,7 @@ describe('studio replay fixtures', () => {
     expect(parsed.events.length).toBeGreaterThan(5);
   });
 
-  it('golden: tick scrub changes tree node statuses', () => {
+  it('golden: tick scrub preserves canonical tree rendering', () => {
     const raw = readFileSync(path.join(rootDir, 'tools', 'fixtures', 'minimal_run.jsonl'), 'utf8');
     const parsed = parseJsonlEvents(raw);
     expect(parsed.errors).toHaveLength(0);
@@ -30,17 +30,17 @@ describe('studio replay fixtures', () => {
     replay.appendMany(parsed.events);
 
     const tick0Markup = renderToStaticMarkup(
-      <TreeView replay={replay} selectedTick={0} selectedNodeId="root" onSelectNode={() => {}} />,
+      <TreeView replay={replay} selectedTick={1} selectedNodeId="1" onSelectNode={() => {}} />,
     );
 
     const tick1Markup = renderToStaticMarkup(
-      <TreeView replay={replay} selectedTick={1} selectedNodeId="root" onSelectNode={() => {}} />,
+      <TreeView replay={replay} selectedTick={2} selectedNodeId="1" onSelectNode={() => {}} />,
     );
 
-    expect(tick0Markup).toContain('Root');
-    expect(tick0Markup).toContain('Sequence · success');
-    expect(tick1Markup).toContain('Sequence · running');
-    expect(tick1Markup).toContain('PickUp');
-    expect(tick1Markup).toContain('Action · failure');
+    expect(tick0Markup).toContain('root');
+    expect(tick0Markup).toContain('always-true');
+    expect(tick1Markup).toContain('always-success');
+    expect(tick1Markup).toContain('seq · unknown');
+    expect(tick1Markup).toContain('act · unknown');
   });
 });

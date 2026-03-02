@@ -12,7 +12,7 @@ Use replay mode when you need deterministic post-run inspection, debugging, or r
 
 - file load parses JSONL line-by-line via `@muesli/replay`
 - parsed events are appended to a `ReplayStore`
-- tree layout is computed once from `bt_def.nodes/edges`
+- tree layout is computed once from `bt_def.nodes/edges` (supports `from/to` and `parent/child` edge variants)
 - tick scrubbing recolours nodes using indexed `node_status` events
 - blackboard diff panel shows `bb_write`/`bb_delete` for selected tick
 
@@ -22,7 +22,7 @@ Input: `.jsonl` where each line matches `mbt.evt.v1`.
 
 ## example
 
-Load [`tools/fixtures/minimal_run.jsonl`](../../../tools/fixtures/minimal_run.jsonl), then scrub ticks `0..1`.
+Load [`tools/fixtures/minimal_run.jsonl`](../../../tools/fixtures/minimal_run.jsonl), then scrub ticks `1..2`.
 
 ## gotchas
 

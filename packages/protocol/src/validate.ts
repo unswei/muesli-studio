@@ -25,204 +25,203 @@ export const eventTypeValues = [
 
 export const statusValues = ['idle', 'running', 'success', 'failure', 'skipped'] as const;
 export const severityValues = ['info', 'warning', 'error', 'fatal'] as const;
-export const outcomeValues = ['ok', 'error', 'timeout', 'cancelled'] as const;
+export const outcomeValues = ['ok', 'error', 'timeout', 'cancelled', 'failed'] as const;
+
+const stringOrIntIdSchema = z.union([z.string().min(1), z.number().int().nonnegative()]);
 
 const envelopeSchema = z.object({
   schema: z.literal(EVENT_SCHEMA),
   run_id: z.string().min(1),
-  unix_ms: z.number().int().nonnegative(),
-  seq: z.number().int().nonnegative(),
+  unix_ms: z.number().int(),
+  seq: z.number().int().positive(),
   tick: z.number().int().nonnegative().optional(),
-});
-
-const btNodeSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1),
-  kind: z.string().min(1),
-  parent_id: z.string().optional(),
-  source: z.string().optional(),
-});
-
-const btEdgeSchema = z.object({
-  from: z.string().min(1),
-  to: z.string().min(1),
-});
-
-const blackboardValueSchema = z.object({
-  digest: z.string().min(1),
-  preview: z.string().optional(),
 });
 
 const runStartSchema = envelopeSchema.extend({
   type: z.literal('run_start'),
-  data: z.object({
-    git_sha: z.string().min(1),
-    host: z.string().min(1),
-    tick_hz: z.number().positive(),
-    tree_hash: z.string().min(1),
-    backend: z.string().optional(),
-  }),
+  data: z
+    .object({
+      git_sha: z.string().min(1),
+      tick_hz: z.number().positive(),
+      tree_hash: z.string().min(1),
+      host: z.union([
+        z.string().min(1),
+        z
+          .object({
+            name: z.string().min(1),
+            version: z.string().min(1),
+            platform: z.string().min(1),
+          })
+          .passthrough(),
+      ]),
+      capabilities: z.record(z.unknown()).optional(),
+      backend: z.string().optional(),
+    })
+    .passthrough(),
 });
+
+const btNodeSchema = z
+  .object({
+    id: stringOrIntIdSchema,
+    name: z.string().min(1),
+    kind: z.string().min(1),
+    parent_id: stringOrIntIdSchema.optional(),
+    source: z.string().optional(),
+  })
+  .passthrough();
+
+const btEdgeSchema = z
+  .object({
+    from: stringOrIntIdSchema.optional(),
+    to: stringOrIntIdSchema.optional(),
+    parent: stringOrIntIdSchema.optional(),
+    child: stringOrIntIdSchema.optional(),
+    index: z.number().int().nonnegative().optional(),
+  })
+  .passthrough()
+  .refine((edge) => {
+    const hasFromTo = edge.from !== undefined && edge.to !== undefined;
+    const hasParentChild = edge.parent !== undefined && edge.child !== undefined;
+    return hasFromTo || hasParentChild;
+  }, 'bt_def edge must contain from/to or parent/child');
 
 const btDefSchema = envelopeSchema.extend({
   type: z.literal('bt_def'),
-  data: z.object({
-    nodes: z.array(btNodeSchema),
-    edges: z.array(btEdgeSchema),
-    dsl: z.string().optional(),
-  }),
+  data: z
+    .object({
+      nodes: z.array(btNodeSchema),
+      edges: z.array(btEdgeSchema),
+      dsl: z.string().optional(),
+      tree_name: z.string().optional(),
+      tree_hash: z.string().optional(),
+    })
+    .passthrough(),
 });
 
 const tickBeginSchema = envelopeSchema.extend({
-  tick: z.number().int().nonnegative(),
   type: z.literal('tick_begin'),
-  data: z.object({
-    wall_ms: z.number().nonnegative().optional(),
-  }),
+  tick: z.number().int().nonnegative(),
+  data: z.record(z.unknown()),
 });
 
 const tickEndSchema = envelopeSchema.extend({
-  tick: z.number().int().nonnegative(),
   type: z.literal('tick_end'),
-  data: z.object({
-    wall_ms: z.number().nonnegative().optional(),
-  }),
+  tick: z.number().int().nonnegative(),
+  data: z.record(z.unknown()),
 });
 
 const nodeStatusSchema = envelopeSchema.extend({
-  tick: z.number().int().nonnegative(),
   type: z.literal('node_status'),
-  data: z.object({
-    node_id: z.string().min(1),
-    status: z.enum(statusValues),
-    outcome: z.enum(outcomeValues).optional(),
-    duration_ms: z.number().nonnegative().optional(),
-    message: z.string().optional(),
-  }),
+  tick: z.number().int().nonnegative(),
+  data: z
+    .object({
+      node_id: stringOrIntIdSchema,
+      status: z.enum(statusValues),
+      outcome: z.union([z.enum(outcomeValues), z.string().min(1)]).optional(),
+      message: z.string().optional(),
+      duration_ms: z.number().nonnegative().optional(),
+      dur_ms: z.number().nonnegative().optional(),
+    })
+    .passthrough(),
 });
 
 const bbWriteSchema = envelopeSchema.extend({
-  tick: z.number().int().nonnegative(),
   type: z.literal('bb_write'),
-  data: z.object({
-    key: z.string().min(1),
-    digest: z.string().min(1),
-    preview: z.string().optional(),
-  }),
+  tick: z.number().int().nonnegative(),
+  data: z
+    .object({
+      key: z.string().min(1),
+      digest: z.string().min(1).optional(),
+      value_digest: z.string().min(1).optional(),
+      preview: z.unknown().optional(),
+    })
+    .passthrough()
+    .refine((data) => data.digest !== undefined || data.value_digest !== undefined, {
+      message: 'bb_write requires digest or value_digest',
+    }),
 });
 
 const bbDeleteSchema = envelopeSchema.extend({
-  tick: z.number().int().nonnegative(),
   type: z.literal('bb_delete'),
-  data: z.object({
-    key: z.string().min(1),
-    reason: z.string().optional(),
-  }),
+  tick: z.number().int().nonnegative(),
+  data: z
+    .object({
+      key: z.string().min(1),
+      reason: z.string().optional(),
+    })
+    .passthrough(),
 });
 
 const bbSnapshotSchema = envelopeSchema.extend({
-  tick: z.number().int().nonnegative(),
   type: z.literal('bb_snapshot'),
-  data: z.object({
-    values: z.record(blackboardValueSchema),
-  }),
+  tick: z.number().int().nonnegative(),
+  data: z
+    .object({
+      values: z.record(z.unknown()).optional(),
+      entries: z.array(z.tuple([z.string(), z.unknown()])).optional(),
+    })
+    .passthrough()
+    .refine((data) => data.values !== undefined || data.entries !== undefined, {
+      message: 'bb_snapshot requires values or entries',
+    }),
 });
 
 const schedSubmitSchema = envelopeSchema.extend({
-  tick: z.number().int().nonnegative(),
   type: z.literal('sched_submit'),
-  data: z.object({
-    job_id: z.string().min(1),
-    node_id: z.string().optional(),
-    queue: z.string().optional(),
-  }),
+  data: z.record(z.unknown()),
 });
 
 const schedStartSchema = envelopeSchema.extend({
-  tick: z.number().int().nonnegative(),
   type: z.literal('sched_start'),
-  data: z.object({
-    job_id: z.string().min(1),
-    worker: z.string().optional(),
-  }),
+  data: z.record(z.unknown()),
 });
 
 const schedFinishSchema = envelopeSchema.extend({
-  tick: z.number().int().nonnegative(),
   type: z.literal('sched_finish'),
-  data: z.object({
-    job_id: z.string().min(1),
-    outcome: z.enum(outcomeValues),
-    duration_ms: z.number().nonnegative().optional(),
-  }),
+  data: z.record(z.unknown()),
 });
 
 const schedCancelSchema = envelopeSchema.extend({
-  tick: z.number().int().nonnegative(),
   type: z.literal('sched_cancel'),
-  data: z.object({
-    job_id: z.string().min(1),
-    reason: z.string().optional(),
-  }),
+  data: z.record(z.unknown()),
 });
 
 const plannerV1Schema = envelopeSchema.extend({
-  tick: z.number().int().nonnegative(),
   type: z.literal('planner_v1'),
-  data: z.object({
-    budget_ms: z.number().nonnegative(),
-    time_used_ms: z.number().nonnegative(),
-    confidence: z.number().min(0).max(1),
-    summary: z.string().optional(),
-  }),
+  data: z.record(z.unknown()),
 });
 
 const vlaSubmitSchema = envelopeSchema.extend({
-  tick: z.number().int().nonnegative(),
   type: z.literal('vla_submit'),
-  data: z.object({
-    request_id: z.string().min(1),
-    service: z.string().min(1),
-    prompt: z.string().optional(),
-  }),
+  data: z.record(z.unknown()),
 });
 
 const vlaPollSchema = envelopeSchema.extend({
-  tick: z.number().int().nonnegative(),
   type: z.literal('vla_poll'),
-  data: z.object({
-    request_id: z.string().min(1),
-    status: z.enum(statusValues).optional(),
-  }),
+  data: z.record(z.unknown()),
 });
 
 const vlaCancelSchema = envelopeSchema.extend({
-  tick: z.number().int().nonnegative(),
   type: z.literal('vla_cancel'),
-  data: z.object({
-    request_id: z.string().min(1),
-    reason: z.string().optional(),
-  }),
+  data: z.record(z.unknown()),
 });
 
 const vlaResultSchema = envelopeSchema.extend({
-  tick: z.number().int().nonnegative(),
   type: z.literal('vla_result'),
-  data: z.object({
-    request_id: z.string().min(1),
-    outcome: z.enum(outcomeValues),
-    summary: z.string().optional(),
-  }),
+  data: z.record(z.unknown()),
 });
 
 const errorSchema = envelopeSchema.extend({
   type: z.literal('error'),
-  data: z.object({
-    severity: z.enum(severityValues),
-    message: z.string().min(1),
-    code: z.string().optional(),
-    node_id: z.string().optional(),
-  }),
+  data: z
+    .object({
+      severity: z.union([z.enum(severityValues), z.string().min(1)]),
+      message: z.string().min(1),
+      code: z.string().optional(),
+      component: z.string().optional(),
+      node_id: stringOrIntIdSchema.optional(),
+    })
+    .passthrough(),
 });
 
 export const mbtEventSchema = z.discriminatedUnion('type', [

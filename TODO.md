@@ -1,10 +1,5 @@
 # todo
 
-## P1 follow-up
-
-- [ ] replace inspector demo emitter with direct muesli-bt runtime integration
-- [ ] add runtime-backed integration tests once inspector is linked to muesli-bt
-
 ## P2 editing
 
 - [ ] show `bt_def.dsl` in a text editor panel
@@ -15,3 +10,4 @@
 
 - [ ] add sidecar index strategy for very large logs
 - [ ] add broader studio rendering snapshots beyond tick/status golden coverage
+- [ ] add Webots-enabled CI lane (with SDK) to exercise `--attach webots` against exported `muesli_bt::integration_webots`

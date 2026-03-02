@@ -1,38 +1,72 @@
+#include <bt/compiler.hpp>
+#include <bt/event_log.hpp>
+#include <bt/runtime_host.hpp>
+#if MBT_INSPECTOR_HAS_PYBULLET_INTEGRATION
+#include <pybullet/racecar_demo.hpp>
+#endif
+#if MBT_INSPECTOR_HAS_WEBOTS_INTEGRATION
+#include <webots/extension.hpp>
+#endif
+
 #include <ixwebsocket/IXNetSystem.h>
 #include <ixwebsocket/IXWebSocketServer.h>
 
+#include <muslisp/reader.hpp>
+#include <muslisp/value.hpp>
+
 #include <atomic>
 #include <chrono>
+#include <cctype>
 #include <csignal>
 #include <cstdint>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <mutex>
 #include <optional>
+#include <regex>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 namespace {
 std::atomic<bool> g_running{true};
+
+constexpr const char* kDefaultTreeDsl =
+    "(sel (seq (cond target-visible) (act approach-target) (act grasp)) (act search-target))";
+constexpr const char* kPybulletTreeDsl = "(sel (seq (cond collision-imminent) (act avoid-obstacle)) (act constant-drive))";
 
 struct Options {
   std::string backend = "mock";
   std::string ws_bind = ":8765";
   std::string log_path;
   std::string run_loop;
-  std::int32_t demo_ticks = 0;
-  std::int32_t tick_ms = 250;
+  std::optional<double> tick_hz;
+  std::optional<std::uint64_t> seed;
   std::int32_t startup_delay_ms = 0;
   bool quiet = false;
+};
+
+struct RunLoopConfig {
+  std::int64_t max_ticks = 0;
+  double tick_hz = 20.0;
+  std::string tree_dsl;
 };
 
 struct BindAddress {
   std::string host;
   std::uint16_t port;
+};
+
+struct ReplayCache {
+  std::mutex mutex;
+  std::optional<std::string> run_start;
+  std::optional<std::string> bt_def;
 };
 
 void OnSignal(int /*signal*/) {
@@ -44,36 +78,187 @@ std::int64_t UnixMsNow() {
   return static_cast<std::int64_t>(now.time_since_epoch().count());
 }
 
-std::string JsonEscape(const std::string& input) {
-  std::ostringstream escaped;
-  for (const char c : input) {
-    switch (c) {
-      case '\\':
-        escaped << "\\\\";
-        break;
+std::string ReadTextFile(const std::string& path) {
+  std::ifstream in(path, std::ios::in | std::ios::binary);
+  if (!in.good()) {
+    throw std::runtime_error("Unable to read file: " + path);
+  }
+
+  std::ostringstream buffer;
+  buffer << in.rdbuf();
+  if (!in.good() && !in.eof()) {
+    throw std::runtime_error("Failed while reading file: " + path);
+  }
+
+  return buffer.str();
+}
+
+std::string Trim(std::string text) {
+  const auto is_space = [](unsigned char ch) { return std::isspace(ch) != 0; };
+
+  while (!text.empty() && is_space(static_cast<unsigned char>(text.front()))) {
+    text.erase(text.begin());
+  }
+  while (!text.empty() && is_space(static_cast<unsigned char>(text.back()))) {
+    text.pop_back();
+  }
+  return text;
+}
+
+std::string UnescapeJsonString(std::string_view escaped) {
+  std::string out;
+  out.reserve(escaped.size());
+
+  for (std::size_t index = 0; index < escaped.size(); ++index) {
+    const char ch = escaped[index];
+    if (ch != '\\') {
+      out.push_back(ch);
+      continue;
+    }
+
+    if (index + 1 >= escaped.size()) {
+      out.push_back('\\');
+      break;
+    }
+
+    index += 1;
+    const char esc = escaped[index];
+    switch (esc) {
       case '"':
-        escaped << "\\\"";
+        out.push_back('"');
         break;
-      case '\n':
-        escaped << "\\n";
+      case '\\':
+        out.push_back('\\');
         break;
-      case '\r':
-        escaped << "\\r";
+      case '/':
+        out.push_back('/');
         break;
-      case '\t':
-        escaped << "\\t";
+      case 'b':
+        out.push_back('\b');
+        break;
+      case 'f':
+        out.push_back('\f');
+        break;
+      case 'n':
+        out.push_back('\n');
+        break;
+      case 'r':
+        out.push_back('\r');
+        break;
+      case 't':
+        out.push_back('\t');
         break;
       default:
-        escaped << c;
+        out.push_back(esc);
         break;
     }
   }
-  return escaped.str();
+
+  return out;
+}
+
+std::optional<std::string> ExtractJsonString(const std::string& text, const std::string& key) {
+  const std::regex pattern("\"" + key + "\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"");
+  std::smatch match;
+  if (!std::regex_search(text, match, pattern)) {
+    return std::nullopt;
+  }
+
+  if (match.size() < 2) {
+    return std::nullopt;
+  }
+
+  return UnescapeJsonString(match[1].str());
+}
+
+std::optional<std::int64_t> ExtractJsonInteger(const std::string& text, const std::string& key) {
+  const std::regex pattern("\"" + key + "\"\\s*:\\s*(-?[0-9]+)");
+  std::smatch match;
+  if (!std::regex_search(text, match, pattern)) {
+    return std::nullopt;
+  }
+
+  if (match.size() < 2) {
+    return std::nullopt;
+  }
+
+  return std::stoll(match[1].str());
+}
+
+std::optional<double> ExtractJsonDouble(const std::string& text, const std::string& key) {
+  const std::regex pattern("\"" + key + "\"\\s*:\\s*(-?(?:[0-9]+(?:\\.[0-9]+)?|\\.[0-9]+))");
+  std::smatch match;
+  if (!std::regex_search(text, match, pattern)) {
+    return std::nullopt;
+  }
+
+  if (match.size() < 2) {
+    return std::nullopt;
+  }
+
+  return std::stod(match[1].str());
+}
+
+RunLoopConfig ParseRunLoopConfig(const std::string& value) {
+  RunLoopConfig config;
+  if (value.empty()) {
+    return config;
+  }
+
+  std::string source = value;
+  if (std::filesystem::exists(value)) {
+    source = ReadTextFile(value);
+  }
+
+  const std::string trimmed = Trim(source);
+  if (trimmed.empty()) {
+    return config;
+  }
+
+  if (!trimmed.empty() && trimmed.front() != '{') {
+    config.tree_dsl = trimmed;
+    return config;
+  }
+
+  if (const auto max_ticks = ExtractJsonInteger(trimmed, "max_ticks"); max_ticks.has_value()) {
+    config.max_ticks = *max_ticks;
+  } else if (const auto max_ticks = ExtractJsonInteger(trimmed, "maxTicks"); max_ticks.has_value()) {
+    config.max_ticks = *max_ticks;
+  }
+
+  if (config.max_ticks < 0) {
+    throw std::runtime_error("run-loop config: max_ticks must be >= 0");
+  }
+
+  if (const auto tick_hz = ExtractJsonDouble(trimmed, "tick_hz"); tick_hz.has_value()) {
+    config.tick_hz = *tick_hz;
+  } else if (const auto tick_hz = ExtractJsonDouble(trimmed, "tickHz"); tick_hz.has_value()) {
+    config.tick_hz = *tick_hz;
+  }
+
+  if (config.tick_hz <= 0.0) {
+    throw std::runtime_error("run-loop config: tick_hz must be > 0");
+  }
+
+  if (const auto tree_dsl = ExtractJsonString(trimmed, "tree_dsl"); tree_dsl.has_value() && !tree_dsl->empty()) {
+    config.tree_dsl = *tree_dsl;
+  } else if (const auto dsl = ExtractJsonString(trimmed, "dsl"); dsl.has_value() && !dsl->empty()) {
+    config.tree_dsl = *dsl;
+  }
+
+  return config;
+}
+
+std::string DefaultTreeDslForBackend(const std::string& backend) {
+  if (backend == "pybullet") {
+    return kPybulletTreeDsl;
+  }
+  return kDefaultTreeDsl;
 }
 
 std::string UsageText() {
-  return "Usage: mbt_inspector [--connect <backend>] [--ws <host:port|:port>] [--log <path>] "
-         "[--run-loop <cfg>] [--demo-ticks <n>] [--tick-ms <n>] [--startup-delay-ms <n>] [--quiet]";
+  return "Usage: mbt_inspector [--attach <backend>] [--ws <host:port|:port>] [--log <path>] "
+         "[--tick-hz <n>] [--run-loop <cfg-json-or-file>] [--seed <n>] [--startup-delay-ms <n>] [--quiet]";
 }
 
 [[noreturn]] void ThrowUsageError(const std::string& message) {
@@ -97,7 +282,7 @@ Options ParseArgs(int argc, char** argv) {
     if (arg == "--help" || arg == "-h") {
       std::cout << UsageText() << '\n';
       std::exit(0);
-    } else if (arg == "--connect") {
+    } else if (arg == "--attach" || arg == "--connect") {
       options.backend = nextValue(arg);
     } else if (arg == "--ws") {
       options.ws_bind = nextValue(arg);
@@ -105,16 +290,17 @@ Options ParseArgs(int argc, char** argv) {
       options.log_path = nextValue(arg);
     } else if (arg == "--run-loop") {
       options.run_loop = nextValue(arg);
-    } else if (arg == "--demo-ticks") {
-      options.demo_ticks = std::stoi(nextValue(arg));
-      if (options.demo_ticks < 0) {
-        ThrowUsageError("--demo-ticks must be >= 0");
+    } else if (arg == "--tick-hz") {
+      options.tick_hz = std::stod(nextValue(arg));
+      if (!options.tick_hz.has_value() || *options.tick_hz <= 0.0) {
+        ThrowUsageError("--tick-hz must be > 0");
       }
-    } else if (arg == "--tick-ms") {
-      options.tick_ms = std::stoi(nextValue(arg));
-      if (options.tick_ms <= 0) {
-        ThrowUsageError("--tick-ms must be > 0");
+    } else if (arg == "--seed") {
+      const std::int64_t raw_seed = std::stoll(nextValue(arg));
+      if (raw_seed < 0) {
+        ThrowUsageError("--seed must be >= 0");
       }
+      options.seed = static_cast<std::uint64_t>(raw_seed);
     } else if (arg == "--startup-delay-ms") {
       options.startup_delay_ms = std::stoi(nextValue(arg));
       if (options.startup_delay_ms < 0) {
@@ -161,22 +347,73 @@ BindAddress ParseBindAddress(const std::string& value) {
   return {host, static_cast<std::uint16_t>(port)};
 }
 
-std::string BuildEnvelope(const std::string& type, const std::string& run_id, std::int64_t unix_ms,
-                          std::uint64_t seq, std::optional<std::int32_t> tick, const std::string& data_json) {
-  std::ostringstream out;
-  out << "{"
-      << "\"schema\":\"mbt.evt.v1\","
-      << "\"type\":\"" << type << "\","
-      << "\"run_id\":\"" << JsonEscape(run_id) << "\","
-      << "\"unix_ms\":" << unix_ms << ','
-      << "\"seq\":" << seq;
-
-  if (tick.has_value()) {
-    out << ",\"tick\":" << *tick;
+void CacheBootstrapLine(ReplayCache& cache, const std::string& payload) {
+  if (payload.find("\"type\":\"run_start\"") != std::string::npos) {
+    std::lock_guard<std::mutex> lock(cache.mutex);
+    cache.run_start = payload;
+    return;
   }
 
-  out << ",\"data\":" << data_json << '}';
-  return out.str();
+  if (payload.find("\"type\":\"bt_def\"") != std::string::npos) {
+    std::lock_guard<std::mutex> lock(cache.mutex);
+    cache.bt_def = payload;
+  }
+}
+
+void AttachBackend(bt::runtime_host& host, const std::string& backend) {
+  if (backend == "mock" || backend == "demo") {
+    bt::install_demo_callbacks(host);
+    return;
+  }
+
+  if (backend == "pybullet") {
+#if MBT_INSPECTOR_HAS_PYBULLET_INTEGRATION
+    bt::install_demo_callbacks(host);
+    bt::install_racecar_demo_callbacks(host);
+    return;
+#else
+    throw std::runtime_error(
+        "Unsupported backend: pybullet (muesli-bt integration target muesli_bt::integration_pybullet is unavailable)");
+#endif
+  }
+
+  if (backend == "webots") {
+#if MBT_INSPECTOR_HAS_WEBOTS_INTEGRATION
+    bt::install_demo_callbacks(host);
+    bt::integrations::webots::install_callbacks(host);
+    return;
+#else
+    throw std::runtime_error(
+        "Unsupported backend: webots (muesli-bt integration target muesli_bt::integration_webots is unavailable)");
+#endif
+  }
+
+  throw std::runtime_error("Unsupported backend: " + backend + " (expected one of: mock, demo, pybullet, webots)");
+}
+
+muslisp::value ResolveTreeFormFromDsl(const std::string& dsl_text) {
+  const std::vector<muslisp::value> exprs = muslisp::read_all(dsl_text);
+  if (exprs.empty()) {
+    throw std::runtime_error("run-loop tree DSL did not contain any expressions");
+  }
+
+  muslisp::value form = exprs.front();
+  if (!muslisp::is_proper_list(form)) {
+    return form;
+  }
+
+  const std::vector<muslisp::value> items = muslisp::vector_from_list(form);
+  if (items.size() >= 3 && muslisp::is_symbol(items[0]) && muslisp::symbol_name(items[0]) == "defbt") {
+    return items[2];
+  }
+
+  return form;
+}
+
+void EmitInspectorError(bt::event_log& events, std::optional<std::uint64_t> tick, const std::string& message) {
+  std::ostringstream data;
+  data << "{\"severity\":\"error\",\"message\":\"" << bt::event_log::json_escape(message) << "\"}";
+  (void)events.emit("error", tick, data.str());
 }
 
 }  // namespace
@@ -185,6 +422,14 @@ int main(int argc, char** argv) {
   try {
     const Options options = ParseArgs(argc, argv);
     const BindAddress bind = ParseBindAddress(options.ws_bind);
+    RunLoopConfig run_loop = ParseRunLoopConfig(options.run_loop);
+    if (run_loop.tree_dsl.empty()) {
+      run_loop.tree_dsl = DefaultTreeDslForBackend(options.backend);
+    }
+
+    if (options.tick_hz.has_value()) {
+      run_loop.tick_hz = *options.tick_hz;
+    }
 
     std::signal(SIGINT, OnSignal);
     std::signal(SIGTERM, OnSignal);
@@ -199,30 +444,25 @@ int main(int argc, char** argv) {
 
     ix::initNetSystem();
 
-    std::mutex replay_cache_mutex;
-    std::vector<std::string> replay_cache;
+    ReplayCache replay_cache;
 
     ix::WebSocketServer server(bind.port, bind.host);
     server.setOnClientMessageCallback(
         [&](std::shared_ptr<ix::ConnectionState> connection_state, ix::WebSocket& websocket,
             const ix::WebSocketMessagePtr& msg) {
-          if (options.quiet) {
-            if (msg->type == ix::WebSocketMessageType::Open) {
-              std::lock_guard<std::mutex> lock(replay_cache_mutex);
-              for (const auto& cached_event : replay_cache) {
-                websocket.send(cached_event);
-              }
-            }
-            return;
-          }
-
           if (msg->type == ix::WebSocketMessageType::Open) {
-            std::cerr << "client connected: " << connection_state->getId() << "\n";
-            std::lock_guard<std::mutex> lock(replay_cache_mutex);
-            for (const auto& cached_event : replay_cache) {
-              websocket.send(cached_event);
+            if (!options.quiet) {
+              std::cerr << "client connected: " << connection_state->getId() << "\n";
             }
-          } else if (msg->type == ix::WebSocketMessageType::Close) {
+
+            std::lock_guard<std::mutex> lock(replay_cache.mutex);
+            if (replay_cache.run_start.has_value()) {
+              websocket.send(*replay_cache.run_start);
+            }
+            if (replay_cache.bt_def.has_value()) {
+              websocket.send(*replay_cache.bt_def);
+            }
+          } else if (msg->type == ix::WebSocketMessageType::Close && !options.quiet) {
             std::cerr << "client disconnected: " << connection_state->getId() << "\n";
           }
         });
@@ -237,19 +477,14 @@ int main(int argc, char** argv) {
     server.start();
 
     if (!options.quiet) {
-      std::cerr << "mbt_inspector listening on ws://" << bind.host << ':' << bind.port << " (path /events accepted)\n";
-      std::cerr << "backend=" << options.backend << " run_loop=" << options.run_loop << "\n";
+      std::cerr << "mbt_inspector listening on ws://" << bind.host << ':' << bind.port
+                << " (path /events accepted)\n";
+      std::cerr << "backend=" << options.backend << " tick_hz=" << run_loop.tick_hz << " max_ticks="
+                << run_loop.max_ticks << "\n";
     }
 
-    std::uint64_t seq = 0;
-    std::int32_t tick = 0;
-    const std::string run_id = "run-" + std::to_string(UnixMsNow());
-
-    auto emit = [&](const std::string& payload, bool cache_for_new_clients = false) {
-      if (cache_for_new_clients) {
-        std::lock_guard<std::mutex> lock(replay_cache_mutex);
-        replay_cache.push_back(payload);
-      }
+    auto publish_line = [&](const std::string& payload) {
+      CacheBootstrapLine(replay_cache, payload);
 
       if (log_file.good()) {
         log_file << payload << '\n';
@@ -267,77 +502,76 @@ int main(int argc, char** argv) {
       }
     };
 
-    if (options.startup_delay_ms > 0) {
+    bt::runtime_host host;
+    host.events().set_line_listener([&](const std::string& line) { publish_line(line); });
+    host.events().set_file_enabled(false);
+    host.events().set_git_sha("muesli-studio");
+    host.events().set_host_info("mbt_inspector", "runtime", options.backend);
+    host.events().set_tick_hz(run_loop.tick_hz);
+
+    if (options.seed.has_value()) {
+      host.enable_deterministic_test_mode(*options.seed, "run-seed-" + std::to_string(*options.seed), 1735689600000, 1);
+    } else {
+      host.events().set_run_id("run-" + std::to_string(UnixMsNow()));
+    }
+
+    int exit_code = 0;
+
+    try {
+      AttachBackend(host, options.backend);
+    } catch (const std::exception& error) {
+      EmitInspectorError(host.events(), std::nullopt, std::string("attach failed: ") + error.what());
+      exit_code = 1;
+    }
+
+    std::int64_t instance_handle = -1;
+    if (exit_code == 0) {
+      try {
+        const muslisp::value tree_form = ResolveTreeFormFromDsl(run_loop.tree_dsl);
+        bt::definition def = bt::compile_definition(tree_form);
+        const std::int64_t definition_handle = host.store_definition(std::move(def));
+        instance_handle = host.create_instance(definition_handle);
+      } catch (const std::exception& error) {
+        EmitInspectorError(host.events(), std::nullopt, std::string("runtime initialisation failed: ") + error.what());
+        exit_code = 1;
+      }
+    }
+
+    if (exit_code == 0 && options.startup_delay_ms > 0) {
       std::this_thread::sleep_for(std::chrono::milliseconds(options.startup_delay_ms));
     }
 
-    {
-      std::ostringstream data;
-      const double tick_hz = 1000.0 / static_cast<double>(options.tick_ms);
-      data << "{"
-           << "\"git_sha\":\"dev\","
-           << "\"host\":\"mbt_inspector\","
-           << "\"tick_hz\":" << tick_hz << ','
-           << "\"tree_hash\":\"demo-tree-v1\","
-           << "\"backend\":\"" << JsonEscape(options.backend) << "\""
-           << '}';
+    if (exit_code == 0) {
+      const auto tick_period = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+          std::chrono::duration<double>(1.0 / run_loop.tick_hz));
+      auto next_tick = std::chrono::steady_clock::now();
 
-      emit(BuildEnvelope("run_start", run_id, UnixMsNow(), seq++, std::nullopt, data.str()), true);
-    }
+      for (std::int64_t tick_count = 0; g_running.load(); ++tick_count) {
+        if (run_loop.max_ticks > 0 && tick_count >= run_loop.max_ticks) {
+          break;
+        }
 
-    {
-      const std::string data =
-          "{"
-          "\"nodes\":["
-          "{\"id\":\"root\",\"name\":\"Root\",\"kind\":\"Sequence\"},"
-          "{\"id\":\"nav\",\"name\":\"Navigate\",\"kind\":\"Action\",\"parent_id\":\"root\"},"
-          "{\"id\":\"pickup\",\"name\":\"PickUp\",\"kind\":\"Action\",\"parent_id\":\"root\"}"
-          "],"
-          "\"edges\":["
-          "{\"from\":\"root\",\"to\":\"nav\"},"
-          "{\"from\":\"root\",\"to\":\"pickup\"}"
-          "],"
-          "\"dsl\":\"sequence(root){ nav(); pickup(); }\""
-          "}";
+        try {
+          (void)host.tick_instance(instance_handle);
+        } catch (const std::exception& error) {
+          EmitInspectorError(host.events(), std::nullopt, std::string("runtime tick failed: ") + error.what());
+          exit_code = 1;
+          break;
+        }
 
-      emit(BuildEnvelope("bt_def", run_id, UnixMsNow(), seq++, std::nullopt, data), true);
-    }
+        if (!g_running.load()) {
+          break;
+        }
 
-    while (g_running.load() && (options.demo_ticks == 0 || tick < options.demo_ticks)) {
-      const auto tick_start_ms = UnixMsNow();
-
-      emit(BuildEnvelope("tick_begin", run_id, UnixMsNow(), seq++, tick, "{}"));
-      emit(BuildEnvelope("node_status", run_id, UnixMsNow(), seq++, tick,
-                         "{\"node_id\":\"root\",\"status\":\"running\"}"));
-
-      if (tick % 2 == 0) {
-        emit(BuildEnvelope("node_status", run_id, UnixMsNow(), seq++, tick,
-                           "{\"node_id\":\"nav\",\"status\":\"success\",\"outcome\":\"ok\"}"));
-        emit(BuildEnvelope("bb_write", run_id, UnixMsNow(), seq++, tick,
-                           "{\"key\":\"target\",\"digest\":\"sha256:live-demo\",\"preview\":\"goal:A\"}"));
-        emit(BuildEnvelope("node_status", run_id, UnixMsNow(), seq++, tick,
-                           "{\"node_id\":\"root\",\"status\":\"success\",\"outcome\":\"ok\"}"));
-      } else {
-        emit(BuildEnvelope(
-            "node_status", run_id, UnixMsNow(), seq++, tick,
-            "{\"node_id\":\"pickup\",\"status\":\"failure\",\"outcome\":\"error\",\"message\":\"live demo failure\"}"));
-        emit(BuildEnvelope("bb_delete", run_id, UnixMsNow(), seq++, tick,
-                           "{\"key\":\"target\",\"reason\":\"live demo clear\"}"));
-        emit(BuildEnvelope("error", run_id, UnixMsNow(), seq++, tick,
-                           "{\"severity\":\"warning\",\"message\":\"pickup failed\",\"node_id\":\"pickup\"}"));
+        next_tick += tick_period;
+        std::this_thread::sleep_until(next_tick);
       }
-
-      const auto tick_wall_ms = UnixMsNow() - tick_start_ms;
-      emit(BuildEnvelope("tick_end", run_id, UnixMsNow(), seq++, tick,
-                         "{\"wall_ms\":" + std::to_string(tick_wall_ms) + '}'));
-
-      tick += 1;
-      std::this_thread::sleep_for(std::chrono::milliseconds(options.tick_ms));
     }
 
+    host.events().clear_line_listener();
     server.stop();
     ix::uninitNetSystem();
-    return 0;
+    return exit_code;
   } catch (const std::exception& error) {
     std::cerr << error.what() << '\n';
     return 1;

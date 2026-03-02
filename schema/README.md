@@ -2,7 +2,7 @@
 
 ## what this is
 
-This directory contains the canonical event schema for muesli runtime telemetry: `mbt.evt.v1`.
+This directory contains the local copy of the canonical event schema for muesli runtime telemetry: `mbt.evt.v1`.
 
 ## when to use it
 
@@ -11,10 +11,19 @@ Use this schema when:
 - validating replay logs (`.jsonl`)
 - validating events emitted over live monitoring transports
 - generating TypeScript protocol types for studio packages
+- checking drift against the resolved `muesli-bt` dependency
 
 ## how it works
 
 Each line in a canonical log is a single JSON object matching one event variant in [`mbt.evt.v1.schema.json`](./mbt.evt.v1.schema.json).
+
+The schema source of truth is the resolved `muesli-bt` dependency used by inspector.
+
+Refresh the local copy after configuring inspector:
+
+```bash
+tools/sync_schema.sh
+```
 
 The event envelope is fixed:
 

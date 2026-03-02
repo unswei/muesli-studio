@@ -22,10 +22,77 @@ interface PositionedNode {
   kind: string;
 }
 
+interface NormalisedBtNode {
+  id: string;
+  name: string;
+  kind: string;
+}
+
+interface NormalisedBtEdge {
+  from: string;
+  to: string;
+}
+
 const NODE_WIDTH = 150;
 const NODE_HEIGHT = 54;
 const H_SPACING = 210;
 const V_SPACING = 120;
+
+function normaliseId(value: unknown): string | null {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value.trim();
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value);
+  }
+
+  return null;
+}
+
+function normaliseDefinition(btDef: BtDefEvent): { nodes: NormalisedBtNode[]; edges: NormalisedBtEdge[] } {
+  const nodes: NormalisedBtNode[] = [];
+  const edges: NormalisedBtEdge[] = [];
+
+  if (Array.isArray(btDef.data.nodes)) {
+    for (const node of btDef.data.nodes) {
+      if (!node || typeof node !== 'object') {
+        continue;
+      }
+
+      const record = node as Record<string, unknown>;
+      const id = normaliseId(record.id);
+      if (!id) {
+        continue;
+      }
+
+      nodes.push({
+        id,
+        name: typeof record.name === 'string' && record.name.length > 0 ? record.name : `node-${id}`,
+        kind: typeof record.kind === 'string' && record.kind.length > 0 ? record.kind : 'node',
+      });
+    }
+  }
+
+  if (Array.isArray(btDef.data.edges)) {
+    for (const edge of btDef.data.edges) {
+      if (!edge || typeof edge !== 'object') {
+        continue;
+      }
+
+      const record = edge as Record<string, unknown>;
+      const from = normaliseId(record.from ?? record.parent);
+      const to = normaliseId(record.to ?? record.child);
+      if (!from || !to) {
+        continue;
+      }
+
+      edges.push({ from, to });
+    }
+  }
+
+  return { nodes, edges };
+}
 
 export function TreeView({ replay, selectedTick, selectedNodeId, onSelectNode }: TreeViewProps) {
   const btDef = replay.btDef as BtDefEvent | undefined;
@@ -35,8 +102,9 @@ export function TreeView({ replay, selectedTick, selectedNodeId, onSelectNode }:
       return { nodes: [] as PositionedNode[], edges: [] as Array<{ from: string; to: string }>, size: { width: 0, height: 0 } };
     }
 
-    const childSet = new Set(btDef.data.edges.map((edge) => edge.to));
-    const roots = btDef.data.nodes.filter((node) => !childSet.has(node.id));
+    const normalised = normaliseDefinition(btDef);
+    const childSet = new Set(normalised.edges.map((edge) => edge.to));
+    const roots = normalised.nodes.filter((node) => !childSet.has(node.id));
 
     const depthByNode = new Map<string, number>();
     const queue: Array<{ id: string; depth: number }> = roots.map((root) => ({ id: root.id, depth: 0 }));
@@ -52,28 +120,28 @@ export function TreeView({ replay, selectedTick, selectedNodeId, onSelectNode }:
       }
 
       depthByNode.set(current.id, current.depth);
-      for (const edge of btDef.data.edges) {
+      for (const edge of normalised.edges) {
         if (edge.from === current.id) {
           queue.push({ id: edge.to, depth: current.depth + 1 });
         }
       }
     }
 
-    for (const node of btDef.data.nodes) {
+    for (const node of normalised.nodes) {
       if (!depthByNode.has(node.id)) {
         depthByNode.set(node.id, 0);
       }
     }
 
     const columns = new Map<number, string[]>();
-    for (const node of btDef.data.nodes) {
+    for (const node of normalised.nodes) {
       const depth = depthByNode.get(node.id) ?? 0;
       const bucket = columns.get(depth) ?? [];
       bucket.push(node.id);
       columns.set(depth, bucket);
     }
 
-    const byId = new Map(btDef.data.nodes.map((node) => [node.id, node]));
+    const byId = new Map(normalised.nodes.map((node) => [node.id, node]));
     const positionedNodes: PositionedNode[] = [];
 
     const maxColumnSize = Math.max(...Array.from(columns.values()).map((ids) => ids.length), 1);
@@ -99,7 +167,7 @@ export function TreeView({ replay, selectedTick, selectedNodeId, onSelectNode }:
 
     return {
       nodes: positionedNodes,
-      edges: btDef.data.edges,
+      edges: normalised.edges,
       size: {
         width: (maxDepth + 1) * H_SPACING + NODE_WIDTH,
         height: maxColumnSize * V_SPACING + NODE_HEIGHT,

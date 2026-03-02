@@ -17,6 +17,7 @@ function resetStore(): void {
     liveAutoFollow: true,
     liveReconnectEnabled: true,
     liveLastError: null,
+    liveLastEventUnixMs: null,
     liveHistory: [],
   });
 }
@@ -51,6 +52,7 @@ describe('studio live store behaviour', () => {
     useStudioStore.getState().appendLiveEvents([tick1]);
     expect(useStudioStore.getState().selectedTick).toBe(1);
     expect(useStudioStore.getState().mode).toBe('live');
+    expect(useStudioStore.getState().liveLastEventUnixMs).toBe(2);
   });
 
   it('stops auto-following after manual override', () => {

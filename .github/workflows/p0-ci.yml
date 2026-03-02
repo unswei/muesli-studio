@@ -4,9 +4,12 @@ on:
   push:
     branches: ["**"]
   pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
 
 jobs:
   studio-and-packages:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
 
     steps:
@@ -27,6 +30,21 @@ jobs:
       - name: install
         run: pnpm install --frozen-lockfile
 
+      - name: configure inspector
+        run: pnpm inspector:configure
+
+      - name: sync schema from muesli-bt
+        run: pnpm sync:schema
+
+      - name: ensure schema sync is committed
+        run: git diff --exit-code -- schema/mbt.evt.v1.schema.json
+
+      - name: sync contract from muesli-bt
+        run: pnpm sync:contract
+
+      - name: ensure contract sync is committed
+        run: git diff --exit-code -- contracts/muesli-studio-integration.md
+
       - name: generate protocol types
         run: pnpm gen:types
 
@@ -46,6 +64,7 @@ jobs:
         run: pnpm build
 
   inspector-build:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
 
     steps:
@@ -73,13 +92,45 @@ jobs:
         run: cmake --build apps/inspector/build --config Release
 
       - name: smoke test inspector
-        run: apps/inspector/build/mbt_inspector --ws :8877 --demo-ticks 2 --tick-ms 10 --log apps/inspector/build/ci-smoke.jsonl --quiet
+        run: apps/inspector/build/mbt_inspector --attach mock --ws :8877 --run-loop '{"max_ticks":2}' --tick-hz 100 --seed 7 --log apps/inspector/build/ci-smoke.jsonl --quiet
 
       - name: assert inspector emitted canonical events
         run: |
           test -s apps/inspector/build/ci-smoke.jsonl
           grep -n '"type":"run_start"' apps/inspector/build/ci-smoke.jsonl
           grep -n '"type":"bt_def"' apps/inspector/build/ci-smoke.jsonl
+
+      - name: verify WS/JSONL equivalence
+        run: pnpm inspector:test
+
+  inspector-build-main:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.5.2
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: install
+        run: pnpm install --frozen-lockfile
+
+      - name: configure inspector against muesli-bt main
+        run: cmake --preset default -S apps/inspector -DMUESLI_BT_GIT_TAG=main
+
+      - name: build inspector
+        run: cmake --build apps/inspector/build --config Release
 
       - name: verify WS/JSONL equivalence
         run: pnpm inspector:test

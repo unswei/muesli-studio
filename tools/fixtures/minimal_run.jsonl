@@ -1,14 +1,8 @@
-{"schema":"mbt.evt.v1","type":"run_start","run_id":"run-minimal","unix_ms":1710000000000,"seq":0,"data":{"git_sha":"deadbeef","host":"sim-host","tick_hz":20,"tree_hash":"tree-001","backend":"pybullet"}}
-{"schema":"mbt.evt.v1","type":"bt_def","run_id":"run-minimal","unix_ms":1710000000001,"seq":1,"data":{"nodes":[{"id":"root","name":"Root","kind":"Sequence"},{"id":"nav","name":"Navigate","kind":"Action","parent_id":"root"},{"id":"pickup","name":"PickUp","kind":"Action","parent_id":"root"}],"edges":[{"from":"root","to":"nav"},{"from":"root","to":"pickup"}],"dsl":"sequence(root){ nav(); pickup(); }"}}
-{"schema":"mbt.evt.v1","type":"tick_begin","run_id":"run-minimal","unix_ms":1710000000010,"seq":2,"tick":0,"data":{}}
-{"schema":"mbt.evt.v1","type":"node_status","run_id":"run-minimal","unix_ms":1710000000011,"seq":3,"tick":0,"data":{"node_id":"root","status":"running"}}
-{"schema":"mbt.evt.v1","type":"node_status","run_id":"run-minimal","unix_ms":1710000000012,"seq":4,"tick":0,"data":{"node_id":"nav","status":"success","outcome":"ok"}}
-{"schema":"mbt.evt.v1","type":"bb_write","run_id":"run-minimal","unix_ms":1710000000013,"seq":5,"tick":0,"data":{"key":"target","digest":"sha256:abc123","preview":"goal:A"}}
-{"schema":"mbt.evt.v1","type":"node_status","run_id":"run-minimal","unix_ms":1710000000014,"seq":6,"tick":0,"data":{"node_id":"root","status":"success","outcome":"ok"}}
-{"schema":"mbt.evt.v1","type":"tick_end","run_id":"run-minimal","unix_ms":1710000000015,"seq":7,"tick":0,"data":{}}
-{"schema":"mbt.evt.v1","type":"tick_begin","run_id":"run-minimal","unix_ms":1710000000020,"seq":8,"tick":1,"data":{}}
-{"schema":"mbt.evt.v1","type":"node_status","run_id":"run-minimal","unix_ms":1710000000021,"seq":9,"tick":1,"data":{"node_id":"root","status":"running"}}
-{"schema":"mbt.evt.v1","type":"node_status","run_id":"run-minimal","unix_ms":1710000000022,"seq":10,"tick":1,"data":{"node_id":"pickup","status":"failure","outcome":"error","message":"grasp timeout"}}
-{"schema":"mbt.evt.v1","type":"bb_delete","run_id":"run-minimal","unix_ms":1710000000023,"seq":11,"tick":1,"data":{"key":"target","reason":"goal cleared"}}
-{"schema":"mbt.evt.v1","type":"error","run_id":"run-minimal","unix_ms":1710000000024,"seq":12,"tick":1,"data":{"severity":"warning","message":"pickup failed","node_id":"pickup"}}
-{"schema":"mbt.evt.v1","type":"tick_end","run_id":"run-minimal","unix_ms":1710000000025,"seq":13,"tick":1,"data":{}}
+{"schema":"mbt.evt.v1","type":"run_start","run_id":"fixture-minimal","unix_ms":1735689600000,"seq":1,"data":{"git_sha":"fixture","host":{"name":"muesli-bt","version":"0.1.0","platform":"linux"},"tick_hz":20.0,"tree_hash":"fnv1a64:aaaaaaaaaaaaaaaa","capabilities":{"reset":true}}}
+{"schema":"mbt.evt.v1","type":"bt_def","run_id":"fixture-minimal","unix_ms":1735689600001,"seq":2,"data":{"tree_name":"bt","dsl":"(bt (seq (cond always-true) (act always-success)))","tree_hash":"fnv1a64:aaaaaaaaaaaaaaaa","nodes":[{"id":1,"kind":"seq","name":"root"},{"id":2,"kind":"cond","name":"always-true"},{"id":3,"kind":"act","name":"always-success"}],"edges":[{"parent":1,"child":2,"index":0},{"parent":1,"child":3,"index":1}]}}
+{"schema":"mbt.evt.v1","type":"tick_begin","run_id":"fixture-minimal","unix_ms":1735689600010,"seq":3,"tick":1,"data":{"root":1}}
+{"schema":"mbt.evt.v1","type":"bb_write","run_id":"fixture-minimal","unix_ms":1735689600011,"seq":4,"tick":1,"data":{"key":"state","value_digest":"fnv1a64:1111111111111111","preview":"[0.0,0.0]","source":"fixture"}}
+{"schema":"mbt.evt.v1","type":"tick_end","run_id":"fixture-minimal","unix_ms":1735689600012,"seq":5,"tick":1,"data":{"status":"running","active_path":[1,2],"budget":{"tick_budget_ms":20.0,"tick_time_ms":2.1}}}
+{"schema":"mbt.evt.v1","type":"tick_begin","run_id":"fixture-minimal","unix_ms":1735689600020,"seq":6,"tick":2,"data":{"root":1}}
+{"schema":"mbt.evt.v1","type":"bb_write","run_id":"fixture-minimal","unix_ms":1735689600021,"seq":7,"tick":2,"data":{"key":"action","value_digest":"fnv1a64:2222222222222222","preview":"[0.1,0.0]","source":"fixture"}}
+{"schema":"mbt.evt.v1","type":"tick_end","run_id":"fixture-minimal","unix_ms":1735689600022,"seq":8,"tick":2,"data":{"status":"success","active_path":[1,3],"budget":{"tick_budget_ms":20.0,"tick_time_ms":1.3}}}

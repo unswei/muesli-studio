@@ -36,6 +36,57 @@ export interface BlackboardDiff {
   deletes: string[];
 }
 
+function normaliseNodeId(value: unknown): string | null {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value.trim();
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value);
+  }
+
+  return null;
+}
+
+function previewText(value: unknown): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function stableDigestFromUnknown(value: unknown): string {
+  const text = previewText(value) ?? 'null';
+  return `preview:${text}`;
+}
+
+function blackboardValueFromSnapshotEntry(value: unknown): BlackboardValue {
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    const digestRaw = record.digest ?? record.value_digest;
+    if (typeof digestRaw === 'string' && digestRaw.length > 0) {
+      return {
+        digest: digestRaw,
+        preview: previewText(record.preview),
+      };
+    }
+  }
+
+  return {
+    digest: stableDigestFromUnknown(value),
+    preview: previewText(value),
+  };
+}
+
 export class ReplayStore {
   private readonly events: ValidatedMbtEvent[] = [];
 
@@ -79,6 +130,11 @@ export class ReplayStore {
 
     switch (event.type) {
       case 'node_status': {
+        const nodeId = normaliseNodeId(event.data.node_id);
+        if (!nodeId) {
+          break;
+        }
+
         const point: NodeStatusPoint = {
           tick: event.tick,
           seq: event.seq,
@@ -87,10 +143,10 @@ export class ReplayStore {
           message: event.data.message,
         };
 
-        const timeline = this.nodeTimeline.get(event.data.node_id) ?? [];
+        const timeline = this.nodeTimeline.get(nodeId) ?? [];
         timeline.push(point);
-        this.nodeTimeline.set(event.data.node_id, timeline);
-        this.nodeLastStatus.set(event.data.node_id, point);
+        this.nodeTimeline.set(nodeId, timeline);
+        this.nodeLastStatus.set(nodeId, point);
         break;
       }
 
@@ -161,6 +217,36 @@ export class ReplayStore {
     return undefined;
   }
 
+  getTreeNodeIds(): string[] {
+    if (!this.btDefEvent) {
+      return [];
+    }
+
+    const rawNodes = this.btDefEvent.data.nodes;
+    if (!Array.isArray(rawNodes)) {
+      return [];
+    }
+
+    const ids: string[] = [];
+    for (const rawNode of rawNodes) {
+      if (!rawNode || typeof rawNode !== 'object') {
+        continue;
+      }
+
+      const nodeId = normaliseNodeId((rawNode as Record<string, unknown>).id);
+      if (nodeId) {
+        ids.push(nodeId);
+      }
+    }
+
+    return ids;
+  }
+
+  getFirstTreeNodeId(): string | null {
+    const [firstNodeId] = this.getTreeNodeIds();
+    return firstNodeId ?? null;
+  }
+
   getBlackboardDiff(tick: number): BlackboardDiff {
     const internal = this.blackboardDiffByTick.get(tick);
 
@@ -220,9 +306,14 @@ export class ReplayStore {
   }
 
   private applyBlackboardWrite(event: BlackboardWriteEvent): void {
+    const digest = event.data.digest ?? event.data.value_digest;
+    if (!digest || digest.length === 0) {
+      return;
+    }
+
     const value: BlackboardValue = {
-      digest: event.data.digest,
-      preview: event.data.preview,
+      digest,
+      preview: previewText(event.data.preview),
     };
 
     this.upsertBlackboardDiff(event.tick).writes.set(event.data.key, value);
@@ -252,9 +343,32 @@ export class ReplayStore {
   }
 
   private applyBlackboardSnapshot(event: BlackboardSnapshotEvent): void {
+    const values = new Map<string, BlackboardValue>();
+
+    if (event.data.values && typeof event.data.values === 'object') {
+      for (const [key, value] of Object.entries(event.data.values)) {
+        values.set(key, blackboardValueFromSnapshotEntry(value));
+      }
+    }
+
+    if (Array.isArray(event.data.entries)) {
+      for (const entry of event.data.entries) {
+        if (!Array.isArray(entry) || entry.length < 2) {
+          continue;
+        }
+
+        const key = entry[0];
+        if (typeof key !== 'string' || key.length === 0) {
+          continue;
+        }
+
+        values.set(key, blackboardValueFromSnapshotEntry(entry[1]));
+      }
+    }
+
     this.blackboardSnapshots.push({
       tick: event.tick,
-      values: new Map(Object.entries(event.data.values)),
+      values,
     });
 
     this.blackboardSnapshots.sort((left, right) => left.tick - right.tick);

@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createServer, createConnection } from 'node:net';
 
+import Ajv2020 from 'ajv/dist/2020.js';
 import WebSocket from 'ws';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -112,14 +113,23 @@ async function run() {
   const port = await getFreePort();
   const tempDir = await mkdtemp(path.join(tmpdir(), 'mbt-inspector-test-'));
   const logPath = path.join(tempDir, 'run.jsonl');
+  const schemaPath = path.join(rootDir, 'schema', 'mbt.evt.v1.schema.json');
+
+  const schema = JSON.parse(await readFile(schemaPath, 'utf8'));
+  const ajv = new Ajv2020({ strict: false, allErrors: true });
+  const validateSchema = ajv.compile(schema);
 
   const args = [
+    '--attach',
+    'mock',
     '--ws',
     `:${port}`,
-    '--demo-ticks',
-    '4',
-    '--tick-ms',
-    '8',
+    '--run-loop',
+    '{"max_ticks":4}',
+    '--tick-hz',
+    '125',
+    '--seed',
+    '7',
     '--startup-delay-ms',
     '200',
     '--log',
@@ -161,14 +171,17 @@ async function run() {
     assert(logLines.length > 0, 'Expected inspector log to contain events');
     assert(wsMessages.length === logLines.length, `WS/log event count mismatch: ws=${wsMessages.length}, log=${logLines.length}`);
 
+    let previousSeq = 0;
     for (let index = 0; index < logLines.length; index += 1) {
       const logLine = logLines[index];
       const wsLine = wsMessages[index];
       assert(logLine === wsLine, `Event mismatch at index ${index}`);
 
       const parsed = JSON.parse(logLine);
+      assert(validateSchema(parsed), `Schema validation failed at index ${index}: ${ajv.errorsText(validateSchema.errors)}`);
       assert(parsed.schema === 'mbt.evt.v1', `Invalid schema at index ${index}`);
-      assert(parsed.seq === index, `Expected seq=${index}, got seq=${parsed.seq}`);
+      assert(parsed.seq === previousSeq + 1, `Expected seq=${previousSeq + 1}, got seq=${parsed.seq}`);
+      previousSeq = parsed.seq;
     }
 
     const hasRunStart = logLines.some((line) => line.includes('"type":"run_start"'));

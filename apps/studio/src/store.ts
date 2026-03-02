@@ -23,6 +23,7 @@ interface StudioState {
   liveAutoFollow: boolean;
   liveReconnectEnabled: boolean;
   liveLastError: string | null;
+  liveLastEventUnixMs: number | null;
   liveHistory: LiveHistoryEntry[];
   loadJsonl: (text: string) => void;
   appendLiveEvents: (events: ValidatedMbtEvent[]) => void;
@@ -49,6 +50,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   liveAutoFollow: true,
   liveReconnectEnabled: true,
   liveLastError: null,
+  liveLastEventUnixMs: null,
   liveHistory: [],
 
   loadJsonl: (text) => {
@@ -61,7 +63,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       eventCount: replay.getAllEvents().length,
       parseErrors: result.errors,
       selectedTick: replay.maxTick >= 0 ? replay.maxTick : 0,
-      selectedNodeId: replay.btDef?.data.nodes[0]?.id ?? null,
+      selectedNodeId: replay.getFirstTreeNodeId(),
       mode: 'replay',
     });
   },
@@ -75,14 +77,19 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       const replay = state.replay ?? new ReplayStore();
       replay.appendMany(events);
 
-      const selectedNodeId = state.selectedNodeId ?? replay.btDef?.data.nodes[0]?.id ?? null;
+      const selectedNodeId = state.selectedNodeId ?? replay.getFirstTreeNodeId();
       const maxTick = replay.maxTick >= 0 ? replay.maxTick : 0;
+      const liveLastEventUnixMs = events.reduce(
+        (latest, event) => Math.max(latest, event.unix_ms),
+        state.liveLastEventUnixMs ?? 0,
+      );
 
       return {
         replay,
         eventCount: replay.getAllEvents().length,
         selectedNodeId,
         selectedTick: state.liveAutoFollow ? maxTick : Math.max(0, Math.min(state.selectedTick, maxTick)),
+        liveLastEventUnixMs,
         mode: 'live',
       };
     });

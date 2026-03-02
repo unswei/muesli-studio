@@ -18,6 +18,7 @@ export function App() {
   const liveAutoFollow = useStudioStore((state) => state.liveAutoFollow);
   const liveReconnectEnabled = useStudioStore((state) => state.liveReconnectEnabled);
   const liveLastError = useStudioStore((state) => state.liveLastError);
+  const liveLastEventUnixMs = useStudioStore((state) => state.liveLastEventUnixMs);
   const liveHistory = useStudioStore((state) => state.liveHistory);
   const loadJsonl = useStudioStore((state) => state.loadJsonl);
   const appendLiveEvents = useStudioStore((state) => state.appendLiveEvents);
@@ -242,6 +243,7 @@ export function App() {
         <p className="muted">
           status: <code>{liveStatus}</code>
           {liveLastError ? ` - ${liveLastError}` : ''}
+          {liveLastEventUnixMs ? ` · last event ${new Date(liveLastEventUnixMs).toLocaleTimeString()}` : ''}
         </p>
         <div className="history-list compact">
           {liveHistory.length === 0 ? (
