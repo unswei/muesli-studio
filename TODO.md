@@ -15,6 +15,6 @@
 
 ## engineering follow-up
 
-- [ ] add CI workflow (`lint`, `test`, `gen:types` drift check)
 - [ ] add sidecar index strategy for very large logs
-- [ ] add snapshot tests for studio view states
+- [ ] extend CI coverage for `P1` inspector build/tests once `apps/inspector` exists
+- [ ] add broader studio rendering snapshots beyond tick/status golden coverage

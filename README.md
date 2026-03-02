@@ -28,6 +28,7 @@ Deferred to later milestones:
 ```bash
 pnpm install
 pnpm gen:types
+pnpm check:fixtures
 pnpm test
 pnpm --filter @muesli/studio dev
 ```
