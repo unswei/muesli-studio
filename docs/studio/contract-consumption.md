@@ -24,7 +24,8 @@ If hard requirements are missing, studio fails fast with actionable diagnostics.
 
 ### required version metadata
 
-- contract version present (`runtime-contract-v1` family)
+- contract identifier present (`runtime-contract-v1.0.0` family)
+- contract version present (`1.x` family)
 - event schema version present (`mbt.evt.v1` family)
 
 ### required stable identifiers
@@ -37,18 +38,24 @@ If hard requirements are missing, studio fails fast with actionable diagnostics.
 ### required minimum event set
 
 - `tick_begin` and `tick_end`
-- `node_status` lifecycle events
+- node lifecycle events:
+  - preferred: `node_enter`, `node_exit`
+  - compatibility: `node_status` is accepted when present
 - async lifecycle events:
-  - `sched_submit`, `sched_start`, `sched_cancel`, `sched_finish`
   - `vla_submit`, `vla_poll`, `vla_cancel`, `vla_result`
-- planner lifecycle event: `planner_v1`
-- warning/error diagnostics for budget/deadline conditions (`error` event type with explicit reason fields)
+  - cancellation lifecycle: `async_cancel_requested`, `async_cancel_acknowledged`
+- planner lifecycle events:
+  - `planner_call_start`, `planner_call_end`
+  - `planner_v1` summary records (when emitted)
+- timing diagnostics:
+  - `budget_warning`
+  - `deadline_exceeded`
 
 ### required ordering assumptions
 
-- `tick_begin` appears before node activity for a tick
-- `tick_end` appears after node activity for a tick
-- per-job lifecycle is monotonic within a run (`submit -> start -> terminal`)
+- `tick_begin` appears before node/planner/async activity for a tick
+- `tick_end` appears after node/planner/async activity for a tick
+- per-job lifecycle is monotonic within a run (`submit -> poll/start -> terminal`)
 
 ## example
 
@@ -56,8 +63,9 @@ Compatible log metadata:
 
 ```json
 {
-  "contract_version": "runtime-contract-v1",
-  "schema_version": "mbt.evt.v1"
+  "contract_id": "runtime-contract-v1.0.0",
+  "contract_version": "1.0.0",
+  "schema": "mbt.evt.v1"
 }
 ```
 
@@ -65,18 +73,24 @@ Compatible event ordering fragment:
 
 ```json
 {"type":"tick_begin","tick":12}
-{"type":"node_status","tick":12,"data":{"node_id":"3","status":"running"}}
+{"type":"node_enter","tick":12,"data":{"node_id":3}}
+{"type":"planner_call_start","tick":12,"data":{"node_id":3,"planner":"mcts","budget_ms":12}}
+{"type":"planner_call_end","tick":12,"data":{"node_id":3,"planner":"mcts","status":"ok","time_used_ms":2.0}}
+{"type":"node_exit","tick":12,"data":{"node_id":3,"status":"running","dur_ms":2.2}}
 {"type":"tick_end","tick":12}
 ```
 
 ## gotchas
 
 - `mbt.evt.v1` is a schema family; unknown major versions must be rejected.
+- contract identifier/version must be present on bundle metadata and event stream (`contract_id`, `contract_version`).
 - newer minor versions can be accepted with warnings only if backward compatible.
 - fixture bundles must include explicit contract/schema metadata so gating does not rely on implicit inference.
+- studio should tolerate known compatibility variants (`node_status`) while preferring strict lifecycle pairs (`node_enter`/`node_exit`).
 
 ## see also
 
 - `contracts/muesli-studio-integration.md`
 - `schema/mbt.evt.v1.schema.json`
 - `packages/replay/src/version-gate.ts`
+- `packages/replay/src/summarise-run.ts`

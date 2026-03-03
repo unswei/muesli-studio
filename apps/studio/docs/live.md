@@ -16,6 +16,7 @@ Use this mode when you need real-time visibility while preserving replay compati
 - when auto-follow is enabled, studio keeps the selected tick pinned to the newest tick
 - if a connection drops unexpectedly, studio retries with exponential backoff (when auto-reconnect is enabled)
 - live controls include a connection history panel to inspect retries and errors
+- live ingest and replay mode share the same store path, so tick navigation behaviour stays consistent between modes
 
 ## api / syntax
 
@@ -36,6 +37,7 @@ apps/inspector/build/mbt_inspector --attach mock --ws :8765 --run-loop '{"max_ti
 - malformed live payloads are skipped and surfaced in ingest warnings
 - moving the tick scrubber disables auto-follow until re-enabled
 - disabling auto-reconnect prevents automatic retry after unexpected closes
+- runtime may emit event variants that are not yet rendered in dedicated UI widgets; those events are still retained for replay integrity
 
 ## see also
 

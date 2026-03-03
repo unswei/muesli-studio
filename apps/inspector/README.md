@@ -108,3 +108,10 @@ pnpm inspector:test
 ```
 
 This integration check asserts exact WS/JSONL byte equality and validates emitted events against `schema/mbt.evt.v1.schema.json`.
+
+To run backend-specific checks explicitly:
+
+```bash
+pnpm inspector:test --attach webots --ticks 3 --tick-hz 100 --timeout-ms 8000
+pnpm inspector:test --attach pybullet --ticks 3 --tick-hz 100 --timeout-ms 8000
+```

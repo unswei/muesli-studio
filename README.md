@@ -2,7 +2,7 @@
 
 A monorepo for `muesli-studio` (web UI) and `mbt_inspector` (runtime bridge) around the canonical event stream `mbt.evt.v1`.
 
-## current scope (P1)
+## current scope (P1 complete)
 
 Implemented in this milestone:
 
@@ -45,6 +45,7 @@ Implemented in this milestone:
     - `tests/fixtures/determinism_replay`
   - fixture summary regression tests using stored `expected_summary.json`
   - minimal CLI: `studio inspect <bundle_dir>` for bundle sanity checks and `run_summary.json` emission
+  - Node-only replay entrypoint for bundle/validator features: `@muesli/replay/node`
 
 Deferred to later milestones:
 
@@ -68,6 +69,7 @@ pnpm sync:contract
 pnpm gen:types
 pnpm check:fixtures
 pnpm test
+pnpm build
 pnpm --filter @muesli/studio dev
 ```
 
@@ -81,7 +83,10 @@ This command validates the bundle, prints a concise summary, and writes `run_sum
 
 ### replay mode
 
-Load `tools/fixtures/minimal_run.jsonl` in studio.
+Load either:
+
+- a canonical JSONL fixture (`tools/fixtures/minimal_run.jsonl`), or
+- a validated bundle event log (`tests/fixtures/*/events.jsonl`) after running `studio inspect`.
 
 ### live mode
 
@@ -93,6 +98,18 @@ pnpm inspector:test
 ```
 
 Then connect studio to `ws://localhost:8765/events`.
+
+## replay package entrypoints
+
+- browser/UI consumption: `@muesli/replay`
+- Node tooling consumption (bundle loader + subprocess validator): `@muesli/replay/node`
+
+## studio docs
+
+- consumer contract checklist: `docs/studio/contract-consumption.md`
+- fixture bundle workflow and CLI: `docs/studio/fixture-bundles.md`
+- studio replay mode: `apps/studio/docs/replay.md`
+- studio live monitoring: `apps/studio/docs/live.md`
 
 ## local install vs fetchcontent
 
@@ -110,11 +127,14 @@ schema/              # canonical event schema copy used by studio tooling
 contracts/           # canonical integration contract copy
 apps/studio/         # replay-first React + Vite UI
 apps/inspector/      # C++ runtime bridge (muesli-bt + ixwebsocket)
+docs/studio/         # studio-facing contract and workflow docs
 packages/protocol/   # generated types, zod validation, protocol helpers
 packages/replay/     # parser/index/query for append-only event ingestion
 packages/ui/         # shared UI bits
+tests/fixtures/      # bundle fixtures + golden summaries for P1 regression checks
 tools/gen_types/     # schema->types generation scripts
 tools/fixtures/      # canonical fixture logs
+tools/studio         # studio CLI wrapper (`studio inspect`)
 tools/sync_schema.sh # sync schema from resolved muesli-bt source
 tools/sync_contract.sh # sync contract from resolved muesli-bt source
 ```
