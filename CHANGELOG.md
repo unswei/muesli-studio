@@ -36,3 +36,9 @@ All notable changes to this project will be documented in this file.
 - pinned `muesli-bt` revision updated to include exported integration-target packaging fixes for Webots
 - Webots-enabled CI lane on macOS now installs Webots SDK and exercises `--attach webots` with WS/JSONL equivalence checks
 - inspector WS/JSONL equivalence harness now supports runtime arguments (`--attach`, tick controls, timeout) for backend-specific CI coverage
+- studio contract-consumption checklist published at `docs/studio/contract-consumption.md`
+- replay package now includes contract/schema version gating (`version-gate`) and deterministic `run_summary` generation with stable digest
+- replay bundle loader now supports fixture bundle directories (`manifest.json`, `events.jsonl`, optional config/seed/expected metrics)
+- log validation integration added via `tools/validate_log.py` subprocess with deterministic AJV fallback
+- imported P1 fixture bundles (`budget_warning`, `deadline_cancel`, `determinism_replay`) from `muesli-bt` main with checked-in `expected_summary.json` regression baselines
+- minimal `studio inspect <bundle_dir>` CLI added for bundle validation and summary emission

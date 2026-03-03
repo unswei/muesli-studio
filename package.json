@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@10.5.2",
+  "bin": {
+    "studio": "tools/studio"
+  },
   "scripts": {
     "gen:types": "pnpm --filter @muesli/protocol gen:types",
     "sync:schema": "tools/sync_schema.sh",
@@ -15,11 +18,14 @@
     "inspector:configure": "cmake --preset default -S apps/inspector",
     "inspector:build": "cmake --build apps/inspector/build --config Release",
     "inspector:smoke": "apps/inspector/build/mbt_inspector --attach mock --ws :8877 --run-loop '{\"max_ticks\":2}' --tick-hz 100 --seed 7 --log apps/inspector/build/smoke.jsonl --quiet",
-    "inspector:test": "node apps/inspector/tests/ws-jsonl-equivalence.mjs"
+    "inspector:test": "node apps/inspector/tests/ws-jsonl-equivalence.mjs",
+    "studio": "./tools/studio",
+    "studio:inspect": "./tools/studio inspect"
   },
   "devDependencies": {
     "ajv": "^8.17.1",
     "json-schema-to-typescript": "^15.0.4",
+    "tsx": "^4.19.4",
     "ws": "^8.18.3"
   }
 }

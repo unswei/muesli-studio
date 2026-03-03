@@ -1,0 +1,263 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://unswei.github.io/muesli-bt/schemas/event_log/v1/mbt.evt.v1.schema.json",
+  "title": "muesli-bt canonical event stream envelope (mbt.evt.v1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "contract_version",
+    "type",
+    "run_id",
+    "unix_ms",
+    "seq",
+    "data"
+  ],
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "mbt.evt.v1"
+    },
+    "contract_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "run_start",
+        "bt_def",
+        "tick_begin",
+        "tick_end",
+        "node_enter",
+        "node_exit",
+        "node_status",
+        "budget_warning",
+        "deadline_exceeded",
+        "bb_write",
+        "bb_delete",
+        "bb_snapshot",
+        "sched_submit",
+        "sched_start",
+        "sched_finish",
+        "sched_cancel",
+        "planner_call_start",
+        "planner_call_end",
+        "planner_v1",
+        "vla_submit",
+        "vla_poll",
+        "vla_cancel",
+        "vla_result",
+        "async_cancel_requested",
+        "async_cancel_acknowledged",
+        "async_completion_dropped",
+        "error"
+      ]
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "unix_ms": {
+      "type": "integer"
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "tick": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "data": {
+      "type": "object"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "run_start"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "git_sha",
+              "host",
+              "contract_version",
+              "contract_id",
+              "tick_hz",
+              "tree_hash",
+              "capabilities"
+            ],
+            "properties": {
+              "git_sha": {
+                "type": "string"
+              },
+              "host": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "version",
+                  "platform"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "version": {
+                    "type": "string"
+                  },
+                  "platform": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "contract_version": {
+                "type": "string"
+              },
+              "contract_id": {
+                "type": "string"
+              },
+              "tick_hz": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "tree_hash": {
+                "type": "string"
+              },
+              "capabilities": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "bt_def"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "tree_name",
+              "dsl",
+              "tree_hash",
+              "nodes",
+              "edges"
+            ],
+            "properties": {
+              "tree_name": {
+                "type": "string"
+              },
+              "dsl": {
+                "type": "string"
+              },
+              "tree_hash": {
+                "type": "string"
+              },
+              "nodes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "kind",
+                    "name"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "edges": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "parent",
+                    "child",
+                    "index"
+                  ],
+                  "properties": {
+                    "parent": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "child": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "index": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "type": {
+            "const": "planner_v1"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "record"
+            ],
+            "properties": {
+              "record": {
+                "type": "object",
+                "required": [
+                  "schema_version"
+                ],
+                "properties": {
+                  "schema_version": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": true
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "event_count": 7,
+  "events_sha256": "18fb0a116863db643f92c5d8537561ff498d5402dc3a72ae1c015b092fb5eff1",
+  "required_types": [
+    "run_start",
+    "tick_begin",
+    "vla_submit",
+    "deadline_exceeded",
+    "async_cancel_requested",
+    "async_cancel_acknowledged",
+    "tick_end"
+  ]
+}

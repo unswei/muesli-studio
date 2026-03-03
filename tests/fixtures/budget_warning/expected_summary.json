@@ -1,0 +1,39 @@
+{
+  "contract_version": "1.0.0",
+  "schema_version": "mbt.evt.v1",
+  "event_counts": {
+    "run_start": 1,
+    "tick_begin": 1,
+    "budget_warning": 1,
+    "tick_end": 1
+  },
+  "ticks": {
+    "count": 1,
+    "min_duration_ms": 5,
+    "max_duration_ms": 5,
+    "mean_duration_ms": 5
+  },
+  "node_status_counts": {},
+  "async_jobs": {
+    "sched": {
+      "submit": 0,
+      "start": 0,
+      "cancel": 0,
+      "finish": 0,
+      "terminal_states": {}
+    },
+    "vla": {
+      "submit": 0,
+      "poll": 0,
+      "cancel": 0,
+      "result": 0,
+      "terminal_states": {}
+    }
+  },
+  "warnings": {
+    "budget_warning_count": 0,
+    "deadline_exceeded_count": 0
+  },
+  "digest": "fnv1a64:5aa86f16ee8ef8f9"
+}
+

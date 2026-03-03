@@ -12,7 +12,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@muesli/protocol": "workspace:*"
+    "@muesli/protocol": "workspace:*",
+    "ajv": "^8.17.1"
   },
   "devDependencies": {
     "typescript": "^5.8.2",

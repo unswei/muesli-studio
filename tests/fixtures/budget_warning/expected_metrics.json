@@ -1,0 +1,13 @@
+{
+  "absent_types": [
+    "planner_call_start"
+  ],
+  "event_count": 4,
+  "events_sha256": "164fe710b5f8d0ee26ed0b65679aba70fbcb2f5440ad46050db5126cb15bc9a2",
+  "required_types": [
+    "run_start",
+    "tick_begin",
+    "budget_warning",
+    "tick_end"
+  ]
+}

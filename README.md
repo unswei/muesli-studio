@@ -32,11 +32,23 @@ Implemented in this milestone:
   - forwards canonical runtime event lines to WebSocket and JSONL through one serialisation path
   - integration test proving WS/JSONL payload equivalence in deterministic mode
 - CI checks for schema/contract drift against the resolved `muesli-bt` source
+- P0 contract-consumption foundations:
+  - consumer requirements checklist (`docs/studio/contract-consumption.md`)
+  - version gating for contract/schema compatibility (`packages/replay/src/version-gate.ts`)
+  - deterministic run summary generation with stable digest (`packages/replay/src/summarise-run.ts`)
+- P1 fixture bundle support:
+  - bundle loader for `manifest.json` + `events.jsonl` (+ optional config/seed/expected metrics)
+  - subprocess log validation integration (`tools/validate_log.py`) with deterministic AJV fallback
+  - imported golden bundle fixtures from `muesli-bt` main:
+    - `tests/fixtures/budget_warning`
+    - `tests/fixtures/deadline_cancel`
+    - `tests/fixtures/determinism_replay`
+  - fixture summary regression tests using stored `expected_summary.json`
+  - minimal CLI: `studio inspect <bundle_dir>` for bundle sanity checks and `run_summary.json` emission
 
 Deferred to later milestones:
 
 - BT DSL editing
-- Webots-enabled CI coverage for backend attach path
 
 ## muesli-bt pinning
 
@@ -58,6 +70,14 @@ pnpm check:fixtures
 pnpm test
 pnpm --filter @muesli/studio dev
 ```
+
+### inspect fixture bundles
+
+```bash
+pnpm studio inspect tests/fixtures/determinism_replay --out /tmp/run_summary.json
+```
+
+This command validates the bundle, prints a concise summary, and writes `run_summary.json` when `--out` is provided.
 
 ### replay mode
 

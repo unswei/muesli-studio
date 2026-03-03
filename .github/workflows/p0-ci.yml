@@ -45,6 +45,9 @@ jobs:
       - name: ensure contract sync is committed
         run: git diff --exit-code -- contracts/muesli-studio-integration.md
 
+      - name: ensure validate_log.py is callable
+        run: python3 tools/validate_log.py --help >/dev/null
+
       - name: generate protocol types
         run: pnpm gen:types
 

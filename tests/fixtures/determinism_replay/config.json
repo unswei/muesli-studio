@@ -1,0 +1,5 @@
+{
+  "deterministic_mode": true,
+  "scenario": "deterministic_trace_replay",
+  "tick_budget_ms": 20
+}

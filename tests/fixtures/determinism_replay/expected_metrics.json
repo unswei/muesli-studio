@@ -1,0 +1,17 @@
+{
+  "event_count": 13,
+  "events_sha256": "ee977d7be04c3875755cc28739c41f9553db0e87a45008dafebbbaa14f8a157c",
+  "node_status_sequence": [
+    "1:running",
+    "1:success"
+  ],
+  "required_types": [
+    "run_start",
+    "planner_call_start",
+    "planner_call_end",
+    "node_enter",
+    "node_exit",
+    "tick_begin",
+    "tick_end"
+  ]
+}
