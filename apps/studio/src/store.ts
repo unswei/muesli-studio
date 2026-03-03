@@ -2,6 +2,8 @@ import type { ValidatedMbtEvent } from '@muesli/protocol';
 import { parseJsonlEventsWithOptionalSidecar, ReplayStore, type JsonlParseError } from '@muesli/replay';
 import { create } from 'zustand';
 
+import type { CompiledBtDefinition } from './dsl-compiler';
+
 export type LiveStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 export type LiveHistoryLevel = 'info' | 'warning' | 'error';
 
@@ -62,6 +64,7 @@ interface StudioState {
   replayIndexed: boolean;
   replayLoadWarning: string | null;
   replaySourceBytes: number;
+  treeRevision: number;
   mode: 'replay' | 'live';
   liveUrl: string;
   liveStatus: LiveStatus;
@@ -73,6 +76,8 @@ interface StudioState {
   loadJsonl: (text: string, sidecarText?: string | null, sourceBytes?: number) => void;
   loadJsonlFromFiles: (jsonlFile: File, sidecarFile?: File | null) => Promise<void>;
   appendLiveEvents: (events: ValidatedMbtEvent[]) => void;
+  applyCompiledTree: (compiled: CompiledBtDefinition) => void;
+  resetCompiledTree: () => void;
   setSelectedTick: (tick: number) => void;
   setSelectedNodeId: (nodeId: string | null) => void;
   setLiveUrl: (url: string) => void;
@@ -94,6 +99,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   replayIndexed: false,
   replayLoadWarning: null,
   replaySourceBytes: 0,
+  treeRevision: 0,
   mode: 'replay',
   liveUrl: 'ws://localhost:8765/events',
   liveStatus: 'disconnected',
@@ -121,6 +127,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       replayIndexed: result.sidecar.index_used,
       replayLoadWarning,
       replaySourceBytes: sourceBytes,
+      treeRevision: 0,
       selectedTick: replay.maxTick >= 0 ? replay.maxTick : 0,
       selectedNodeId: replay.getFirstTreeNodeId(),
       mode: 'replay',
@@ -169,6 +176,41 @@ export const useStudioStore = create<StudioState>((set, get) => ({
         selectedTick: state.liveAutoFollow ? maxTick : Math.max(0, Math.min(state.selectedTick, maxTick)),
         liveLastEventUnixMs,
         mode: 'live',
+      };
+    });
+  },
+
+  applyCompiledTree: (compiled) => {
+    set((state) => {
+      if (!state.replay) {
+        return state;
+      }
+
+      state.replay.setBtDefOverride({
+        dsl: compiled.dsl,
+        nodes: compiled.nodes,
+        edges: compiled.edges,
+      });
+
+      return {
+        replay: state.replay,
+        selectedNodeId: state.replay.getFirstTreeNodeId(),
+        treeRevision: state.treeRevision + 1,
+      };
+    });
+  },
+
+  resetCompiledTree: () => {
+    set((state) => {
+      if (!state.replay) {
+        return state;
+      }
+
+      state.replay.clearBtDefOverride();
+      return {
+        replay: state.replay,
+        selectedNodeId: state.replay.getFirstTreeNodeId(),
+        treeRevision: state.treeRevision + 1,
       };
     });
   },

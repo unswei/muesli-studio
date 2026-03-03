@@ -16,6 +16,11 @@ Implemented in this milestone:
   - tick scrubber
   - node status colouring
   - blackboard diffs at selected tick
+  - runtime DSL editor:
+    - edit `bt_def.dsl` text
+    - compile and apply updated tree definitions to the live replay view
+    - revert to runtime-provided tree definition
+    - save edited DSL via browser save picker (or download fallback)
 - studio live monitoring:
   - connect to WebSocket endpoint (`ws://host:port/events`)
   - append live events to the same replay engine
@@ -55,10 +60,6 @@ Implemented in this milestone:
   - fixture summary regression tests using stored `expected_summary.json`
   - minimal CLI: `studio inspect <bundle_dir>` for bundle sanity checks and `run_summary.json` emission
   - Node-only replay entrypoint for bundle/validator features: `@muesli/replay/node`
-
-Deferred to later milestones:
-
-- BT DSL editing
 
 ## muesli-bt pinning
 
@@ -107,6 +108,12 @@ Load either:
 - a validated bundle event log (`tests/fixtures/*/events.jsonl`) after running `studio inspect`.
 
 Studio replay load supports an optional sidecar index file (`events.sidecar.tick-index.v1.json`). The UI now shows load progress, indexed/unindexed state, and warns when large logs fall back to unindexed full-scan ingest.
+
+The replay panel also includes a DSL editor for `bt_def.dsl`. Use:
+
+- `apply` to compile and replace the rendered tree immediately
+- `revert` to restore the runtime-provided definition
+- `save` to export the edited DSL for runtime-side use
 
 ### live mode
 

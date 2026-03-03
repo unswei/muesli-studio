@@ -53,3 +53,6 @@ All notable changes to this project will be documented in this file.
 - studio replay file loader now supports optional sidecar files, shows replay load progress, and surfaces indexed/unindexed plus large-file fallback status
 - sidecar benchmark harness (`pnpm bench:sidecar`) now emits `tests/benchmarks/sidecar-large_replay.json`
 - CI now regenerates the large fixture bundle before generated-diff checks and runs `studio inspect` against `large_replay`
+- studio BT DSL editor is now writable with compile/apply/revert/save actions, and updates the rendered tree through replay override state
+- replay store now exposes explicit `bt_def` override lifecycle (`setBtDefOverride`, `clearBtDefOverride`, `hasBtDefOverride`) used by studio editing flow
+- added deterministic unit coverage for DSL compilation and apply/reset override behaviour in studio and replay tests

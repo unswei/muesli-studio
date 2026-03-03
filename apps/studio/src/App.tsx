@@ -17,6 +17,7 @@ export function App() {
   const replayIndexed = useStudioStore((state) => state.replayIndexed);
   const replayLoadWarning = useStudioStore((state) => state.replayLoadWarning);
   const replaySourceBytes = useStudioStore((state) => state.replaySourceBytes);
+  const treeRevision = useStudioStore((state) => state.treeRevision);
   const mode = useStudioStore((state) => state.mode);
   const liveUrl = useStudioStore((state) => state.liveUrl);
   const liveStatus = useStudioStore((state) => state.liveStatus);
@@ -33,6 +34,8 @@ export function App() {
   const setLiveStatus = useStudioStore((state) => state.setLiveStatus);
   const setLiveAutoFollow = useStudioStore((state) => state.setLiveAutoFollow);
   const setLiveReconnectEnabled = useStudioStore((state) => state.setLiveReconnectEnabled);
+  const applyCompiledTree = useStudioStore((state) => state.applyCompiledTree);
+  const resetCompiledTree = useStudioStore((state) => state.resetCompiledTree);
   const addLiveHistory = useStudioStore((state) => state.addLiveHistory);
   const clearLiveHistory = useStudioStore((state) => state.clearLiveHistory);
   const addParseError = useStudioStore((state) => state.addParseError);
@@ -52,7 +55,7 @@ export function App() {
       nodeCount: replay.btDef.data.nodes.length,
       edgeCount: replay.btDef.data.edges.length,
     };
-  }, [replay]);
+  }, [replay, treeRevision]);
 
   const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -209,7 +212,7 @@ export function App() {
       <header className="header">
         <div>
           <h1>muesli-studio</h1>
-          <p className="muted">P1: replay + live monitoring over WebSocket, sharing one append-only replay engine.</p>
+          <p className="muted">Replay + live monitoring over WebSocket, sharing one append-only replay engine.</p>
         </div>
 
         <div className="live-controls">
@@ -363,7 +366,7 @@ export function App() {
           <>
             <TreeView replay={replay} selectedTick={selectedTick} selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
             <NodeInspector replay={replay} selectedNodeId={selectedNodeId} tick={selectedTick} />
-            <DslEditor replay={replay} />
+            <DslEditor replay={replay} onApplyCompiled={applyCompiledTree} onResetCompiled={resetCompiledTree} />
             <BlackboardDiff replay={replay} tick={selectedTick} />
           </>
         ) : (

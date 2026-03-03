@@ -21,9 +21,12 @@ describe('DslEditor', () => {
     const replay = new ReplayStore();
     replay.appendMany(parsed.events);
 
-    const markup = renderToStaticMarkup(<DslEditor replay={replay} />);
+    const markup = renderToStaticMarkup(
+      <DslEditor replay={replay} onApplyCompiled={() => {}} onResetCompiled={() => {}} />,
+    );
     expect(markup).toContain('(bt (seq (cond always-true) (act always-success)))');
     expect(markup).toContain('textarea');
+    expect(markup).toContain('apply');
+    expect(markup).toContain('save');
   });
 });
-

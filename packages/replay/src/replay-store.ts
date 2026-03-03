@@ -108,7 +108,9 @@ export class ReplayStore {
 
   private runStartEvent?: Extract<ValidatedMbtEvent, { type: 'run_start' }>;
 
-  private btDefEvent?: Extract<ValidatedMbtEvent, { type: 'bt_def' }>;
+  private btDefBaseEvent?: Extract<ValidatedMbtEvent, { type: 'bt_def' }>;
+
+  private btDefOverrideEvent?: Extract<ValidatedMbtEvent, { type: 'bt_def' }>;
 
   append(event: ValidatedMbtEvent): void {
     this.events.push(event);
@@ -118,7 +120,8 @@ export class ReplayStore {
     }
 
     if (event.type === 'bt_def') {
-      this.btDefEvent = event;
+      this.btDefBaseEvent = event;
+      this.btDefOverrideEvent = undefined;
     }
 
     if (typeof event.tick === 'number') {
@@ -182,7 +185,29 @@ export class ReplayStore {
   }
 
   get btDef(): Extract<ValidatedMbtEvent, { type: 'bt_def' }> | undefined {
-    return this.btDefEvent;
+    return this.btDefOverrideEvent ?? this.btDefBaseEvent;
+  }
+
+  get hasBtDefOverride(): boolean {
+    return this.btDefOverrideEvent !== undefined;
+  }
+
+  setBtDefOverride(data: Extract<ValidatedMbtEvent, { type: 'bt_def' }>['data']): void {
+    if (!this.btDefBaseEvent) {
+      return;
+    }
+
+    this.btDefOverrideEvent = {
+      ...this.btDefBaseEvent,
+      data: {
+        ...this.btDefBaseEvent.data,
+        ...data,
+      },
+    };
+  }
+
+  clearBtDefOverride(): void {
+    this.btDefOverrideEvent = undefined;
   }
 
   get maxTick(): number {
@@ -218,11 +243,12 @@ export class ReplayStore {
   }
 
   getTreeNodeIds(): string[] {
-    if (!this.btDefEvent) {
+    const btDef = this.btDef;
+    if (!btDef) {
       return [];
     }
 
-    const rawNodes = this.btDefEvent.data.nodes;
+    const rawNodes = btDef.data.nodes;
     if (!Array.isArray(rawNodes)) {
       return [];
     }

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { parseEvent } from '@muesli/protocol';
-import { buildTickSidecarIndex } from '@muesli/replay';
+import { buildTickSidecarIndex, ReplayStore } from '@muesli/replay';
 
+import { compileBtDsl } from './dsl-compiler';
 import { useStudioStore } from './store';
 
 function resetStore(): void {
@@ -16,6 +17,7 @@ function resetStore(): void {
     replayIndexed: false,
     replayLoadWarning: null,
     replaySourceBytes: 0,
+    treeRevision: 0,
     mode: 'replay',
     liveUrl: 'ws://localhost:8765/events',
     liveStatus: 'disconnected',
@@ -148,5 +150,68 @@ describe('studio live store behaviour', () => {
     const state = useStudioStore.getState();
     expect(state.replayIndexed).toBe(true);
     expect(state.replayLoadWarning).toBeNull();
+  });
+
+  it('applies and resets compiled bt overrides for tree sync', () => {
+    resetStore();
+
+    const replay = new ReplayStore();
+    replay.append(
+      parseEvent({
+        schema: 'mbt.evt.v1',
+        type: 'run_start',
+        run_id: 'run-edit',
+        unix_ms: 1,
+        seq: 1,
+        data: {
+          git_sha: 'fixture',
+          host: { name: 'studio', version: '0.1.0', platform: 'test' },
+          tick_hz: 20,
+          tree_hash: 'fnv1a64:1',
+          capabilities: { reset: true },
+        },
+      }),
+    );
+
+    replay.append(
+      parseEvent({
+        schema: 'mbt.evt.v1',
+        type: 'bt_def',
+        run_id: 'run-edit',
+        unix_ms: 2,
+        seq: 2,
+        data: {
+          dsl: '(bt (seq (act original)))',
+          nodes: [
+            { id: 1, kind: 'seq', name: 'seq' },
+            { id: 2, kind: 'act', name: 'original' },
+          ],
+          edges: [{ parent: 1, child: 2, index: 0 }],
+        },
+      }),
+    );
+
+    useStudioStore.setState({
+      replay,
+      selectedNodeId: replay.getFirstTreeNodeId(),
+      treeRevision: 0,
+    });
+
+    const compiled = compileBtDsl('(bt (sel (act fallback) (act recover)))');
+    useStudioStore.getState().applyCompiledTree(compiled);
+
+    const appliedState = useStudioStore.getState();
+    expect(appliedState.replay?.hasBtDefOverride).toBe(true);
+    expect(appliedState.replay?.btDef?.data.dsl).toBe('(bt (sel (act fallback) (act recover)))');
+    expect(appliedState.replay?.btDef?.data.nodes).toHaveLength(3);
+    expect(appliedState.selectedNodeId).toBe('1');
+    expect(appliedState.treeRevision).toBe(1);
+
+    useStudioStore.getState().resetCompiledTree();
+
+    const resetState = useStudioStore.getState();
+    expect(resetState.replay?.hasBtDefOverride).toBe(false);
+    expect(resetState.replay?.btDef?.data.dsl).toBe('(bt (seq (act original)))');
+    expect(resetState.treeRevision).toBe(2);
   });
 });

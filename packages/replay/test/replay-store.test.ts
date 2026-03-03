@@ -91,4 +91,52 @@ describe('ReplayStore', () => {
     expect(store.getNodeStatusAt('1', 0)?.status).toBe('running');
     expect(store.getNodeStatusAt('1', 1)?.status).toBe('success');
   });
+
+  it('supports bt_def override apply/reset without mutating source events', () => {
+    const store = new ReplayStore();
+
+    store.append(
+      parseEvent({
+        schema: 'mbt.evt.v1',
+        type: 'bt_def',
+        run_id: 'run-edit',
+        unix_ms: 1,
+        seq: 1,
+        data: {
+          dsl: '(bt (seq (act original)))',
+          nodes: [
+            { id: 1, kind: 'seq', name: 'seq' },
+            { id: 2, kind: 'act', name: 'original' },
+          ],
+          edges: [{ parent: 1, child: 2, index: 0 }],
+        },
+      }),
+    );
+
+    expect(store.btDef?.data.dsl).toBe('(bt (seq (act original)))');
+    expect(store.getTreeNodeIds()).toEqual(['1', '2']);
+    expect(store.hasBtDefOverride).toBe(false);
+
+    store.setBtDefOverride({
+      dsl: '(bt (sel (act fallback) (act recover)))',
+      nodes: [
+        { id: 1, kind: 'sel', name: 'sel' },
+        { id: 2, kind: 'act', name: 'fallback' },
+        { id: 3, kind: 'act', name: 'recover' },
+      ],
+      edges: [
+        { parent: 1, child: 2, index: 0 },
+        { parent: 1, child: 3, index: 1 },
+      ],
+    });
+
+    expect(store.hasBtDefOverride).toBe(true);
+    expect(store.btDef?.data.dsl).toBe('(bt (sel (act fallback) (act recover)))');
+    expect(store.getTreeNodeIds()).toEqual(['1', '2', '3']);
+
+    store.clearBtDefOverride();
+    expect(store.hasBtDefOverride).toBe(false);
+    expect(store.btDef?.data.dsl).toBe('(bt (seq (act original)))');
+    expect(store.getTreeNodeIds()).toEqual(['1', '2']);
+  });
 });

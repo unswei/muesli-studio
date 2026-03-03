@@ -1,9 +1,8 @@
 # todo
 
-## P2 editing
+## editing follow-up
 
-- [ ] keep visual tree synchronised by reloading runtime-compiled definitions
-- [ ] save edited DSL text back to file for runtime use
+- [ ] add jsdom interaction coverage for `DslEditor` (`apply`, `revert`, and `save` paths)
 
 ## engineering follow-up
 

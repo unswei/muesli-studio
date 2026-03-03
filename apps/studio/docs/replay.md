@@ -16,7 +16,10 @@ Use replay mode when you need deterministic post-run inspection, debugging, or r
 - tree layout is computed once from `bt_def.nodes/edges` (supports `from/to` and `parent/child` edge variants)
 - tick scrubbing recolours nodes using indexed `node_status` events
 - blackboard diff panel shows `bb_write`/`bb_delete` for selected tick
-- `bt_def.dsl` is shown in a dedicated text editor panel for quick definition inspection
+- `bt_def.dsl` is editable in a dedicated panel:
+  - `apply` compiles the draft DSL and refreshes the rendered tree immediately
+  - `revert` restores the runtime definition from log events
+  - `save` writes the draft via browser save picker, or downloads if picker API is unavailable
 - fixture bundle support is validated by `studio inspect` using `@muesli/replay/node`, then the same `events.jsonl` can be opened in replay UI
 - replay UI now shows load progress, indexed/unindexed status, and explicit fallback warning for large unindexed logs
 
@@ -36,13 +39,16 @@ pnpm studio inspect tests/fixtures/determinism_replay --schema tests/fixtures/sc
 
 2. Open [`tests/fixtures/determinism_replay/events.jsonl`](../../../tests/fixtures/determinism_replay/events.jsonl) in studio and scrub ticks `1..2`.
 
-3. For large logs, also open [`tests/fixtures/large_replay/events.sidecar.tick-index.v1.json`](../../../tests/fixtures/large_replay/events.sidecar.tick-index.v1.json) before opening `events.jsonl`.
+3. Edit `bt_def.dsl`, click `apply`, and confirm the tree panel updates.
+
+4. For large logs, also open [`tests/fixtures/large_replay/events.sidecar.tick-index.v1.json`](../../../tests/fixtures/large_replay/events.sidecar.tick-index.v1.json) before opening `events.jsonl`.
 
 ## gotchas
 
 - invalid lines are skipped and surfaced as parse warnings
 - replay UI consumes JSONL; bundle-level validation happens in Node tooling (`studio inspect`)
 - newer runtime event variants are retained in the stream even when UI panels do not yet render dedicated widgets
+- DSL compile errors are shown inline and do not mutate the currently rendered tree
 
 ## see also
 

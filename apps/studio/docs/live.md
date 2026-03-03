@@ -1,4 +1,4 @@
-# live monitoring (P1)
+# live monitoring
 
 ## what this is
 
