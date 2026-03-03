@@ -83,6 +83,7 @@ pnpm studio inspect tests/fixtures/determinism_replay --out /tmp/run_summary.jso
 ```
 
 This command validates the bundle, prints a concise summary, and writes `run_summary.json` when `--out` is provided.
+When the bundle sits under `tests/fixtures/<name>`, the CLI auto-uses `tests/fixtures/schema/mbt.evt.v1.schema.json`.
 
 To refresh the large deterministic stress fixture used for sidecar/index planning:
 

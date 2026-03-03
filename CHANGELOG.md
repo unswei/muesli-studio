@@ -45,3 +45,4 @@ All notable changes to this project will be documented in this file.
 - studio now shows `bt_def.dsl` in a dedicated editor panel for replay/live inspection
 - deterministic large fixture bundle `tests/fixtures/large_replay` (30,002 events) and generator script `pnpm fixtures:large` for sidecar/index strategy testing
 - replay fixture-summary regression suite now includes `large_replay`
+- `studio inspect` now auto-selects `tests/fixtures/schema/mbt.evt.v1.schema.json` for fixture bundles when `--schema` is omitted

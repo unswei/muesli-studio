@@ -1,4 +1,4 @@
-import { writeFile } from 'node:fs/promises';
+import { access, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { BundleLoadError, loadBundle } from '@muesli/replay/node';
@@ -77,8 +77,21 @@ async function runInspect(args: CliArgs): Promise<void> {
   }
 
   const bundleDir = path.resolve(args.bundleDir);
+  let schemaPath: string | undefined;
+  if (args.schemaPath) {
+    schemaPath = path.resolve(args.schemaPath);
+  } else {
+    const fixtureSchemaPath = path.resolve(bundleDir, '..', 'schema', 'mbt.evt.v1.schema.json');
+    try {
+      await access(fixtureSchemaPath);
+      schemaPath = fixtureSchemaPath;
+    } catch {
+      schemaPath = undefined;
+    }
+  }
+
   const loaded = await loadBundle(bundleDir, {
-    schemaPath: args.schemaPath ?? undefined,
+    schemaPath,
     validatorPath: args.validatorPath ?? undefined,
   });
 

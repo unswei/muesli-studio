@@ -42,6 +42,8 @@ CLI:
 pnpm studio inspect <bundle_dir> [--schema <schema_path>] [--validator <validator_path>] [--out <summary_path>]
 ```
 
+If `<bundle_dir>` is under `tests/fixtures/<name>`, `studio inspect` automatically uses `tests/fixtures/schema/mbt.evt.v1.schema.json` when `--schema` is not supplied.
+
 ## example
 
 ```bash
