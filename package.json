@@ -12,6 +12,7 @@
     "sync:contract": "tools/sync_contract.sh",
     "check:fixtures": "node tools/fixtures/validate-fixtures.mjs",
     "fixtures:large": "pnpm exec tsx tools/fixtures/generate-large-bundle.ts",
+    "demo": "pnpm exec tsx tools/demo.ts",
     "bench:sidecar": "pnpm exec tsx tools/bench/benchmark-sidecar.ts",
     "lint": "pnpm --filter @muesli/protocol lint && pnpm --filter @muesli/replay lint && pnpm --filter @muesli/ui lint && pnpm --filter @muesli/studio lint",
     "typecheck": "pnpm --filter @muesli/protocol typecheck && pnpm --filter @muesli/replay typecheck && pnpm --filter @muesli/ui typecheck && pnpm --filter @muesli/studio typecheck",

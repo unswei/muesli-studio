@@ -1,6 +1,17 @@
 # muesli-studio
 
 A monorepo for `muesli-studio` (web UI) and `mbt_inspector` (runtime bridge) around the canonical event stream `mbt.evt.v1`.
+Current implemented scope is replay-first inspection plus live monitoring. Interactive editing workflows are planned and tracked in `TODO.md`.
+
+## ui snapshot
+
+Tree view with tick scrubber:
+
+![tree view and tick scrubber](docs/images/studio-tree-scrubber.png)
+
+Blackboard diff at selected tick:
+
+![blackboard diff panel](docs/images/studio-blackboard-diff.png)
 
 ## current scope
 
@@ -69,7 +80,15 @@ Inspector pin metadata lives in [`apps/inspector/cmake/MuesliBtVersion.cmake`](.
 - scheduled CI builds inspector against `muesli-bt` `main` (advisory)
 - canonical contract reference: [muesli-bt studio integration contract](https://github.com/unswei/muesli-bt/blob/main/docs/contracts/muesli-studio-integration.md)
 
-## quick start
+## try it now
+
+```bash
+pnpm install && pnpm demo
+```
+
+`pnpm demo` stages a known deterministic fixture bundle, validates it with `studio inspect`, starts studio, and opens the browser with the replay preloaded.
+
+## quick start (full dev setup)
 
 ```bash
 pnpm install
@@ -91,6 +110,12 @@ pnpm studio inspect tests/fixtures/determinism_replay --out /tmp/run_summary.jso
 
 This command validates the bundle, prints a concise summary, and writes `run_summary.json` when `--out` is provided.
 When the bundle sits under `tests/fixtures/<name>`, the CLI auto-uses `tests/fixtures/schema/mbt.evt.v1.schema.json`.
+
+For the quick UI demo fixture:
+
+```bash
+pnpm studio inspect tests/fixtures/studio_demo
+```
 
 To refresh the large deterministic stress fixture used for sidecar/index planning:
 
@@ -114,6 +139,11 @@ The replay panel also includes a DSL editor for `bt_def.dsl`. Use:
 - `apply` to compile and replace the rendered tree immediately
 - `revert` to restore the runtime-provided definition
 - `save` to export the edited DSL for runtime-side use
+
+The demo launcher uses URL query auto-load:
+
+- `demo_fixture=/demo/<fixture>/events.jsonl`
+- optional `demo_sidecar=/demo/<fixture>/events.sidecar.tick-index.v1.json`
 
 ### live mode
 

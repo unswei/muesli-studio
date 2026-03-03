@@ -5,6 +5,7 @@ import { decodeWebSocketData, parseLivePayload } from './live';
 import { DslEditor } from './components/DslEditor';
 import { NodeInspector } from './components/NodeInspector';
 import { TreeView } from './components/TreeView';
+import { parseDemoFixtureQuery } from './demo-fixture';
 import { useStudioStore } from './store';
 
 export function App() {
@@ -27,6 +28,7 @@ export function App() {
   const liveLastEventUnixMs = useStudioStore((state) => state.liveLastEventUnixMs);
   const liveHistory = useStudioStore((state) => state.liveHistory);
   const loadJsonlFromFiles = useStudioStore((state) => state.loadJsonlFromFiles);
+  const loadJsonlFromUrl = useStudioStore((state) => state.loadJsonlFromUrl);
   const appendLiveEvents = useStudioStore((state) => state.appendLiveEvents);
   const setSelectedTick = useStudioStore((state) => state.setSelectedTick);
   const setSelectedNodeId = useStudioStore((state) => state.setSelectedNodeId);
@@ -45,6 +47,7 @@ export function App() {
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectEnabledRef = useRef(liveReconnectEnabled);
   const manualDisconnectRef = useRef(false);
+  const demoLoadRef = useRef(false);
 
   const treeSummary = useMemo(() => {
     if (!replay?.btDef) {
@@ -74,6 +77,36 @@ export function App() {
   useEffect(() => {
     reconnectEnabledRef.current = liveReconnectEnabled;
   }, [liveReconnectEnabled]);
+
+  useEffect(() => {
+    if (demoLoadRef.current || typeof window === 'undefined') {
+      return;
+    }
+
+    demoLoadRef.current = true;
+    const demoQuery = parseDemoFixtureQuery(window.location.search);
+    if (!demoQuery) {
+      return;
+    }
+
+    let cancelled = false;
+    loadJsonlFromUrl(demoQuery.jsonlPath, demoQuery.sidecarPath).catch((error) => {
+      if (cancelled) {
+        return;
+      }
+
+      const message = error instanceof Error ? error.message : String(error);
+      addParseError({
+        line: 0,
+        message: `demo load failed: ${message}`,
+        raw: demoQuery.jsonlPath,
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [addParseError, loadJsonlFromUrl]);
 
   const clearReconnectTimer = useCallback(() => {
     if (!reconnectTimerRef.current) {

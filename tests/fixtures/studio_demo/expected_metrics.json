@@ -1,0 +1,11 @@
+{
+  "event_count": 8,
+  "events_sha256": "ba95ee3035a5952e46a914532de4fe260d65380d1fa6da937325e823b9ed633c",
+  "required_types": [
+    "run_start",
+    "bt_def",
+    "tick_begin",
+    "bb_write",
+    "tick_end"
+  ]
+}

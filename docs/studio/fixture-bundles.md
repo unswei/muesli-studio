@@ -53,6 +53,13 @@ pnpm studio inspect tests/fixtures/determinism_replay \
   --out /tmp/run_summary.json
 ```
 
+Fast UI demo bundle:
+
+```bash
+pnpm studio inspect tests/fixtures/studio_demo
+pnpm demo
+```
+
 Large deterministic fixture refresh:
 
 ```bash

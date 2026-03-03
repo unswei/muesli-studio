@@ -56,3 +56,7 @@ All notable changes to this project will be documented in this file.
 - studio BT DSL editor is now writable with compile/apply/revert/save actions, and updates the rendered tree through replay override state
 - replay store now exposes explicit `bt_def` override lifecycle (`setBtDefOverride`, `clearBtDefOverride`, `hasBtDefOverride`) used by studio editing flow
 - added deterministic unit coverage for DSL compilation and apply/reset override behaviour in studio and replay tests
+- studio replay now supports URL query demo auto-load (`demo_fixture`, optional `demo_sidecar`) for one-command launches
+- root demo launcher (`pnpm demo`) now stages and validates `tests/fixtures/studio_demo` before opening studio
+- added `tests/fixtures/studio_demo` fixture bundle for small deterministic replay demos with tree and blackboard diff coverage
+- README now includes UI screenshots plus a direct `pnpm demo` “try it now” path and scope note that editing workflows are planned

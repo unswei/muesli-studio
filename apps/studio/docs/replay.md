@@ -22,6 +22,7 @@ Use replay mode when you need deterministic post-run inspection, debugging, or r
   - `save` writes the draft via browser save picker, or downloads if picker API is unavailable
 - fixture bundle support is validated by `studio inspect` using `@muesli/replay/node`, then the same `events.jsonl` can be opened in replay UI
 - replay UI now shows load progress, indexed/unindexed status, and explicit fallback warning for large unindexed logs
+- demo bootstrapping can auto-load replay files via URL query (`demo_fixture`, optional `demo_sidecar`)
 
 ## api / syntax
 
@@ -42,6 +43,12 @@ pnpm studio inspect tests/fixtures/determinism_replay --schema tests/fixtures/sc
 3. Edit `bt_def.dsl`, click `apply`, and confirm the tree panel updates.
 
 4. For large logs, also open [`tests/fixtures/large_replay/events.sidecar.tick-index.v1.json`](../../../tests/fixtures/large_replay/events.sidecar.tick-index.v1.json) before opening `events.jsonl`.
+
+Quick demo launcher:
+
+```bash
+pnpm demo
+```
 
 ## gotchas
 

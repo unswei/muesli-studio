@@ -1,0 +1,5 @@
+{
+  "deterministic_mode": true,
+  "scenario": "studio_demo",
+  "tick_budget_ms": 20
+}

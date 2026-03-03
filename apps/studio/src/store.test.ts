@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { parseEvent } from '@muesli/protocol';
 import { buildTickSidecarIndex, ReplayStore } from '@muesli/replay';
@@ -30,6 +30,10 @@ function resetStore(): void {
 }
 
 describe('studio live store behaviour', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('auto-follows newest tick while enabled', () => {
     resetStore();
 
@@ -150,6 +154,63 @@ describe('studio live store behaviour', () => {
     const state = useStudioStore.getState();
     expect(state.replayIndexed).toBe(true);
     expect(state.replayLoadWarning).toBeNull();
+  });
+
+  it('loads replay JSONL from URL sources for demo mode', async () => {
+    resetStore();
+
+    const jsonl = [
+      '{"schema":"mbt.evt.v1","type":"run_start","run_id":"run-demo","unix_ms":1,"seq":1,"data":{"git_sha":"fixture","host":{"name":"studio","version":"0.1.0","platform":"test"},"tick_hz":20,"tree_hash":"fnv1a64:1","capabilities":{"reset":true}}}',
+      '{"schema":"mbt.evt.v1","type":"bt_def","run_id":"run-demo","unix_ms":2,"seq":2,"data":{"dsl":"(bt (seq (act a)))","nodes":[{"id":1,"kind":"seq","name":"seq"},{"id":2,"kind":"act","name":"a"}],"edges":[{"parent":1,"child":2,"index":0}]}}',
+      '{"schema":"mbt.evt.v1","type":"tick_begin","run_id":"run-demo","unix_ms":3,"seq":3,"tick":0,"data":{}}',
+      '{"schema":"mbt.evt.v1","type":"tick_end","run_id":"run-demo","unix_ms":4,"seq":4,"tick":0,"data":{"root_status":"success","tick_ms":1.2}}',
+    ].join('\n');
+    const sidecar = buildTickSidecarIndex(jsonl, 'events.jsonl');
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(jsonl, {
+          status: 200,
+          headers: {
+            'content-length': String(new TextEncoder().encode(jsonl).byteLength),
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(sidecar), {
+          status: 200,
+        }),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await useStudioStore.getState().loadJsonlFromUrl('/demo/determinism/events.jsonl', '/demo/determinism/events.sidecar.tick-index.v1.json');
+
+    const state = useStudioStore.getState();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(state.eventCount).toBe(4);
+    expect(state.replayIndexed).toBe(true);
+    expect(state.replayLoadWarning).toBeNull();
+    expect(state.replay?.runStart?.run_id).toBe('run-demo');
+  });
+
+  it('clears replay loading progress when demo URL load fails', async () => {
+    resetStore();
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response('not found', {
+          status: 404,
+          statusText: 'Not Found',
+        }),
+      ),
+    );
+
+    await expect(useStudioStore.getState().loadJsonlFromUrl('/demo/missing/events.jsonl')).rejects.toThrow(
+      'failed to fetch replay log: 404 Not Found',
+    );
+    expect(useStudioStore.getState().replayLoadProgress).toBeNull();
   });
 
   it('applies and resets compiled bt overrides for tree sync', () => {

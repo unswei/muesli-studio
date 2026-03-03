@@ -49,3 +49,4 @@ node_modules/
 dist/
 coverage/
 apps/inspector/build/
+apps/studio/public/demo/

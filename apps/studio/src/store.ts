@@ -75,6 +75,7 @@ interface StudioState {
   liveHistory: LiveHistoryEntry[];
   loadJsonl: (text: string, sidecarText?: string | null, sourceBytes?: number) => void;
   loadJsonlFromFiles: (jsonlFile: File, sidecarFile?: File | null) => Promise<void>;
+  loadJsonlFromUrl: (jsonlUrl: string, sidecarUrl?: string | null) => Promise<void>;
   appendLiveEvents: (events: ValidatedMbtEvent[]) => void;
   applyCompiledTree: (compiled: CompiledBtDefinition) => void;
   resetCompiledTree: () => void;
@@ -151,6 +152,40 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     }
 
     get().loadJsonl(text, sidecarText, jsonlFile.size);
+  },
+
+  loadJsonlFromUrl: async (jsonlUrl, sidecarUrl = null) => {
+    set({
+      replayLoadProgress: 0,
+      parseErrors: [],
+      replayLoadWarning: null,
+    });
+
+    try {
+      const jsonlResponse = await fetch(jsonlUrl);
+      if (!jsonlResponse.ok) {
+        throw new Error(`failed to fetch replay log: ${jsonlResponse.status} ${jsonlResponse.statusText}`);
+      }
+
+      const text = await jsonlResponse.text();
+      const headerBytes = Number.parseInt(jsonlResponse.headers.get('content-length') ?? '', 10);
+      const sourceBytes =
+        Number.isFinite(headerBytes) && headerBytes > 0 ? headerBytes : new TextEncoder().encode(text).byteLength;
+
+      let sidecarText: string | null = null;
+      if (sidecarUrl) {
+        const sidecarResponse = await fetch(sidecarUrl);
+        if (!sidecarResponse.ok) {
+          throw new Error(`failed to fetch sidecar: ${sidecarResponse.status} ${sidecarResponse.statusText}`);
+        }
+        sidecarText = await sidecarResponse.text();
+      }
+
+      get().loadJsonl(text, sidecarText, sourceBytes);
+    } catch (error) {
+      set({ replayLoadProgress: null });
+      throw error;
+    }
   },
 
   appendLiveEvents: (events) => {
