@@ -51,11 +51,17 @@ jobs:
       - name: generate protocol types
         run: pnpm gen:types
 
+      - name: regenerate large fixture bundle
+        run: pnpm fixtures:large
+
       - name: ensure generated files are committed
         run: git diff --exit-code
 
       - name: validate fixtures against schema
         run: pnpm check:fixtures
+
+      - name: inspect large fixture bundle
+        run: pnpm studio:inspect tests/fixtures/large_replay --out /tmp/large_run_summary.json
 
       - name: lint
         run: pnpm lint
