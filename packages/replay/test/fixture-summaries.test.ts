@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { loadBundle } from '../src';
+import { loadBundle } from '../src/node';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..', '..', '..');
@@ -37,4 +37,3 @@ describe('fixture bundle regression summaries', () => {
     });
   }
 });
-

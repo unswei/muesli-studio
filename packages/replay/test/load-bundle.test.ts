@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { BundleLoadError, loadBundle } from '../src';
+import { BundleLoadError, loadBundle } from '../src/node';
 
 async function writeBundleFile(bundleDir: string, fileName: string, body: string): Promise<void> {
   await writeFile(path.join(bundleDir, fileName), body, 'utf8');
@@ -121,4 +121,3 @@ describe('loadBundle', () => {
     }
   });
 });
-

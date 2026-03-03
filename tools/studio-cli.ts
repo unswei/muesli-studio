@@ -1,7 +1,7 @@
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { BundleLoadError, loadBundle } from '@muesli/replay';
+import { BundleLoadError, loadBundle } from '@muesli/replay/node';
 
 interface CliArgs {
   command: string | null;
