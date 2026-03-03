@@ -1,5 +1,5 @@
 import type { ValidatedMbtEvent } from '@muesli/protocol';
-import { parseJsonlEvents, ReplayStore, type JsonlParseError } from '@muesli/replay';
+import { parseJsonlEventsWithOptionalSidecar, ReplayStore, type JsonlParseError } from '@muesli/replay';
 import { create } from 'zustand';
 
 export type LiveStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
@@ -11,12 +11,57 @@ export interface LiveHistoryEntry {
   message: string;
 }
 
+const LARGE_LOG_FALLBACK_THRESHOLD_BYTES = 2 * 1024 * 1024;
+
+function largeLogFallbackWarning(sourceBytes: number, indexUsed: boolean): string | null {
+  if (indexUsed || sourceBytes < LARGE_LOG_FALLBACK_THRESHOLD_BYTES) {
+    return null;
+  }
+
+  return 'large log loaded without sidecar index; full-scan fallback is active and may be slow.';
+}
+
+async function readFileTextWithProgress(file: File, onProgress: (percent: number) => void): Promise<string> {
+  if (!file.stream) {
+    const text = await file.text();
+    onProgress(100);
+    return text;
+  }
+
+  const reader = file.stream().getReader();
+  const decoder = new TextDecoder();
+  const parts: string[] = [];
+  let loadedBytes = 0;
+  const totalBytes = Math.max(file.size, 1);
+
+  onProgress(0);
+  while (true) {
+    const chunk = await reader.read();
+    if (chunk.done) {
+      break;
+    }
+
+    const value = chunk.value ?? new Uint8Array();
+    loadedBytes += value.byteLength;
+    parts.push(decoder.decode(value, { stream: true }));
+    onProgress(Math.min(99, Math.round((loadedBytes / totalBytes) * 100)));
+  }
+
+  parts.push(decoder.decode());
+  onProgress(100);
+  return parts.join('');
+}
+
 interface StudioState {
   replay: ReplayStore | null;
   eventCount: number;
   selectedTick: number;
   selectedNodeId: string | null;
   parseErrors: JsonlParseError[];
+  replayLoadProgress: number | null;
+  replayIndexed: boolean;
+  replayLoadWarning: string | null;
+  replaySourceBytes: number;
   mode: 'replay' | 'live';
   liveUrl: string;
   liveStatus: LiveStatus;
@@ -25,7 +70,8 @@ interface StudioState {
   liveLastError: string | null;
   liveLastEventUnixMs: number | null;
   liveHistory: LiveHistoryEntry[];
-  loadJsonl: (text: string) => void;
+  loadJsonl: (text: string, sidecarText?: string | null, sourceBytes?: number) => void;
+  loadJsonlFromFiles: (jsonlFile: File, sidecarFile?: File | null) => Promise<void>;
   appendLiveEvents: (events: ValidatedMbtEvent[]) => void;
   setSelectedTick: (tick: number) => void;
   setSelectedNodeId: (nodeId: string | null) => void;
@@ -44,6 +90,10 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   selectedTick: 0,
   selectedNodeId: null,
   parseErrors: [],
+  replayLoadProgress: null,
+  replayIndexed: false,
+  replayLoadWarning: null,
+  replaySourceBytes: 0,
   mode: 'replay',
   liveUrl: 'ws://localhost:8765/events',
   liveStatus: 'disconnected',
@@ -53,19 +103,47 @@ export const useStudioStore = create<StudioState>((set, get) => ({
   liveLastEventUnixMs: null,
   liveHistory: [],
 
-  loadJsonl: (text) => {
-    const result = parseJsonlEvents(text);
+  loadJsonl: (text, sidecarText = null, sourceBytes = 0) => {
+    const result = parseJsonlEventsWithOptionalSidecar(text, sidecarText);
     const replay = new ReplayStore();
     replay.appendMany(result.events);
+
+    const warnings = [result.sidecar.warning, largeLogFallbackWarning(sourceBytes, result.sidecar.index_used)].filter(
+      (warning): warning is string => Boolean(warning && warning.length > 0),
+    );
+    const replayLoadWarning = warnings.length > 0 ? warnings.join(' ') : null;
 
     set({
       replay,
       eventCount: replay.getAllEvents().length,
       parseErrors: result.errors,
+      replayLoadProgress: null,
+      replayIndexed: result.sidecar.index_used,
+      replayLoadWarning,
+      replaySourceBytes: sourceBytes,
       selectedTick: replay.maxTick >= 0 ? replay.maxTick : 0,
       selectedNodeId: replay.getFirstTreeNodeId(),
       mode: 'replay',
     });
+  },
+
+  loadJsonlFromFiles: async (jsonlFile, sidecarFile = null) => {
+    set({
+      replayLoadProgress: 0,
+      parseErrors: [],
+      replayLoadWarning: null,
+    });
+
+    const text = await readFileTextWithProgress(jsonlFile, (percent) => {
+      set({ replayLoadProgress: percent });
+    });
+
+    let sidecarText: string | null = null;
+    if (sidecarFile) {
+      sidecarText = await sidecarFile.text();
+    }
+
+    get().loadJsonl(text, sidecarText, jsonlFile.size);
   },
 
   appendLiveEvents: (events) => {

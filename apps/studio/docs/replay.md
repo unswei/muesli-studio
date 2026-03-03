@@ -1,4 +1,4 @@
-# replay mode (P0/P1)
+# replay mode
 
 ## what this is
 
@@ -11,12 +11,14 @@ Use replay mode when you need deterministic post-run inspection, debugging, or r
 ## how it works
 
 - file load parses JSONL line-by-line via `@muesli/replay`
+- optional sidecar tick index (`events.sidecar.tick-index.v1.json`) can be loaded with the JSONL file
 - parsed events are appended to a `ReplayStore`
 - tree layout is computed once from `bt_def.nodes/edges` (supports `from/to` and `parent/child` edge variants)
 - tick scrubbing recolours nodes using indexed `node_status` events
 - blackboard diff panel shows `bb_write`/`bb_delete` for selected tick
 - `bt_def.dsl` is shown in a dedicated text editor panel for quick definition inspection
 - fixture bundle support is validated by `studio inspect` using `@muesli/replay/node`, then the same `events.jsonl` can be opened in replay UI
+- replay UI now shows load progress, indexed/unindexed status, and explicit fallback warning for large unindexed logs
 
 ## api / syntax
 
@@ -33,6 +35,8 @@ pnpm studio inspect tests/fixtures/determinism_replay --schema tests/fixtures/sc
 ```
 
 2. Open [`tests/fixtures/determinism_replay/events.jsonl`](../../../tests/fixtures/determinism_replay/events.jsonl) in studio and scrub ticks `1..2`.
+
+3. For large logs, also open [`tests/fixtures/large_replay/events.sidecar.tick-index.v1.json`](../../../tests/fixtures/large_replay/events.sidecar.tick-index.v1.json) before opening `events.jsonl`.
 
 ## gotchas
 

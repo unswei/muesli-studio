@@ -7,5 +7,5 @@
 
 ## engineering follow-up
 
-- [ ] add sidecar index strategy for very large logs and benchmark against `tests/fixtures/large_replay/events.jsonl`
+- [ ] add lazy sidecar-backed replay loading so very large logs do not require full upfront parse
 - [ ] add broader studio rendering snapshots beyond tick/status golden coverage

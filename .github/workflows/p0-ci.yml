@@ -63,6 +63,9 @@ jobs:
       - name: inspect large fixture bundle
         run: pnpm studio:inspect tests/fixtures/large_replay --out /tmp/large_run_summary.json
 
+      - name: benchmark sidecar strategy (check-only)
+        run: pnpm bench:sidecar -- --check
+
       - name: lint
         run: pnpm lint
 

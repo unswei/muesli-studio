@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { parseEvent } from '@muesli/protocol';
+import { buildTickSidecarIndex } from '@muesli/replay';
 
 import { useStudioStore } from './store';
 
@@ -11,6 +12,10 @@ function resetStore(): void {
     selectedTick: 0,
     selectedNodeId: null,
     parseErrors: [],
+    replayLoadProgress: null,
+    replayIndexed: false,
+    replayLoadWarning: null,
+    replaySourceBytes: 0,
     mode: 'replay',
     liveUrl: 'ws://localhost:8765/events',
     liveStatus: 'disconnected',
@@ -111,5 +116,37 @@ describe('studio live store behaviour', () => {
 
     useStudioStore.getState().clearLiveHistory();
     expect(useStudioStore.getState().liveHistory).toHaveLength(0);
+  });
+
+  it('flags large replay fallback when sidecar is missing', () => {
+    resetStore();
+
+    const jsonl = [
+      '{"schema":"mbt.evt.v1","type":"run_start","run_id":"run-1","unix_ms":1,"seq":1,"data":{"git_sha":"fixture","host":{"name":"studio","version":"0.1.0","platform":"test"},"tick_hz":20,"tree_hash":"fnv1a64:1","capabilities":{"reset":true}}}',
+      '{"schema":"mbt.evt.v1","type":"tick_begin","run_id":"run-1","unix_ms":2,"seq":2,"tick":1,"data":{}}',
+      '{"schema":"mbt.evt.v1","type":"tick_end","run_id":"run-1","unix_ms":3,"seq":3,"tick":1,"data":{"root_status":"success","tick_ms":1.1}}',
+    ].join('\n');
+
+    useStudioStore.getState().loadJsonl(jsonl, null, 10 * 1024 * 1024);
+    const state = useStudioStore.getState();
+    expect(state.replayIndexed).toBe(false);
+    expect(state.replayLoadWarning).toContain('full-scan fallback');
+  });
+
+  it('uses sidecar metadata when a valid sidecar is provided', () => {
+    resetStore();
+
+    const jsonl = [
+      '{"schema":"mbt.evt.v1","type":"run_start","run_id":"run-1","unix_ms":1,"seq":1,"data":{"git_sha":"fixture","host":{"name":"studio","version":"0.1.0","platform":"test"},"tick_hz":20,"tree_hash":"fnv1a64:1","capabilities":{"reset":true}}}',
+      '{"schema":"mbt.evt.v1","type":"tick_begin","run_id":"run-1","unix_ms":2,"seq":2,"tick":1,"data":{}}',
+      '{"schema":"mbt.evt.v1","type":"tick_end","run_id":"run-1","unix_ms":3,"seq":3,"tick":1,"data":{"root_status":"success","tick_ms":1.1}}',
+    ].join('\n');
+
+    const sidecar = buildTickSidecarIndex(jsonl, 'events.jsonl');
+    useStudioStore.getState().loadJsonl(jsonl, JSON.stringify(sidecar), 10 * 1024 * 1024);
+
+    const state = useStudioStore.getState();
+    expect(state.replayIndexed).toBe(true);
+    expect(state.replayLoadWarning).toBeNull();
   });
 });

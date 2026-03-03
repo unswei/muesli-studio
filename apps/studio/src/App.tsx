@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { BlackboardDiff } from './components/BlackboardDiff';
 import { decodeWebSocketData, parseLivePayload } from './live';
@@ -13,6 +13,10 @@ export function App() {
   const selectedTick = useStudioStore((state) => state.selectedTick);
   const selectedNodeId = useStudioStore((state) => state.selectedNodeId);
   const parseErrors = useStudioStore((state) => state.parseErrors);
+  const replayLoadProgress = useStudioStore((state) => state.replayLoadProgress);
+  const replayIndexed = useStudioStore((state) => state.replayIndexed);
+  const replayLoadWarning = useStudioStore((state) => state.replayLoadWarning);
+  const replaySourceBytes = useStudioStore((state) => state.replaySourceBytes);
   const mode = useStudioStore((state) => state.mode);
   const liveUrl = useStudioStore((state) => state.liveUrl);
   const liveStatus = useStudioStore((state) => state.liveStatus);
@@ -21,7 +25,7 @@ export function App() {
   const liveLastError = useStudioStore((state) => state.liveLastError);
   const liveLastEventUnixMs = useStudioStore((state) => state.liveLastEventUnixMs);
   const liveHistory = useStudioStore((state) => state.liveHistory);
-  const loadJsonl = useStudioStore((state) => state.loadJsonl);
+  const loadJsonlFromFiles = useStudioStore((state) => state.loadJsonlFromFiles);
   const appendLiveEvents = useStudioStore((state) => state.appendLiveEvents);
   const setSelectedTick = useStudioStore((state) => state.setSelectedTick);
   const setSelectedNodeId = useStudioStore((state) => state.setSelectedNodeId);
@@ -32,6 +36,7 @@ export function App() {
   const addLiveHistory = useStudioStore((state) => state.addLiveHistory);
   const clearLiveHistory = useStudioStore((state) => state.clearLiveHistory);
   const addParseError = useStudioStore((state) => state.addParseError);
+  const [sidecarFile, setSidecarFile] = useState<File | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -55,8 +60,12 @@ export function App() {
       return;
     }
 
-    const text = await file.text();
-    loadJsonl(text);
+    await loadJsonlFromFiles(file, sidecarFile);
+  };
+
+  const onSidecarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    setSidecarFile(file);
   };
 
   useEffect(() => {
@@ -203,11 +212,33 @@ export function App() {
           <p className="muted">P1: replay + live monitoring over WebSocket, sharing one append-only replay engine.</p>
         </div>
 
-        <label className="file-input">
-          <span>open JSONL</span>
-          <input type="file" accept=".jsonl,application/json,text/plain" onChange={onFileChange} />
-        </label>
+        <div className="live-controls">
+          <label className="file-input">
+            <span>open JSONL</span>
+            <input type="file" accept=".jsonl,application/json,text/plain" onChange={onFileChange} />
+          </label>
+          <label className="file-input">
+            <span>open sidecar (optional)</span>
+            <input type="file" accept=".json,application/json" onChange={onSidecarChange} />
+          </label>
+        </div>
       </header>
+
+      {replayLoadProgress !== null ? (
+        <section className="panel controls">
+          <h2>replay loading</h2>
+          <p className="muted">
+            progress: <code>{replayLoadProgress}%</code>
+          </p>
+        </section>
+      ) : null}
+
+      {replayLoadWarning ? (
+        <section className="panel error-panel">
+          <h2>replay warning</h2>
+          <p>{replayLoadWarning}</p>
+        </section>
+      ) : null}
 
       <section className="panel controls">
         <h2>live monitor</h2>
@@ -287,6 +318,12 @@ export function App() {
             </span>
             <span>
               mode: <code>{mode}</code>
+            </span>
+            <span>
+              index: <code>{replayIndexed ? 'indexed' : 'unindexed'}</code>
+            </span>
+            <span>
+              source bytes: <code>{replaySourceBytes}</code>
             </span>
             <span>
               events: <code>{eventCount}</code>

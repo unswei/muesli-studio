@@ -35,6 +35,7 @@ Optional bundle files:
 - `seed.json`
 - `expected_metrics.json`
 - `expected_summary.json` (used for regression tests)
+- `events.sidecar.tick-index.v1.json` (optional tick-byte index for large logs)
 
 CLI:
 
@@ -57,6 +58,7 @@ Large deterministic fixture refresh:
 ```bash
 pnpm fixtures:large
 pnpm studio inspect tests/fixtures/large_replay --out /tmp/large_run_summary.json
+pnpm bench:sidecar
 ```
 
 ## gotchas
@@ -65,6 +67,7 @@ pnpm studio inspect tests/fixtures/large_replay --out /tmp/large_run_summary.jso
 - `tools/validate_log.py` may require Python dependencies (`jsonschema`) in some environments.
 - fallback validation protects CI determinism, but subprocess validation remains the preferred path.
 - `tests/fixtures/large_replay/events.jsonl` is intentionally large to support sidecar/index performance work.
+- sidecar indexes are optional; without one, studio falls back to full-scan ingest and now shows an explicit warning for large files.
 
 ## see also
 

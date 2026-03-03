@@ -39,6 +39,7 @@ Implemented in this milestone:
 - fixture bundle support:
   - bundle loader for `manifest.json` + `events.jsonl` (+ optional config/seed/expected metrics)
   - subprocess log validation integration (`tools/validate_log.py`) with deterministic AJV fallback
+  - sidecar tick index support (`mbt.sidecar.tick-index.v1`) with indexed parse fallback for very large logs
   - imported golden bundle fixtures from `muesli-bt` main:
     - `tests/fixtures/budget_warning`
     - `tests/fixtures/deadline_cancel`
@@ -46,6 +47,11 @@ Implemented in this milestone:
   - deterministic large replay fixture for sidecar/index strategy checks:
     - `tests/fixtures/large_replay` (30,002 canonical events)
     - regenerated with `pnpm fixtures:large`
+    - includes `events.sidecar.tick-index.v1.json`
+  - sidecar benchmark harness and baseline report:
+    - run `pnpm bench:sidecar`
+    - check-only mode: `pnpm bench:sidecar -- --check`
+    - output at `tests/benchmarks/sidecar-large_replay.json`
   - fixture summary regression tests using stored `expected_summary.json`
   - minimal CLI: `studio inspect <bundle_dir>` for bundle sanity checks and `run_summary.json` emission
   - Node-only replay entrypoint for bundle/validator features: `@muesli/replay/node`
@@ -90,6 +96,7 @@ To refresh the large deterministic stress fixture used for sidecar/index plannin
 ```bash
 pnpm fixtures:large
 pnpm studio inspect tests/fixtures/large_replay --out /tmp/large_run_summary.json
+pnpm bench:sidecar
 ```
 
 ### replay mode
@@ -98,6 +105,8 @@ Load either:
 
 - a canonical JSONL fixture (`tools/fixtures/minimal_run.jsonl`), or
 - a validated bundle event log (`tests/fixtures/*/events.jsonl`) after running `studio inspect`.
+
+Studio replay load supports an optional sidecar index file (`events.sidecar.tick-index.v1.json`). The UI now shows load progress, indexed/unindexed state, and warns when large logs fall back to unindexed full-scan ingest.
 
 ### live mode
 
@@ -119,6 +128,7 @@ Then connect studio to `ws://localhost:8765/events`.
 
 - consumer contract checklist: `docs/studio/contract-consumption.md`
 - fixture bundle workflow and CLI: `docs/studio/fixture-bundles.md`
+- sidecar tick-index format and usage: `docs/studio/sidecar-index.md`
 - studio replay mode: `apps/studio/docs/replay.md`
 - studio live monitoring: `apps/studio/docs/live.md`
 
@@ -143,7 +153,9 @@ packages/protocol/   # generated types, zod validation, protocol helpers
 packages/replay/     # parser/index/query for append-only event ingestion
 packages/ui/         # shared UI bits
 tests/fixtures/      # bundle fixtures + golden summaries for regression checks
+tests/benchmarks/    # sidecar benchmark baselines
 tools/gen_types/     # schema->types generation scripts
+tools/bench/         # sidecar benchmark tooling
 tools/fixtures/      # canonical fixture logs
 tools/studio         # studio CLI wrapper (`studio inspect`)
 tools/sync_schema.sh # sync schema from resolved muesli-bt source

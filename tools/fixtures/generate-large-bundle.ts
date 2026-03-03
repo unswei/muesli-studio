@@ -3,7 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { loadBundle, type RunEventRecord } from '@muesli/replay/node';
+import { buildTickSidecarIndex, loadBundle, type RunEventRecord } from '@muesli/replay/node';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..', '..');
@@ -229,6 +229,10 @@ async function main(): Promise<void> {
   await writeFile(path.join(fixtureDir, 'seed.json'), `${JSON.stringify(seed, null, 2)}\n`, 'utf8');
   await writeFile(path.join(fixtureDir, 'events.jsonl'), eventsText, 'utf8');
   await writeFile(path.join(fixtureDir, 'expected_metrics.json'), `${JSON.stringify(expectedMetrics, null, 2)}\n`, 'utf8');
+
+  const sidecar = buildTickSidecarIndex(eventsText, 'events.jsonl');
+  sidecar.events_sha256 = eventsSha256;
+  await writeFile(path.join(fixtureDir, 'events.sidecar.tick-index.v1.json'), `${JSON.stringify(sidecar, null, 2)}\n`, 'utf8');
 
   const loaded = await loadBundle(fixtureDir, {
     skipValidation: true,
