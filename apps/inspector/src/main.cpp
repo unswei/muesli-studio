@@ -9,6 +9,7 @@
 #endif
 
 #include <ixwebsocket/IXNetSystem.h>
+#include <ixwebsocket/IXWebSocketCloseConstants.h>
 #include <ixwebsocket/IXWebSocketServer.h>
 
 #include <muslisp/reader.hpp>
@@ -416,6 +417,15 @@ void EmitInspectorError(bt::event_log& events, std::optional<std::uint64_t> tick
   (void)events.emit("error", tick, data.str());
 }
 
+void CloseClientsGracefully(ix::WebSocketServer& server) {
+  for (const auto& client : server.getClients()) {
+    if (client) {
+      client->close(ix::WebSocketCloseConstants::kNormalClosureCode, "inspector shutting down");
+    }
+  }
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -569,6 +579,7 @@ int main(int argc, char** argv) {
     }
 
     host.events().clear_line_listener();
+    CloseClientsGracefully(server);
     server.stop();
     ix::uninitNetSystem();
     return exit_code;
