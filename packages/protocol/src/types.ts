@@ -6,7 +6,8 @@ export type MuesliBtCanonicalEventStreamEnvelopeMbtEvtV1 = ({
 [k: string]: any
 } & {
 schema: "mbt.evt.v1"
-type: ("run_start" | "bt_def" | "tick_begin" | "tick_end" | "node_status" | "bb_write" | "bb_delete" | "bb_snapshot" | "sched_submit" | "sched_start" | "sched_finish" | "sched_cancel" | "planner_v1" | "vla_submit" | "vla_poll" | "vla_cancel" | "vla_result" | "error")
+contract_version: "1.0.0"
+type: ("run_start" | "bt_def" | "tick_begin" | "tick_end" | "node_enter" | "node_exit" | "node_status" | "budget_warning" | "deadline_exceeded" | "bb_write" | "bb_delete" | "bb_snapshot" | "sched_submit" | "sched_start" | "sched_finish" | "sched_cancel" | "planner_call_start" | "planner_call_end" | "planner_v1" | "vla_submit" | "vla_poll" | "vla_cancel" | "vla_result" | "async_cancel_requested" | "async_cancel_acknowledged" | "async_completion_dropped" | "error")
 run_id: string
 unix_ms: number
 seq: number

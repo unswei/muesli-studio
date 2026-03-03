@@ -29,4 +29,49 @@ describe('protocol fixtures', () => {
       }
     });
   }
+
+  it('accepts current runtime trace event variants', () => {
+    const events: unknown[] = [
+      {
+        schema: 'mbt.evt.v1',
+        type: 'node_enter',
+        run_id: 'run-live',
+        unix_ms: 1,
+        seq: 1,
+        tick: 1,
+        data: { node_id: 1 },
+      },
+      {
+        schema: 'mbt.evt.v1',
+        type: 'planner_call_start',
+        run_id: 'run-live',
+        unix_ms: 2,
+        seq: 2,
+        tick: 1,
+        data: { node_id: 2, planner: 'mcts', budget_ms: 12 },
+      },
+      {
+        schema: 'mbt.evt.v1',
+        type: 'planner_call_end',
+        run_id: 'run-live',
+        unix_ms: 3,
+        seq: 3,
+        tick: 1,
+        data: { node_id: 2, planner: 'mcts', status: 'ok', time_used_ms: 2, work_done: 33 },
+      },
+      {
+        schema: 'mbt.evt.v1',
+        type: 'node_exit',
+        run_id: 'run-live',
+        unix_ms: 4,
+        seq: 4,
+        tick: 1,
+        data: { node_id: 1, status: 'running', dur_ms: 2.07 },
+      },
+    ];
+
+    for (const event of events) {
+      expect(() => parseEvent(event)).not.toThrow();
+    }
+  });
 });

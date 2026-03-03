@@ -47,3 +47,4 @@ All notable changes to this project will be documented in this file.
 - replay fixture-summary regression suite now includes `large_replay`
 - `studio inspect` now auto-selects `tests/fixtures/schema/mbt.evt.v1.schema.json` for fixture bundles when `--schema` is omitted
 - inspector now closes WebSocket clients with normal close code `1000` on shutdown to avoid spurious client-side `1006` errors
+- protocol/schema sync now includes `node_enter`, `node_exit`, `planner_call_start`, and `planner_call_end` so large fixture replay no longer drops those events as ingest warnings

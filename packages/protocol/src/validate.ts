@@ -7,6 +7,8 @@ export const eventTypeValues = [
   'bt_def',
   'tick_begin',
   'tick_end',
+  'node_enter',
+  'node_exit',
   'node_status',
   'bb_write',
   'bb_delete',
@@ -15,6 +17,8 @@ export const eventTypeValues = [
   'sched_start',
   'sched_finish',
   'sched_cancel',
+  'planner_call_start',
+  'planner_call_end',
   'planner_v1',
   'vla_submit',
   'vla_poll',
@@ -125,6 +129,28 @@ const nodeStatusSchema = envelopeSchema.extend({
     .passthrough(),
 });
 
+const nodeEnterSchema = envelopeSchema.extend({
+  type: z.literal('node_enter'),
+  tick: z.number().int().nonnegative(),
+  data: z
+    .object({
+      node_id: stringOrIntIdSchema,
+    })
+    .passthrough(),
+});
+
+const nodeExitSchema = envelopeSchema.extend({
+  type: z.literal('node_exit'),
+  tick: z.number().int().nonnegative(),
+  data: z
+    .object({
+      node_id: stringOrIntIdSchema,
+      status: z.enum(statusValues).optional(),
+      dur_ms: z.number().nonnegative().optional(),
+    })
+    .passthrough(),
+});
+
 const bbWriteSchema = envelopeSchema.extend({
   type: z.literal('bb_write'),
   tick: z.number().int().nonnegative(),
@@ -186,6 +212,18 @@ const schedCancelSchema = envelopeSchema.extend({
   data: z.record(z.unknown()),
 });
 
+const plannerCallStartSchema = envelopeSchema.extend({
+  type: z.literal('planner_call_start'),
+  tick: z.number().int().nonnegative(),
+  data: z.record(z.unknown()),
+});
+
+const plannerCallEndSchema = envelopeSchema.extend({
+  type: z.literal('planner_call_end'),
+  tick: z.number().int().nonnegative(),
+  data: z.record(z.unknown()),
+});
+
 const plannerV1Schema = envelopeSchema.extend({
   type: z.literal('planner_v1'),
   data: z.record(z.unknown()),
@@ -229,6 +267,8 @@ export const mbtEventSchema = z.discriminatedUnion('type', [
   btDefSchema,
   tickBeginSchema,
   tickEndSchema,
+  nodeEnterSchema,
+  nodeExitSchema,
   nodeStatusSchema,
   bbWriteSchema,
   bbDeleteSchema,
@@ -237,6 +277,8 @@ export const mbtEventSchema = z.discriminatedUnion('type', [
   schedStartSchema,
   schedFinishSchema,
   schedCancelSchema,
+  plannerCallStartSchema,
+  plannerCallEndSchema,
   plannerV1Schema,
   vlaSubmitSchema,
   vlaPollSchema,
