@@ -10,8 +10,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..', '..');
 
 const schemaPath = path.join(rootDir, 'schema', 'mbt.evt.v1.schema.json');
-const fixtureDir = path.join(rootDir, 'tools', 'fixtures');
-const fixtureFiles = ['minimal_run.jsonl', 'planner_run.jsonl', 'scheduler_run.jsonl'];
+const fixtureFiles = [
+  'tools/fixtures/minimal_run.jsonl',
+  'tools/fixtures/planner_run.jsonl',
+  'tools/fixtures/scheduler_run.jsonl',
+];
 
 const schema = JSON.parse(await readFile(schemaPath, 'utf8'));
 const ajv = new Ajv2020({ allErrors: true, strict: true, strictRequired: false });
@@ -20,7 +23,7 @@ const validate = ajv.compile(schema);
 let hasErrors = false;
 
 for (const fileName of fixtureFiles) {
-  const filePath = path.join(fixtureDir, fileName);
+  const filePath = path.join(rootDir, fileName);
   const raw = await readFile(filePath, 'utf8');
   const lines = raw.split(/\r?\n/);
 

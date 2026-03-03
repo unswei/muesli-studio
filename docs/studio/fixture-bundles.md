@@ -34,6 +34,7 @@ Optional bundle files:
 - `config.json`
 - `seed.json`
 - `expected_metrics.json`
+- `expected_summary.json` (used for regression tests)
 
 CLI:
 
@@ -49,11 +50,19 @@ pnpm studio inspect tests/fixtures/determinism_replay \
   --out /tmp/run_summary.json
 ```
 
+Large deterministic fixture refresh:
+
+```bash
+pnpm fixtures:large
+pnpm studio inspect tests/fixtures/large_replay --out /tmp/large_run_summary.json
+```
+
 ## gotchas
 
 - unknown major contract/schema versions fail fast.
 - `tools/validate_log.py` may require Python dependencies (`jsonschema`) in some environments.
 - fallback validation protects CI determinism, but subprocess validation remains the preferred path.
+- `tests/fixtures/large_replay/events.jsonl` is intentionally large to support sidecar/index performance work.
 
 ## see also
 

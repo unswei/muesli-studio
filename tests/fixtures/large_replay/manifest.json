@@ -1,0 +1,11 @@
+{
+  "contract_id": "runtime-contract-v1.0.0",
+  "contract_version": "1.0.0",
+  "fixture_name": "large-replay-case",
+  "generated_from_commit_time_utc": "2026-03-03T00:00:00Z",
+  "generator": "tools/fixtures/generate-large-bundle.ts",
+  "git_sha": "fixture",
+  "provenance_model": "deterministic-from-seed",
+  "schema": "mbt.evt.v1",
+  "schema_path": "tests/fixtures/schema/mbt.evt.v1.schema.json"
+}

@@ -1,0 +1,6 @@
+{
+  "deterministic_mode": true,
+  "scenario": "large_replay_sidecar_baseline",
+  "tick_budget_ms": 20,
+  "tick_count": 5000
+}

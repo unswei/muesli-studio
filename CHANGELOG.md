@@ -43,3 +43,5 @@ All notable changes to this project will be documented in this file.
 - imported P1 fixture bundles (`budget_warning`, `deadline_cancel`, `determinism_replay`) from `muesli-bt` main with checked-in `expected_summary.json` regression baselines
 - minimal `studio inspect <bundle_dir>` CLI added for bundle validation and summary emission
 - studio now shows `bt_def.dsl` in a dedicated editor panel for replay/live inspection
+- deterministic large fixture bundle `tests/fixtures/large_replay` (30,002 events) and generator script `pnpm fixtures:large` for sidecar/index strategy testing
+- replay fixture-summary regression suite now includes `large_replay`

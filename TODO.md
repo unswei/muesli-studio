@@ -7,6 +7,6 @@
 
 ## engineering follow-up
 
-- [ ] add sidecar index strategy for very large logs
+- [ ] add sidecar index strategy for very large logs and benchmark against `tests/fixtures/large_replay/events.jsonl`
 - [ ] add broader studio rendering snapshots beyond tick/status golden coverage
 - [ ] align `@muesli/protocol` zod validators with newer `muesli-bt` main event variants used by fixture bundles (`budget_warning`, `deadline_exceeded`, `node_enter/exit`, planner call lifecycle)

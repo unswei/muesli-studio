@@ -1,0 +1,15 @@
+{
+  "event_count": 30002,
+  "max_tick": 5000,
+  "events_sha256": "b9978ce9e063ed12bac15dfbf49414732c3e95bda04a9ddc9ce628a0c8faafa9",
+  "required_types": [
+    "run_start",
+    "bt_def",
+    "tick_begin",
+    "node_enter",
+    "planner_call_start",
+    "planner_call_end",
+    "node_exit",
+    "tick_end"
+  ]
+}

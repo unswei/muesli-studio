@@ -20,6 +20,7 @@ const fixtures: FixtureCase[] = [
   { name: 'budget_warning', bundleDir: path.join(fixturesRoot, 'budget_warning') },
   { name: 'deadline_cancel', bundleDir: path.join(fixturesRoot, 'deadline_cancel') },
   { name: 'determinism_replay', bundleDir: path.join(fixturesRoot, 'determinism_replay') },
+  { name: 'large_replay', bundleDir: path.join(fixturesRoot, 'large_replay') },
 ];
 
 describe('fixture bundle regression summaries', () => {

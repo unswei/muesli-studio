@@ -43,6 +43,9 @@ Implemented in this milestone:
     - `tests/fixtures/budget_warning`
     - `tests/fixtures/deadline_cancel`
     - `tests/fixtures/determinism_replay`
+  - deterministic large replay fixture for sidecar/index strategy checks:
+    - `tests/fixtures/large_replay` (30,002 canonical events)
+    - regenerated with `pnpm fixtures:large`
   - fixture summary regression tests using stored `expected_summary.json`
   - minimal CLI: `studio inspect <bundle_dir>` for bundle sanity checks and `run_summary.json` emission
   - Node-only replay entrypoint for bundle/validator features: `@muesli/replay/node`
@@ -80,6 +83,13 @@ pnpm studio inspect tests/fixtures/determinism_replay --out /tmp/run_summary.jso
 ```
 
 This command validates the bundle, prints a concise summary, and writes `run_summary.json` when `--out` is provided.
+
+To refresh the large deterministic stress fixture used for sidecar/index planning:
+
+```bash
+pnpm fixtures:large
+pnpm studio inspect tests/fixtures/large_replay --out /tmp/large_run_summary.json
+```
 
 ### replay mode
 
