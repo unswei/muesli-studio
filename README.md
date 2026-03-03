@@ -13,6 +13,12 @@ Blackboard diff at selected tick:
 
 ![blackboard diff panel](docs/images/studio-blackboard-diff.png)
 
+Refresh both screenshots with:
+
+```bash
+pnpm docs:screenshots
+```
+
 ## current scope
 
 Implemented in this milestone:
@@ -133,6 +139,7 @@ Load either:
 - a validated bundle event log (`tests/fixtures/*/events.jsonl`) after running `studio inspect`.
 
 Studio replay load supports an optional sidecar index file (`events.sidecar.tick-index.v1.json`). The UI now shows load progress, indexed/unindexed state, and warns when large logs fall back to unindexed full-scan ingest.
+For large indexed logs, studio now enables lazy sidecar-backed tick parsing so replay opens quickly and loads additional tick ranges when selected.
 
 The replay panel also includes a DSL editor for `bt_def.dsl`. Use:
 

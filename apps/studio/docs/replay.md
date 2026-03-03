@@ -22,6 +22,7 @@ Use replay mode when you need deterministic post-run inspection, debugging, or r
   - `save` writes the draft via browser save picker, or downloads if picker API is unavailable
 - fixture bundle support is validated by `studio inspect` using `@muesli/replay/node`, then the same `events.jsonl` can be opened in replay UI
 - replay UI now shows load progress, indexed/unindexed status, and explicit fallback warning for large unindexed logs
+- for large indexed logs, replay starts in lazy sidecar mode (bootstrap + first tick), then parses additional tick ranges on scrub demand
 - demo bootstrapping can auto-load replay files via URL query (`demo_fixture`, optional `demo_sidecar`)
 
 ## api / syntax
@@ -54,6 +55,7 @@ pnpm demo
 
 - invalid lines are skipped and surfaced as parse warnings
 - replay UI consumes JSONL; bundle-level validation happens in Node tooling (`studio inspect`)
+- current lazy mode still keeps the full JSONL text in browser memory; follow-up work can switch to `File.slice` ranges
 - newer runtime event variants are retained in the stream even when UI panels do not yet render dedicated widgets
 - DSL compile errors are shown inline and do not mutate the currently rendered tree
 

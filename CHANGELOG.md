@@ -60,3 +60,7 @@ All notable changes to this project will be documented in this file.
 - root demo launcher (`pnpm demo`) now stages and validates `tests/fixtures/studio_demo` before opening studio
 - added `tests/fixtures/studio_demo` fixture bundle for small deterministic replay demos with tree and blackboard diff coverage
 - README now includes UI screenshots plus a direct `pnpm demo` “try it now” path and scope note that editing workflows are planned
+- studio `DslEditor` tests now include jsdom interaction coverage for `apply`, `revert`, and browser save flows (`showSaveFilePicker` + download fallback)
+- studio replay now uses lazy sidecar-backed tick parsing for large indexed logs, loading bootstrap + selected ticks on demand
+- studio rendering regression coverage now includes snapshots for tree, node inspector, and blackboard diff panels across fixture ticks
+- added `pnpm docs:screenshots` automation to refresh README screenshots from `tests/fixtures/studio_demo`

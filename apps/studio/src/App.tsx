@@ -18,6 +18,7 @@ export function App() {
   const replayIndexed = useStudioStore((state) => state.replayIndexed);
   const replayLoadWarning = useStudioStore((state) => state.replayLoadWarning);
   const replaySourceBytes = useStudioStore((state) => state.replaySourceBytes);
+  const replayMaxTick = useStudioStore((state) => state.replayMaxTick);
   const treeRevision = useStudioStore((state) => state.treeRevision);
   const mode = useStudioStore((state) => state.mode);
   const liveUrl = useStudioStore((state) => state.liveUrl);
@@ -365,7 +366,7 @@ export function App() {
               events: <code>{eventCount}</code>
             </span>
             <span>
-              ticks: <code>{replay.maxTick >= 0 ? replay.maxTick + 1 : 0}</code>
+              ticks: <code>{replayMaxTick >= 0 ? replayMaxTick + 1 : 0}</code>
             </span>
             {treeSummary ? (
               <span>
@@ -380,7 +381,7 @@ export function App() {
               id="tick-scrubber"
               type="range"
               min={0}
-              max={Math.max(replay.maxTick, 0)}
+              max={Math.max(replayMaxTick, 0)}
               value={selectedTick}
               onChange={(evt) => {
                 if (liveAutoFollow) {
@@ -388,7 +389,7 @@ export function App() {
                 }
                 setSelectedTick(Number(evt.target.value));
               }}
-              disabled={replay.maxTick <= 0}
+              disabled={replayMaxTick <= 0}
             />
           </label>
         </section>

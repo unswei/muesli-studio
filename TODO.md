@@ -1,11 +1,6 @@
 # todo
 
-## editing follow-up
-
-- [ ] add jsdom interaction coverage for `DslEditor` (`apply`, `revert`, and `save` paths)
-
 ## engineering follow-up
 
-- [ ] add lazy sidecar-backed replay loading so very large logs do not require full upfront parse
-- [ ] add broader studio rendering snapshots beyond tick/status golden coverage
-- [ ] automate README screenshot refresh from `tests/fixtures/studio_demo` to reduce docs drift
+- [ ] add file-slice lazy loading so very large browser replays do not require full JSONL text in memory
+- [ ] add snapshot coverage for live monitor status/history rendering states
