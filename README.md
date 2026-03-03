@@ -2,7 +2,7 @@
 
 A monorepo for `muesli-studio` (web UI) and `mbt_inspector` (runtime bridge) around the canonical event stream `mbt.evt.v1`.
 
-## current scope (P1 complete)
+## current scope
 
 Implemented in this milestone:
 
@@ -32,11 +32,11 @@ Implemented in this milestone:
   - forwards canonical runtime event lines to WebSocket and JSONL through one serialisation path
   - integration test proving WS/JSONL payload equivalence in deterministic mode
 - CI checks for schema/contract drift against the resolved `muesli-bt` source
-- P0 contract-consumption foundations:
+- contract-consumption foundations:
   - consumer requirements checklist (`docs/studio/contract-consumption.md`)
   - version gating for contract/schema compatibility (`packages/replay/src/version-gate.ts`)
   - deterministic run summary generation with stable digest (`packages/replay/src/summarise-run.ts`)
-- P1 fixture bundle support:
+- fixture bundle support:
   - bundle loader for `manifest.json` + `events.jsonl` (+ optional config/seed/expected metrics)
   - subprocess log validation integration (`tools/validate_log.py`) with deterministic AJV fallback
   - imported golden bundle fixtures from `muesli-bt` main:
@@ -131,7 +131,7 @@ docs/studio/         # studio-facing contract and workflow docs
 packages/protocol/   # generated types, zod validation, protocol helpers
 packages/replay/     # parser/index/query for append-only event ingestion
 packages/ui/         # shared UI bits
-tests/fixtures/      # bundle fixtures + golden summaries for P1 regression checks
+tests/fixtures/      # bundle fixtures + golden summaries for regression checks
 tools/gen_types/     # schema->types generation scripts
 tools/fixtures/      # canonical fixture logs
 tools/studio         # studio CLI wrapper (`studio inspect`)

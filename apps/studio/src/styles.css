@@ -183,6 +183,18 @@ button:disabled {
   gap: 1rem;
 }
 
+.dsl-editor {
+  width: 100%;
+  min-height: 220px;
+  resize: vertical;
+  border: 1px solid var(--panel-border);
+  border-radius: 0.45rem;
+  padding: 0.65rem;
+  background: #fbfdff;
+  color: #142130;
+  font: 0.88rem/1.45 "IBM Plex Mono", "Consolas", monospace;
+}
+
 .history-list {
   max-height: 220px;
   overflow: auto;

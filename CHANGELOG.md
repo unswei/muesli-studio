@@ -42,3 +42,4 @@ All notable changes to this project will be documented in this file.
 - log validation integration added via `tools/validate_log.py` subprocess with deterministic AJV fallback
 - imported P1 fixture bundles (`budget_warning`, `deadline_cancel`, `determinism_replay`) from `muesli-bt` main with checked-in `expected_summary.json` regression baselines
 - minimal `studio inspect <bundle_dir>` CLI added for bundle validation and summary emission
+- studio now shows `bt_def.dsl` in a dedicated editor panel for replay/live inspection

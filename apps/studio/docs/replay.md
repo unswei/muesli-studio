@@ -15,6 +15,7 @@ Use replay mode when you need deterministic post-run inspection, debugging, or r
 - tree layout is computed once from `bt_def.nodes/edges` (supports `from/to` and `parent/child` edge variants)
 - tick scrubbing recolours nodes using indexed `node_status` events
 - blackboard diff panel shows `bb_write`/`bb_delete` for selected tick
+- `bt_def.dsl` is shown in a dedicated text editor panel for quick definition inspection
 - fixture bundle support is validated by `studio inspect` using `@muesli/replay/node`, then the same `events.jsonl` can be opened in replay UI
 
 ## api / syntax

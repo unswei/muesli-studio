@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { BlackboardDiff } from './components/BlackboardDiff';
 import { decodeWebSocketData, parseLivePayload } from './live';
+import { DslEditor } from './components/DslEditor';
 import { NodeInspector } from './components/NodeInspector';
 import { TreeView } from './components/TreeView';
 import { useStudioStore } from './store';
@@ -325,6 +326,7 @@ export function App() {
           <>
             <TreeView replay={replay} selectedTick={selectedTick} selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
             <NodeInspector replay={replay} selectedNodeId={selectedNodeId} tick={selectedTick} />
+            <DslEditor replay={replay} />
             <BlackboardDiff replay={replay} tick={selectedTick} />
           </>
         ) : (

@@ -2,7 +2,6 @@
 
 ## P2 editing
 
-- [ ] show `bt_def.dsl` in a text editor panel
 - [ ] keep visual tree synchronised by reloading runtime-compiled definitions
 - [ ] save edited DSL text back to file for runtime use
 
