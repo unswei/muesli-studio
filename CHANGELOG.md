@@ -64,3 +64,6 @@ All notable changes to this project will be documented in this file.
 - studio replay now uses lazy sidecar-backed tick parsing for large indexed logs, loading bootstrap + selected ticks on demand
 - studio rendering regression coverage now includes snapshots for tree, node inspector, and blackboard diff panels across fixture ticks
 - added `pnpm docs:screenshots` automation to refresh README screenshots from `tests/fixtures/studio_demo`
+- large sidecar-backed browser file loads now use file-slice lazy tick hydration, avoiding full JSONL text retention in memory
+- studio snapshot coverage now includes live monitor status/history rendering states
+- release workflow now publishes source plus `linux-intel` and `macos-arm` binary bundles with `.sha256` assets on `v*` tags

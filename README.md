@@ -94,6 +94,16 @@ pnpm install && pnpm demo
 
 `pnpm demo` stages a known deterministic fixture bundle, validates it with `studio inspect`, starts studio, and opens the browser with the replay preloaded.
 
+## release targets
+
+Tag pushes matching `v*` now publish these release artefacts:
+
+- source (`.tar.gz` and `.zip`)
+- Linux Intel binary bundle
+- macOS Apple Silicon binary bundle
+
+See `docs/studio/release-targets.md` for the workflow and asset naming.
+
 ## quick start (full dev setup)
 
 ```bash
@@ -173,6 +183,7 @@ Then connect studio to `ws://localhost:8765/events`.
 - consumer contract checklist: `docs/studio/contract-consumption.md`
 - fixture bundle workflow and CLI: `docs/studio/fixture-bundles.md`
 - sidecar tick-index format and usage: `docs/studio/sidecar-index.md`
+- release targets and artefacts: `docs/studio/release-targets.md`
 - studio replay mode: `apps/studio/docs/replay.md`
 - studio live monitoring: `apps/studio/docs/live.md`
 

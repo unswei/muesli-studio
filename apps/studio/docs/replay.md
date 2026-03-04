@@ -55,7 +55,8 @@ pnpm demo
 
 - invalid lines are skipped and surfaced as parse warnings
 - replay UI consumes JSONL; bundle-level validation happens in Node tooling (`studio inspect`)
-- current lazy mode still keeps the full JSONL text in browser memory; follow-up work can switch to `File.slice` ranges
+- lazy mode for local file input now uses `File.slice` ranges to avoid retaining full JSONL text in memory
+- URL-based replay loads still fetch full text; range-based HTTP loading is future work
 - newer runtime event variants are retained in the stream even when UI panels do not yet render dedicated widgets
 - DSL compile errors are shown inline and do not mutate the currently rendered tree
 

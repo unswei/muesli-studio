@@ -186,7 +186,51 @@ describe('studio live store behaviour', () => {
     const afterSelect = useStudioStore.getState();
     expect(afterSelect.selectedTick).toBe(3);
     expect(afterSelect.replay?.getTick(3).length).toBeGreaterThan(0);
-    expect(afterSelect.eventCount).toBe(6);
+    expect(afterSelect.replay?.getTick(2).length).toBeGreaterThan(0);
+    expect(afterSelect.eventCount).toBe(8);
+  });
+
+  it('uses file-slice lazy loading for large sidecar-backed file input', async () => {
+    resetStore();
+
+    const jsonl = [
+      '{"schema":"mbt.evt.v1","type":"run_start","run_id":"run-file","unix_ms":1,"seq":1,"data":{"git_sha":"fixture","host":{"name":"studio","version":"0.1.0","platform":"test"},"tick_hz":20,"tree_hash":"fnv1a64:1","capabilities":{"reset":true}}}',
+      '{"schema":"mbt.evt.v1","type":"bt_def","run_id":"run-file","unix_ms":2,"seq":2,"data":{"dsl":"(bt (seq (act one) (act two) (act three)))","nodes":[{"id":1,"kind":"seq","name":"root"},{"id":2,"kind":"act","name":"one"},{"id":3,"kind":"act","name":"two"},{"id":4,"kind":"act","name":"three"}],"edges":[{"parent":1,"child":2,"index":0},{"parent":1,"child":3,"index":1},{"parent":1,"child":4,"index":2}]}}',
+      '{"schema":"mbt.evt.v1","type":"tick_begin","run_id":"run-file","unix_ms":3,"seq":3,"tick":1,"data":{}}',
+      '{"schema":"mbt.evt.v1","type":"tick_end","run_id":"run-file","unix_ms":4,"seq":4,"tick":1,"data":{"root_status":"running","tick_ms":1.1}}',
+      '{"schema":"mbt.evt.v1","type":"tick_begin","run_id":"run-file","unix_ms":5,"seq":5,"tick":2,"data":{}}',
+      '{"schema":"mbt.evt.v1","type":"tick_end","run_id":"run-file","unix_ms":6,"seq":6,"tick":2,"data":{"root_status":"running","tick_ms":1.2}}',
+      '{"schema":"mbt.evt.v1","type":"tick_begin","run_id":"run-file","unix_ms":7,"seq":7,"tick":3,"data":{}}',
+      '{"schema":"mbt.evt.v1","type":"tick_end","run_id":"run-file","unix_ms":8,"seq":8,"tick":3,"data":{"root_status":"success","tick_ms":1.3}}',
+    ].join('\n');
+    const sidecar = buildTickSidecarIndex(jsonl, 'events.jsonl');
+
+    const paddedJsonl = `${jsonl}\n${' \n'.repeat(1_100_000)}`;
+    const jsonlFile = new File([paddedJsonl], 'events.jsonl', { type: 'application/x-ndjson' });
+    const sidecarFile = new File([JSON.stringify(sidecar)], 'events.sidecar.tick-index.v1.json', {
+      type: 'application/json',
+    });
+    const streamSpy = vi.spyOn(jsonlFile, 'stream');
+
+    await useStudioStore.getState().loadJsonlFromFiles(jsonlFile, sidecarFile);
+    const initial = useStudioStore.getState();
+    expect(initial.replayLoadWarning).toContain('lazy loading');
+    expect(initial.eventCount).toBe(4);
+    expect(initial.replayMaxTick).toBe(3);
+    expect(streamSpy).not.toHaveBeenCalled();
+
+    useStudioStore.getState().setSelectedTick(3);
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      if ((useStudioStore.getState().replay?.getTick(3).length ?? 0) > 0) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+
+    const afterHydration = useStudioStore.getState();
+    expect(afterHydration.replay?.getTick(2).length).toBeGreaterThan(0);
+    expect(afterHydration.replay?.getTick(3).length).toBeGreaterThan(0);
+    expect(afterHydration.eventCount).toBe(8);
   });
 
   it('loads replay JSONL from URL sources for demo mode', async () => {

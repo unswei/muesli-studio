@@ -1,0 +1,117 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  source:
+    runs-on: ubuntu-latest
+
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: resolve release version
+        id: meta
+        run: |
+          echo "version=${GITHUB_REF_NAME}" >> "${GITHUB_OUTPUT}"
+
+      - name: package source archives
+        run: |
+          version="${{ steps.meta.outputs.version }}"
+          bundle="muesli-studio-${version}"
+          mkdir -p dist/release
+          git archive --format=tar.gz --prefix="${bundle}/" --output="dist/release/${bundle}-source.tar.gz" HEAD
+          git archive --format=zip --prefix="${bundle}/" --output="dist/release/${bundle}-source.zip" HEAD
+          sha256sum "dist/release/${bundle}-source.tar.gz" > "dist/release/${bundle}-source.tar.gz.sha256"
+          sha256sum "dist/release/${bundle}-source.zip" > "dist/release/${bundle}-source.zip.sha256"
+
+      - name: upload source assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-assets
+          path: dist/release/muesli-studio-${{ steps.meta.outputs.version }}-source*
+
+  binaries:
+    runs-on: ${{ matrix.os }}
+    needs: source
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-intel
+          - os: macos-14
+            target: macos-arm
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.5.2
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: install
+        run: pnpm install --frozen-lockfile
+
+      - name: configure inspector
+        run: pnpm inspector:configure
+
+      - name: build inspector
+        run: pnpm inspector:build
+
+      - name: smoke inspector binary
+        run: pnpm inspector:smoke
+
+      - name: build studio
+        run: pnpm build
+
+      - name: package release binary
+        run: pnpm release:package -- --target "${{ matrix.target }}" --version "${{ needs.source.outputs.version }}"
+
+      - name: upload binary assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.target }}
+          path: |
+            dist/release/muesli-studio-${{ needs.source.outputs.version }}-${{ matrix.target }}.tar.gz
+            dist/release/muesli-studio-${{ needs.source.outputs.version }}-${{ matrix.target }}.tar.gz.sha256
+
+  publish:
+    runs-on: ubuntu-latest
+    needs:
+      - source
+      - binaries
+
+    steps:
+      - name: download all assets
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/release-assets
+
+      - name: publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.source.outputs.version }}
+          name: ${{ needs.source.outputs.version }}
+          generate_release_notes: true
+          files: dist/release-assets/**/*
