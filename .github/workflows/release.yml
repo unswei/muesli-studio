@@ -33,8 +33,11 @@ jobs:
           mkdir -p dist/release
           git archive --format=tar.gz --prefix="${bundle}/" --output="dist/release/${bundle}-source.tar.gz" HEAD
           git archive --format=zip --prefix="${bundle}/" --output="dist/release/${bundle}-source.zip" HEAD
-          sha256sum "dist/release/${bundle}-source.tar.gz" > "dist/release/${bundle}-source.tar.gz.sha256"
-          sha256sum "dist/release/${bundle}-source.zip" > "dist/release/${bundle}-source.zip.sha256"
+          (
+            cd dist/release
+            sha256sum "${bundle}-source.tar.gz" > "${bundle}-source.tar.gz.sha256"
+            sha256sum "${bundle}-source.zip" > "${bundle}-source.zip.sha256"
+          )
 
       - name: upload source assets
         uses: actions/upload-artifact@v4
