@@ -83,6 +83,7 @@ Implemented in this milestone:
 Inspector pin metadata lives in [`apps/inspector/cmake/MuesliBtVersion.cmake`](./apps/inspector/cmake/MuesliBtVersion.cmake).
 
 - default CI and local fallback builds use that pinned URL/tag
+- current pinned tag: `v0.2.0`
 - scheduled CI builds inspector against `muesli-bt` `main` (advisory)
 - canonical contract reference: [muesli-bt studio integration contract](https://github.com/unswei/muesli-bt/blob/main/docs/contracts/muesli-studio-integration.md)
 
@@ -102,7 +103,12 @@ Tag pushes matching `v*` now publish these release artefacts:
 - Linux Intel binary bundle
 - macOS Apple Silicon binary bundle
 
-See `docs/studio/release-targets.md` for the workflow and asset naming.
+First release: `v0.1.0` (published assets: source + `linux-intel` + `macos-arm` bundles).
+
+See:
+
+- `docs/studio/release-targets.md` for workflow and asset naming
+- `docs/studio/release-notes.md` for release notes
 
 ## quick start (full dev setup)
 
@@ -184,6 +190,7 @@ Then connect studio to `ws://localhost:8765/events`.
 - fixture bundle workflow and CLI: `docs/studio/fixture-bundles.md`
 - sidecar tick-index format and usage: `docs/studio/sidecar-index.md`
 - release targets and artefacts: `docs/studio/release-targets.md`
+- release notes: `docs/studio/release-notes.md`
 - studio replay mode: `apps/studio/docs/replay.md`
 - studio live monitoring: `apps/studio/docs/live.md`
 

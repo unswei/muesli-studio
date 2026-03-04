@@ -53,6 +53,8 @@ Pinned defaults are defined in [`cmake/MuesliBtVersion.cmake`](./cmake/MuesliBtV
 - `MUESLI_BT_GIT_URL`
 - `MUESLI_BT_GIT_TAG`
 
+Current default tag: `v0.2.0`.
+
 ## build instructions
 
 ### option 1: local installed muesli-bt

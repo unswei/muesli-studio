@@ -12,6 +12,8 @@ Use this workflow when you want a tagged release that includes:
 - Linux Intel binary bundle
 - macOS Apple Silicon binary bundle
 
+First published release using this target set: `v0.1.0`.
+
 ## how it works
 
 1. Push a tag that matches `v*`.
@@ -58,6 +60,7 @@ Then open the release page for `v0.1.0` and download the required artefact.
 - the binary bundles include `bin/mbt_inspector` and `studio/dist` static assets.
 - release binaries are built on GitHub runners (`ubuntu-latest`, `macos-14`).
 - checksum files are provided, but detached signatures are not yet published.
+- release binaries contain prebuilt `mbt_inspector` for `linux-intel` and `macos-arm`; no other binary targets are published in this workflow.
 
 ## see also
 
