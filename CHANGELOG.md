@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### changed
 
 - bumped inspector fallback pin `MUESLI_BT_GIT_TAG` to `v0.2.0`.
+- reframed the top-level README around tool-first positioning, a demo-first flow, and screenshot-led product presentation.
 
 ## [0.1.0] - 2026-03-04
 
