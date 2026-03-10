@@ -12,6 +12,8 @@
 
 ## try it now
 
+From the repo root:
+
 ```bash
 pnpm install && pnpm demo
 ```
@@ -152,8 +154,8 @@ Then connect studio to `ws://localhost:8765/events`.
 
 Inspector pin metadata lives in [`apps/inspector/cmake/MuesliBtVersion.cmake`](./apps/inspector/cmake/MuesliBtVersion.cmake).
 
-- default CI and local fallback builds use that pinned URL and tag
-- current pinned tag: `v0.2.0`
+- default CI and local fallback builds use that pinned URL and commit
+- current pinned commit: `affa99d13995a7659bfddfeef08249a8365f4bc5` (tagged `v0.2.0`)
 - scheduled CI builds inspector against [`muesli-bt`](https://github.com/unswei/muesli-bt) `main` as an advisory check
 - canonical contract reference: [muesli-bt studio integration contract](https://github.com/unswei/muesli-bt/blob/main/docs/contracts/muesli-studio-integration.md)
 
@@ -162,7 +164,7 @@ Inspector pin metadata lives in [`apps/inspector/cmake/MuesliBtVersion.cmake`](.
 Inspector resolution order:
 
 1. `find_package(muesli_bt CONFIG QUIET)`
-2. if not found, `FetchContent` using the pinned URL and tag
+2. if not found, `FetchContent` using the pinned URL and commit
 
 No manual include or library path overrides are needed.
 

@@ -4,7 +4,7 @@
 
 This page is the canonical integration contract between `muesli-bt` and `muesli-studio`.
 
-`muesli-studio` must treat this page, together with the event schema at `schema/mbt.evt.v1.schema.json`, as the source of truth for compatible integration behaviour.
+`muesli-studio` must treat this page, together with the event schema at `schemas/event_log/v1/mbt.evt.v1.schema.json`, as the source of truth for compatible integration behaviour.
 
 This contract is a public interface. Any breaking change must be deliberate, documented, and released with matching changelog/schema/fixture/test updates.
 
@@ -33,9 +33,10 @@ Required:
 - optional integration targets are exported when enabled and available:
   - `muesli_bt::integration_pybullet`
   - `muesli_bt::integration_webots`
+  - `muesli_bt::integration_ros2` (skeleton target)
 - installed share assets include:
   - `${prefix}/share/muesli_bt/contracts/muesli-studio-integration.md`
-  - `${prefix}/share/muesli_bt/schema/mbt.evt.v1.schema.json`
+  - `${prefix}/share/muesli_bt/schemas/event_log/v1/mbt.evt.v1.schema.json`
 
 ### requirement 2: inspector-facing host api
 
@@ -51,7 +52,8 @@ Required capabilities include:
   - `muslisp::runtime_config::register_extension(...)`
   - `muslisp::create_global_env(runtime_config)`
   - integration adapter attach entry points (for example `bt::set_racecar_sim_adapter(...)` for PyBullet)
-  - Webots attach entry points (`muslisp::integrations::webots::make_extension(...)` and `bt::integrations::webots::install_callbacks(...)`)
+  - Webots attach entry point (`muslisp::integrations::webots::make_extension(...)`)
+  - ROS2 skeleton attach entry point (`muslisp::integrations::ros2::make_extension(...)`)
 
 ### requirement 3: event callback contract
 
@@ -59,7 +61,7 @@ Studio integration must be able to consume canonical `mbt.evt.v1` events as newl
 
 Required:
 
-- stable envelope fields (`schema`, `type`, `run_id`, `unix_ms`, `seq`, optional `tick`, `data`)
+- stable envelope fields (`schema`, `contract_version`, `type`, `run_id`, `unix_ms`, `seq`, optional `tick`, `data`)
 - monotonic ordering by `seq` per run
 - parser-safe payloads (one JSON object per line)
 
@@ -92,6 +94,7 @@ Required:
 - `run_start` event is emitted with host metadata and runtime metadata
 - stable `run_id` semantics within a run
 - schema version string `mbt.evt.v1` in every envelope
+- runtime contract version string in every envelope (`contract_version`)
 
 ### requirement 7: blackboard helpers
 
@@ -109,9 +112,10 @@ Studio depends on planner/scheduler/VLA visibility for debugging and timeline vi
 
 Required event families:
 
-- planner: `planner_v1`
+- planner: `planner_call_start`, `planner_call_end`, `planner_v1`
 - scheduler: `sched_submit`, `sched_start`, `sched_finish`, `sched_cancel`
 - VLA: `vla_submit`, `vla_poll`, `vla_cancel`, `vla_result`
+- async cancellation lifecycle: `async_cancel_requested`, `async_cancel_acknowledged`, `async_completion_dropped`
 
 ### requirement 9: deterministic mode for fixtures
 
@@ -151,6 +155,7 @@ Runtime API and schema-affecting changes must follow explicit compatibility rule
 Required:
 
 - `muesli-studio` consumes tagged `muesli-bt` releases; optional scheduled CI may test `main`
+- compatibility expectations across tags and `main` are tracked in [studio compatibility matrix](studio-compatibility-matrix.md)
 - breaking inspector-facing C++ API changes require explicit changelog entries
 - event schema-affecting changes require schema/version update plus fixture and validator updates in the same change
 - contract changes must be acknowledged by changelog update (enforced in CI)
@@ -184,11 +189,24 @@ add_executable(mbt_inspector ...)
 target_link_libraries(mbt_inspector PRIVATE muesli_bt::runtime muesli_bt::integration_webots)
 ```
 
+Optional ROS2 integration skeleton target (when built and installed with `MUESLI_BT_BUILD_INTEGRATION_ROS2=ON`):
+
+```cmake
+find_package(muesli_bt CONFIG REQUIRED)
+
+add_executable(mbt_inspector ...)
+target_link_libraries(mbt_inspector PRIVATE muesli_bt::runtime muesli_bt::integration_ros2)
+```
+
 Optional-target probe pattern for downstream consumers:
 
 ```cmake
 if(TARGET muesli_bt::integration_webots)
   target_link_libraries(mbt_inspector PRIVATE muesli_bt::integration_webots)
+endif()
+
+if(TARGET muesli_bt::integration_ros2)
+  target_link_libraries(mbt_inspector PRIVATE muesli_bt::integration_ros2)
 endif()
 ```
 
@@ -210,8 +228,19 @@ muslisp::runtime_config cfg;
 cfg.register_extension(muslisp::integrations::webots::make_extension(robot_ptr));
 muslisp::env_ptr env = muslisp::create_global_env(std::move(cfg));
 
-bt::integrations::webots::install_callbacks(bt::default_runtime_host());
 muslisp::eval_source("(env.attach \"webots\")", env);
+```
+
+Legacy note: `bt::integrations::webots::install_callbacks(...)` remains available as a compatibility shim but is not required for new attach flows.
+
+ROS2 skeleton attach flow:
+
+```cpp
+muslisp::runtime_config cfg;
+cfg.register_extension(muslisp::integrations::ros2::make_extension());
+muslisp::env_ptr env = muslisp::create_global_env(std::move(cfg));
+
+muslisp::eval_source("(env.attach \"ros2\")", env);
 ```
 
 ### event envelope
@@ -219,6 +248,7 @@ muslisp::eval_source("(env.attach \"webots\")", env);
 ```json
 {
   "schema": "mbt.evt.v1",
+  "contract_version": "1.0.0",
   "type": "tick_begin",
   "run_id": "run-0001",
   "unix_ms": 1735689600123,
@@ -232,14 +262,14 @@ muslisp::eval_source("(env.attach \"webots\")", env);
 
 Authoritative schema path:
 
-- `schema/mbt.evt.v1.schema.json`
+- `schemas/event_log/v1/mbt.evt.v1.schema.json`
 
 ## example
 
 A Studio integration compatibility check should:
 
 1. install `muesli-bt` and build a tiny consumer linking `muesli_bt::runtime`
-2. validate fixture logs with `tools/validate_event_log.py`
+2. validate fixture logs with `tools/validate_log.py`
 3. regenerate fixture logs using `tools/gen_fixtures_event_log.cpp`
 4. fail if fixture drift is detected
 
@@ -252,6 +282,7 @@ A Studio integration compatibility check should:
 ## see also
 
 - [contracts index](README.md)
-- [canonical event schema](https://github.com/unswei/muesli-bt/blob/main/schema/mbt.evt.v1.schema.json)
+- [studio compatibility matrix](studio-compatibility-matrix.md)
+- [canonical event schema](https://github.com/unswei/muesli-bt/blob/main/schemas/event_log/v1/mbt.evt.v1.schema.json)
 - [canonical event log docs](../observability/event-log.md)
 - [writing a backend](../integration/writing-a-backend.md)

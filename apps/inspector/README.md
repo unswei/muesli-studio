@@ -51,9 +51,9 @@ Run-loop config keys currently supported:
 Pinned defaults are defined in [`cmake/MuesliBtVersion.cmake`](./cmake/MuesliBtVersion.cmake):
 
 - `MUESLI_BT_GIT_URL`
-- `MUESLI_BT_GIT_TAG`
+- `MUESLI_BT_GIT_TAG` (accepts a tag or commit; the default is an immutable commit pin)
 
-Current default tag: `v0.2.0`.
+Current default commit: `affa99d13995a7659bfddfeef08249a8365f4bc5` (tagged `v0.2.0`).
 
 ## build instructions
 

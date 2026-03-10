@@ -1,11 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://unswei.github.io/muesli-bt/schema/mbt.evt.v1.schema.json",
+  "$id": "https://unswei.github.io/muesli-bt/schemas/event_log/v1/mbt.evt.v1.schema.json",
   "title": "muesli-bt canonical event stream envelope (mbt.evt.v1)",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "schema",
+    "contract_version",
     "type",
     "run_id",
     "unix_ms",
@@ -17,6 +18,10 @@
       "type": "string",
       "const": "mbt.evt.v1"
     },
+    "contract_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
     "type": {
       "type": "string",
       "enum": [
@@ -24,7 +29,11 @@
         "bt_def",
         "tick_begin",
         "tick_end",
+        "node_enter",
+        "node_exit",
         "node_status",
+        "budget_warning",
+        "deadline_exceeded",
         "bb_write",
         "bb_delete",
         "bb_snapshot",
@@ -32,11 +41,16 @@
         "sched_start",
         "sched_finish",
         "sched_cancel",
+        "planner_call_start",
+        "planner_call_end",
         "planner_v1",
         "vla_submit",
         "vla_poll",
         "vla_cancel",
         "vla_result",
+        "async_cancel_requested",
+        "async_cancel_acknowledged",
+        "async_completion_dropped",
         "error"
       ]
     },
@@ -75,6 +89,8 @@
             "required": [
               "git_sha",
               "host",
+              "contract_version",
+              "contract_id",
               "tick_hz",
               "tree_hash",
               "capabilities"
@@ -102,6 +118,12 @@
                   }
                 },
                 "additionalProperties": false
+              },
+              "contract_version": {
+                "type": "string"
+              },
+              "contract_id": {
+                "type": "string"
               },
               "tick_hz": {
                 "type": "number",

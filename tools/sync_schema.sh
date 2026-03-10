@@ -19,14 +19,18 @@ MUESLI_BT_SHARE_DIR=$(extract_var "MUESLI_BT_SHARE_DIR" || true)
 MUESLI_BT_SOURCE_DIR=$(extract_var "MUESLI_BT_SOURCE_DIR" || true)
 
 SOURCE_PATH=""
-if [[ -n "${MUESLI_BT_SHARE_DIR}" && -f "${MUESLI_BT_SHARE_DIR}/schema/mbt.evt.v1.schema.json" ]]; then
+if [[ -n "${MUESLI_BT_SHARE_DIR}" && -f "${MUESLI_BT_SHARE_DIR}/schemas/event_log/v1/mbt.evt.v1.schema.json" ]]; then
+  SOURCE_PATH="${MUESLI_BT_SHARE_DIR}/schemas/event_log/v1/mbt.evt.v1.schema.json"
+elif [[ -n "${MUESLI_BT_SHARE_DIR}" && -f "${MUESLI_BT_SHARE_DIR}/schema/mbt.evt.v1.schema.json" ]]; then
   SOURCE_PATH="${MUESLI_BT_SHARE_DIR}/schema/mbt.evt.v1.schema.json"
+elif [[ -n "${MUESLI_BT_SOURCE_DIR}" && -f "${MUESLI_BT_SOURCE_DIR}/schemas/event_log/v1/mbt.evt.v1.schema.json" ]]; then
+  SOURCE_PATH="${MUESLI_BT_SOURCE_DIR}/schemas/event_log/v1/mbt.evt.v1.schema.json"
 elif [[ -n "${MUESLI_BT_SOURCE_DIR}" && -f "${MUESLI_BT_SOURCE_DIR}/schema/mbt.evt.v1.schema.json" ]]; then
   SOURCE_PATH="${MUESLI_BT_SOURCE_DIR}/schema/mbt.evt.v1.schema.json"
 fi
 
 if [[ -z "$SOURCE_PATH" ]]; then
-  echo "unable to resolve mbt.evt.v1.schema.json from MUESLI_BT_SHARE_DIR or MUESLI_BT_SOURCE_DIR" >&2
+  echo "unable to resolve mbt.evt.v1.schema.json from current or legacy muesli-bt schema locations" >&2
   exit 1
 fi
 

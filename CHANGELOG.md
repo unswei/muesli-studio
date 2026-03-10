@@ -6,7 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ### changed
 
-- bumped inspector fallback pin `MUESLI_BT_GIT_TAG` to `v0.2.0`.
+- synced the vendored `muesli-bt` schema, contract, and generated protocol types to the current pinned upstream contract.
+- hardened the inspector fallback pin by switching `MUESLI_BT_GIT_TAG` from the movable `v0.2.0` tag to commit `affa99d13995a7659bfddfeef08249a8365f4bc5`.
 - reframed the top-level README around tool-first positioning, a demo-first flow, and screenshot-led product presentation.
 
 ## [0.1.0] - 2026-03-04

@@ -3,5 +3,6 @@ if(NOT DEFINED MUESLI_BT_GIT_URL)
 endif()
 
 if(NOT DEFINED MUESLI_BT_GIT_TAG)
-  set(MUESLI_BT_GIT_TAG "v0.2.0" CACHE STRING "Pinned muesli-bt Git tag or commit")
+  # Immutable upstream pin for the v0.2.0 release line.
+  set(MUESLI_BT_GIT_TAG "affa99d13995a7659bfddfeef08249a8365f4bc5" CACHE STRING "Pinned muesli-bt Git tag or commit")
 endif()
