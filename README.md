@@ -2,7 +2,7 @@
 
 **Replay and monitor behaviour trees.**
 
-`muesli-studio` is the inspector for `muesli-bt`. Open a recorded run, scrub ticks, inspect node state, examine state changes, or follow live events over WebSocket.
+`muesli-studio` is the inspector for [`muesli-bt`](https://github.com/unswei/muesli-bt). Open a recorded run, scrub ticks, inspect node state, examine state changes, or follow live events over WebSocket.
 
 [Try the demo](#try-it-now) · [Download releases](https://github.com/unswei/muesli-studio/releases) · [Read the docs](#documentation)
 
@@ -32,15 +32,15 @@ See node statuses, examine blackboard diffs, and check exactly what changed at t
 
 Connect to a running system over WebSocket and follow new events as they arrive through the same inspector.
 
-## built for muesli-bt
+## built for [muesli-bt](https://github.com/unswei/muesli-bt)
 
-`muesli-studio` is the visual inspector for `muesli-bt`. Replay and live monitoring use the same canonical event stream, so a recorded run and a live session share the same inspection model.
+`muesli-studio` is the visual inspector for [`muesli-bt`](https://github.com/unswei/muesli-bt). Replay and live monitoring use the same canonical event stream, so a recorded run and a live session share the same inspection model.
 
 ## why this is reliable
 
 - deterministic fixture bundles drive the demo, screenshot capture, and regression checks
 - replay and live monitoring share the same `@muesli/replay` event model
-- schema and contract sync are checked against the resolved `muesli-bt` source in CI
+- schema and contract sync are checked against the resolved [`muesli-bt`](https://github.com/unswei/muesli-bt) source in CI
 - the runtime-backed inspector proves WebSocket and JSONL payload parity in deterministic integration tests
 - tagged releases publish source archives plus prebuilt Linux Intel and macOS Apple Silicon bundles
 
@@ -148,13 +148,13 @@ Then connect studio to `ws://localhost:8765/events`.
 - browser or UI consumption: `@muesli/replay`
 - Node tooling consumption: `@muesli/replay/node`
 
-## muesli-bt pinning
+## [muesli-bt](https://github.com/unswei/muesli-bt) pinning
 
 Inspector pin metadata lives in [`apps/inspector/cmake/MuesliBtVersion.cmake`](./apps/inspector/cmake/MuesliBtVersion.cmake).
 
 - default CI and local fallback builds use that pinned URL and tag
 - current pinned tag: `v0.2.0`
-- scheduled CI builds inspector against `muesli-bt` `main` as an advisory check
+- scheduled CI builds inspector against [`muesli-bt`](https://github.com/unswei/muesli-bt) `main` as an advisory check
 - canonical contract reference: [muesli-bt studio integration contract](https://github.com/unswei/muesli-bt/blob/main/docs/contracts/muesli-studio-integration.md)
 
 ## local install vs fetchcontent
