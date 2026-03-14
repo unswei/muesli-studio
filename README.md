@@ -32,6 +32,10 @@ Open a recorded run, scrub through ticks, and inspect behaviour tree execution o
 
 See the run summary first, inspect node statuses, examine blackboard diffs, and check exactly what changed at the selected tick.
 
+### capture and share
+
+Switch into presentation mode, export clean PNG or SVG figures, and write a compact publication bundle with replay data, summary metadata, and screenshots.
+
 ### follow live
 
 Connect to a running system over WebSocket and follow new events as they arrive through the same inspector.
@@ -96,6 +100,8 @@ After unpacking a binary bundle, start the packaged UI with:
 
 - [consumer contract checklist](docs/studio/contract-consumption.md)
 - [fixture bundle workflow and CLI](docs/studio/fixture-bundles.md)
+- [publication workflow](docs/studio/publication-workflow.md)
+- [large log workflow](docs/studio/large-logs.md)
 - [sidecar tick-index format and usage](docs/studio/sidecar-index.md)
 - [release targets and artefacts](docs/studio/release-targets.md)
 - [release notes](docs/studio/release-notes.md)
@@ -152,6 +158,8 @@ Large indexed replays now bootstrap lazily for both local files and URL auto-loa
 The replay panel also includes a DSL editor for `bt_def.dsl`. Use `apply` to replace the rendered tree immediately, `revert` to restore the runtime definition, and `save` to export the edited DSL.
 
 Replay mode now includes a first-class run summary panel for versions, tree identity, timings, warning counts, planner/scheduler activity, and deterministic digests.
+
+Replay mode also includes a first-class presentation flow in the right rail. Use it to open clean overview, summary, node, diff, or DSL layouts, then export PNG, SVG, or a zipped publication bundle.
 
 The demo launcher uses URL query auto-load:
 

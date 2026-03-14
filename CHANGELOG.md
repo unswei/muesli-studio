@@ -16,6 +16,7 @@ All notable changes to this project will be documented in this file.
 - applied the first v0.2 design pass across the studio shell, tree timeline, side panels, empty states, and refreshed README screenshots.
 - promoted run summary into a first-class Studio panel and expanded deterministic screenshot refresh to capture overview plus individual summary, node, diff, and DSL panels from the canonical demo bundle.
 - replaced the generic lead README screenshot with a dedicated hero capture built from the same canonical demo fixture and deterministic capture-state pipeline.
+- added a first-class presentation mode in Studio with clean overview/summary/node/diff/DSL layouts, PNG/SVG export, and publication bundle export that writes replay data, sidecar index, run summary, screenshots, and reproduction notes.
 
 ## [0.1.0] - 2026-03-04
 

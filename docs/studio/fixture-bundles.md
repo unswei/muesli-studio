@@ -12,6 +12,7 @@ Use this flow when you:
 - verify contract/schema compatibility in CI
 - generate deterministic `run_summary.json` outputs
 - generate deterministic GitHub or publication screenshots from one canonical demo bundle
+- export a small publication bundle directly from Studio for review or supplements
 
 ## how it works
 
@@ -72,6 +73,15 @@ pnpm docs:screenshots
 - blackboard diff screenshot
 - DSL editor screenshot
 
+Studio can also re-export the loaded replay as a compact publication bundle. The exported archive includes:
+
+- `events.jsonl`
+- `events.sidecar.tick-index.v1.json`
+- `manifest.json`
+- `run_summary.json`
+- `README.md`
+- 3 presentation screenshots
+
 Large deterministic fixture refresh:
 
 ```bash
@@ -96,3 +106,4 @@ pnpm bench:sidecar
 - `tests/fixtures/`
 - `packages/replay/src/bundle/load-bundle.ts`
 - `tools/validate_log.py`
+- `docs/studio/publication-workflow.md`

@@ -1,16 +1,83 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
+import { toBlob, toSvg } from 'html-to-image';
+import JSZip from 'jszip';
 
-import { summariseRun, type RunEventRecord } from '@muesli/replay';
+import { buildTickSidecarIndex, summariseRun, type RunEventRecord } from '@muesli/replay';
 
 import { BlackboardDiff } from './components/BlackboardDiff';
 import { decodeWebSocketData, parseLivePayload } from './live';
 import { DslEditor } from './components/DslEditor';
 import { HeroCapture } from './components/HeroCapture';
 import { NodeInspector } from './components/NodeInspector';
+import { PresentationPanel } from './components/PresentationPanel';
+import { PresentationToolbar } from './components/PresentationToolbar';
 import { RunSummaryPanel } from './components/RunSummaryPanel';
 import { TreeView } from './components/TreeView';
 import { parseDemoFixtureQuery } from './demo-fixture';
+import {
+  buildPublicationManifest,
+  buildPublicationReadme,
+  captureFileName,
+  publicationBundleName,
+  type PresentationLayout,
+  serialiseReplayEvents,
+} from './publication';
+import { saveBlobToDisk } from './save-file';
 import { useStudioStore } from './store';
+
+type CaptureFormat = 'png' | 'svg';
+
+const bundleScreenshotLayouts: readonly PresentationLayout[] = ['hero', 'summary', 'diff'];
+
+function captureTargetId(layout: PresentationLayout): string {
+  if (layout === 'hero') {
+    return 'readme-hero';
+  }
+
+  if (layout === 'summary') {
+    return 'run-summary-panel';
+  }
+
+  if (layout === 'node') {
+    return 'node-inspector-panel';
+  }
+
+  if (layout === 'diff') {
+    return 'blackboard-diff';
+  }
+
+  return 'dsl-editor-panel';
+}
+
+async function waitForCaptureReady(): Promise<void> {
+  if (typeof document !== 'undefined') {
+    const fontSet = (document as Document & { fonts?: { ready: Promise<unknown> } }).fonts;
+    if (fontSet?.ready) {
+      await fontSet.ready;
+    }
+  }
+
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve());
+    });
+  });
+}
+
+async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
+  const response = await fetch(dataUrl);
+  if (!response.ok) {
+    throw new Error('failed to serialise SVG export');
+  }
+
+  return response.blob();
+}
+
+function captureDownloadName(layout: PresentationLayout, selectedTick: number, format: CaptureFormat): string {
+  const baseName = captureFileName(layout, selectedTick).replace(/^screenshots\//, '');
+  return format === 'png' ? baseName : baseName.replace(/\.png$/u, '.svg');
+}
 
 export function App() {
   const replay = useStudioStore((state) => state.replay);
@@ -47,6 +114,10 @@ export function App() {
   const clearLiveHistory = useStudioStore((state) => state.clearLiveHistory);
   const addParseError = useStudioStore((state) => state.addParseError);
   const [sidecarFile, setSidecarFile] = useState<File | null>(null);
+  const [presentationLayout, setPresentationLayout] = useState<PresentationLayout | null>(null);
+  const [presentationBusy, setPresentationBusy] = useState(false);
+  const [presentationStatusMessage, setPresentationStatusMessage] = useState<string | null>(null);
+  const [presentationErrorMessage, setPresentationErrorMessage] = useState<string | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -107,6 +178,244 @@ export function App() {
       schemaVersion: replay.runStart?.schema ?? replay.btDef?.schema,
     });
   }, [eventCount, replay]);
+  const forcedPresentationLayout = captureMode && captureMode !== 'overview' ? captureMode : null;
+  const activePresentationLayout = forcedPresentationLayout ?? presentationLayout;
+  const showsPresentationToolbar = forcedPresentationLayout === null && presentationLayout !== null;
+
+  const renderCaptureLoading = (kicker: string, message: string) => (
+    <section className="panel detail-panel capture-loading-panel">
+      <div className="panel-heading">
+        <div>
+          <p className="panel-kicker">{kicker}</p>
+          <h2>loading</h2>
+        </div>
+      </div>
+      <p className="panel-copy muted">{message}</p>
+    </section>
+  );
+
+  const renderPresentationLayout = (layout: PresentationLayout) => {
+    if (layout === 'hero') {
+      return replay && replaySummary ? (
+        <HeroCapture
+          replay={replay}
+          summary={replaySummary}
+          selectedTick={selectedTick}
+          selectedNodeId={selectedNodeId}
+          maxTick={maxTick}
+          tickCount={tickCount}
+          replayIndexed={replayIndexed}
+          onSelectNode={setSelectedNodeId}
+          onSelectTick={setSelectedTick}
+        />
+      ) : (
+        renderCaptureLoading('hero capture', 'Loading the deterministic demo fixture for the README hero capture.')
+      );
+    }
+
+    if (!replay) {
+      return renderCaptureLoading('capture mode', 'Loading the deterministic demo fixture for capture.');
+    }
+
+    if (layout === 'summary') {
+      return replaySummary ? (
+        <RunSummaryPanel replay={replay} summary={replaySummary} eventCount={eventCount} />
+      ) : (
+        renderCaptureLoading('capture mode', 'Summarising the replay for presentation export.')
+      );
+    }
+
+    if (layout === 'node') {
+      return <NodeInspector replay={replay} selectedNodeId={selectedNodeId} tick={selectedTick} />;
+    }
+
+    if (layout === 'diff') {
+      return <BlackboardDiff replay={replay} tick={selectedTick} />;
+    }
+
+    return <DslEditor replay={replay} onApplyCompiled={applyCompiledTree} onResetCompiled={resetCompiledTree} />;
+  };
+
+  const setPresentationLayoutAndWait = useCallback(async (layout: PresentationLayout | null) => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    flushSync(() => {
+      setPresentationLayout(layout);
+    });
+    await waitForCaptureReady();
+  }, []);
+
+  const captureRenderedLayoutBlob = useCallback(async (layout: PresentationLayout, format: CaptureFormat): Promise<Blob> => {
+    if (typeof document === 'undefined') {
+      throw new Error('capture export is only available in browser mode');
+    }
+
+    const target = document.getElementById(captureTargetId(layout));
+    if (!(target instanceof HTMLElement)) {
+      throw new Error(`capture target not ready for ${layout}`);
+    }
+
+    if (format === 'png') {
+      const blob = await toBlob(target, {
+        pixelRatio: 2,
+        cacheBust: true,
+      });
+      if (!blob) {
+        throw new Error('failed to render PNG export');
+      }
+
+      return blob;
+    }
+
+    const dataUrl = await toSvg(target, {
+      cacheBust: true,
+    });
+    return dataUrlToBlob(dataUrl);
+  }, []);
+
+  const exportCurrentCapture = useCallback(
+    async (format: CaptureFormat) => {
+      if (!activePresentationLayout) {
+        return;
+      }
+
+      setPresentationBusy(true);
+      setPresentationErrorMessage(null);
+      setPresentationStatusMessage(`exporting ${format.toUpperCase()}…`);
+
+      try {
+        await waitForCaptureReady();
+        const blob = await captureRenderedLayoutBlob(activePresentationLayout, format);
+        const fileName = captureDownloadName(activePresentationLayout, selectedTick, format);
+        const mimeType = format === 'png' ? 'image/png' : 'image/svg+xml';
+        const saveMode = await saveBlobToDisk(blob, {
+          suggestedName: fileName,
+          description: format === 'png' ? 'PNG image' : 'SVG image',
+          mimeType,
+          extensions: [format === 'png' ? '.png' : '.svg'],
+        });
+        setPresentationStatusMessage(
+          `${format.toUpperCase()} saved as ${fileName}${saveMode === 'download' ? ' via browser download' : ''}.`,
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setPresentationStatusMessage(null);
+        setPresentationErrorMessage(message);
+      } finally {
+        setPresentationBusy(false);
+      }
+    },
+    [activePresentationLayout, captureRenderedLayoutBlob, selectedTick],
+  );
+
+  const exportPublicationBundle = useCallback(async () => {
+    if (!replay || !replaySummary) {
+      return;
+    }
+
+    const previousLayout = presentationLayout;
+    const previousTick = useStudioStore.getState().selectedTick;
+    setPresentationBusy(true);
+    setPresentationErrorMessage(null);
+    setPresentationStatusMessage('exporting publication bundle…');
+
+    try {
+      const initialLazyState = useStudioStore.getState().lazySidecar;
+      if (initialLazyState && initialLazyState.loadedTicks.size < initialLazyState.index.tick_entries.length) {
+        setPresentationStatusMessage('hydrating indexed replay…');
+        useStudioStore.getState().setSelectedTick(Math.max(replayMaxTick, replay.maxTick, 0));
+
+        const startedAt = Date.now();
+        while (true) {
+          const currentLazyState = useStudioStore.getState().lazySidecar;
+          if (!currentLazyState || currentLazyState.loadedTicks.size >= currentLazyState.index.tick_entries.length) {
+            break;
+          }
+
+          if (Date.now() - startedAt > 30_000) {
+            throw new Error('timed out hydrating the full replay for bundle export');
+          }
+
+          await new Promise<void>((resolve) => {
+            window.setTimeout(resolve, 40);
+          });
+        }
+
+        if (previousTick !== useStudioStore.getState().selectedTick) {
+          useStudioStore.getState().setSelectedTick(previousTick);
+          await waitForCaptureReady();
+        }
+      }
+
+      setPresentationStatusMessage('capturing publication screenshots…');
+      const screenshotFiles: string[] = [];
+      const screenshotBlobs: Array<{ path: string; blob: Blob }> = [];
+      for (const layout of bundleScreenshotLayouts) {
+        await setPresentationLayoutAndWait(layout);
+        const blob = await captureRenderedLayoutBlob(layout, 'png');
+        const path = captureFileName(layout, selectedTick);
+        screenshotFiles.push(path);
+        screenshotBlobs.push({ path, blob });
+      }
+
+      const exportedAtUtc = new Date().toISOString();
+      const eventsText = serialiseReplayEvents(replay);
+      const sidecarIndex = buildTickSidecarIndex(eventsText, 'events.jsonl');
+      const runStartData = replay.runStart?.data as Record<string, unknown> | undefined;
+      const contractVersion =
+        typeof runStartData?.contract_version === 'string' ? runStartData.contract_version : undefined;
+      const bundleSummary = summariseRun(replay.getAllEvents() as readonly RunEventRecord[], {
+        contractVersion,
+        schemaVersion: replay.runStart?.schema ?? replay.btDef?.schema,
+      });
+      const manifest = buildPublicationManifest(replay, bundleSummary, selectedTick, selectedNodeId, exportedAtUtc);
+      const readmeText = buildPublicationReadme(replay, bundleSummary, selectedTick, selectedNodeId, screenshotFiles);
+      const bundleName = publicationBundleName(replay);
+
+      const zip = new JSZip();
+      zip.file('events.jsonl', eventsText);
+      zip.file('events.sidecar.tick-index.v1.json', JSON.stringify(sidecarIndex, null, 2));
+      zip.file('manifest.json', JSON.stringify(manifest, null, 2));
+      zip.file('run_summary.json', JSON.stringify(bundleSummary, null, 2));
+      zip.file('README.md', readmeText);
+      for (const screenshot of screenshotBlobs) {
+        zip.file(screenshot.path, screenshot.blob);
+      }
+
+      setPresentationStatusMessage('writing publication bundle…');
+      const bundleBlob = await zip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 },
+      });
+      const saveMode = await saveBlobToDisk(bundleBlob, {
+        suggestedName: bundleName,
+        description: 'ZIP archive',
+        mimeType: 'application/zip',
+        extensions: ['.zip'],
+      });
+      setPresentationStatusMessage(
+        `bundle saved as ${bundleName}${saveMode === 'download' ? ' via browser download' : ''}.`,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setPresentationStatusMessage(null);
+      setPresentationErrorMessage(message);
+    } finally {
+      await setPresentationLayoutAndWait(previousLayout);
+      setPresentationBusy(false);
+    }
+  }, [
+    captureRenderedLayoutBlob,
+    presentationLayout,
+    replay,
+    replaySummary,
+    selectedNodeId,
+    selectedTick,
+    setPresentationLayoutAndWait,
+  ]);
 
   const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -303,62 +612,46 @@ export function App() {
     };
   }, [clearReconnectTimer]);
 
-  if (captureMode === 'hero') {
-    return (
-      <main className="app-shell app-shell--capture app-shell--capture-hero">
-        {replay && replaySummary ? (
-          <HeroCapture
-            replay={replay}
-            summary={replaySummary}
-            selectedTick={selectedTick}
-            selectedNodeId={selectedNodeId}
-            maxTick={maxTick}
-            tickCount={tickCount}
-            replayIndexed={replayIndexed}
-            onSelectNode={setSelectedNodeId}
-            onSelectTick={setSelectedTick}
-          />
-        ) : (
-          <section className="panel detail-panel capture-loading-panel">
-            <div className="panel-heading">
-              <div>
-                <p className="panel-kicker">hero capture</p>
-                <h2>loading</h2>
-              </div>
-            </div>
-            <p className="panel-copy muted">Loading the deterministic demo fixture for the README hero capture.</p>
-          </section>
-        )}
-      </main>
-    );
-  }
+  if (activePresentationLayout) {
+    const shellClassName = `app-shell app-shell--capture app-shell--capture-${activePresentationLayout}${
+      showsPresentationToolbar ? ' app-shell--capture-interactive' : ''
+    }`;
 
-  if (captureMode && captureMode !== 'overview') {
     return (
-      <main className={`app-shell app-shell--capture app-shell--capture-${captureMode}`}>
-        <section className="capture-panel-shell">
-          {captureMode === 'summary' && replay && replaySummary ? (
-            <RunSummaryPanel replay={replay} summary={replaySummary} eventCount={eventCount} />
-          ) : null}
-          {captureMode === 'node' && replay ? (
-            <NodeInspector replay={replay} selectedNodeId={selectedNodeId} tick={selectedTick} />
-          ) : null}
-          {captureMode === 'diff' && replay ? <BlackboardDiff replay={replay} tick={selectedTick} /> : null}
-          {captureMode === 'dsl' && replay ? (
-            <DslEditor replay={replay} onApplyCompiled={applyCompiledTree} onResetCompiled={resetCompiledTree} />
-          ) : null}
-          {!replay ? (
-            <section className="panel detail-panel capture-loading-panel">
-              <div className="panel-heading">
-                <div>
-                  <p className="panel-kicker">capture mode</p>
-                  <h2>loading</h2>
-                </div>
-              </div>
-              <p className="panel-copy muted">Loading the deterministic demo fixture for capture.</p>
-            </section>
-          ) : null}
-        </section>
+      <main className={shellClassName}>
+        {showsPresentationToolbar && activePresentationLayout ? (
+          <PresentationToolbar
+            currentLayout={activePresentationLayout}
+            busy={presentationBusy}
+            statusMessage={presentationStatusMessage}
+            errorMessage={presentationErrorMessage}
+            onSelectLayout={(layout) => {
+              setPresentationStatusMessage(null);
+              setPresentationErrorMessage(null);
+              setPresentationLayout(layout);
+            }}
+            onExportPng={() => {
+              void exportCurrentCapture('png');
+            }}
+            onExportSvg={() => {
+              void exportCurrentCapture('svg');
+            }}
+            onExportBundle={() => {
+              void exportPublicationBundle();
+            }}
+            onClose={() => {
+              setPresentationStatusMessage(null);
+              setPresentationErrorMessage(null);
+              setPresentationLayout(null);
+            }}
+          />
+        ) : null}
+
+        {activePresentationLayout === 'hero' ? (
+          renderPresentationLayout(activePresentationLayout)
+        ) : (
+          <section className="capture-panel-shell">{renderPresentationLayout(activePresentationLayout)}</section>
+        )}
       </main>
     );
   }
@@ -501,6 +794,24 @@ export function App() {
 
         <aside className="workspace-sidebar">
           {replay && replaySummary ? <RunSummaryPanel replay={replay} summary={replaySummary} eventCount={eventCount} /> : null}
+          {replay && replaySummary ? (
+            <PresentationPanel
+              currentLayout={presentationLayout}
+              selectedTick={selectedTick}
+              selectedNodeId={selectedNodeId}
+              busy={presentationBusy}
+              statusMessage={presentationStatusMessage}
+              errorMessage={presentationErrorMessage}
+              onOpenLayout={(layout) => {
+                setPresentationStatusMessage(null);
+                setPresentationErrorMessage(null);
+                setPresentationLayout(layout);
+              }}
+              onExportBundle={() => {
+                void exportPublicationBundle();
+              }}
+            />
+          ) : null}
 
           {replayLoadProgress !== null ? (
             <section className="panel notice-panel notice-panel--loading">

@@ -27,6 +27,7 @@ Use replay mode when you need deterministic post-run inspection, debugging, or r
 - large sidecar-backed URL loads now use HTTP byte ranges for the same lazy bootstrap and scrub hydration path
 - demo bootstrapping can auto-load replay files via URL query (`demo_fixture`, optional `demo_sidecar`)
 - demo bootstrapping also supports deterministic capture-state queries (`demo_tick`, `demo_node`, `demo_capture`)
+- the right rail includes a presentation panel for clean capture layouts and publication bundle export
 - the canonical `studio_demo` bundle is a deterministic Webots-flavoured navigation/control trace with planner calls, scheduler events, node history, blackboard writes and deletes, and a warning event
 
 ## api / syntax
@@ -63,13 +64,19 @@ Quick demo launcher:
 ./start-studio.sh
 ```
 
+Interactive presentation export:
+
+- open the `presentation` panel in the right rail
+- choose `overview`, `summary`, `node`, `diff`, or `dsl`
+- export `PNG`, `SVG`, or `bundle`
+
 ## gotchas
 
 - invalid lines are skipped and surfaced as parse warnings
 - replay UI consumes JSONL; bundle-level validation happens in Node tooling (`studio inspect`)
 - lazy mode for local file input now uses `File.slice` ranges to avoid retaining full JSONL text in memory
 - lazy URL mode depends on HTTP byte-range support from the host serving `events.jsonl`; unsupported hosts fall back to a normal fetch
-- the capture-state query parameters are intended for deterministic demos and screenshot automation; they are not a general saved-layout system yet
+- the capture-state query parameters are for deterministic demos and screenshot automation; the right-rail presentation panel is the normal user-facing export path
 - newer runtime event variants are retained in the stream even when UI panels do not yet render dedicated widgets
 - DSL compile errors are shown inline and do not mutate the currently rendered tree
 
@@ -78,4 +85,6 @@ Quick demo launcher:
 - [`schema/mbt.evt.v1.schema.json`](../../../schema/mbt.evt.v1.schema.json)
 - [`packages/replay`](../../../packages/replay)
 - [`docs/studio/contract-consumption.md`](../../../docs/studio/contract-consumption.md)
+- [`docs/studio/publication-workflow.md`](../../../docs/studio/publication-workflow.md)
+- [`docs/studio/large-logs.md`](../../../docs/studio/large-logs.md)
 - [`live monitoring`](./live.md)
