@@ -37,6 +37,28 @@ Release entry template:
 
 ## example
 
+## v0.2.0 - 2026-03-15
+
+### highlights
+
+- first feature release after `v0.1.x`, with the Studio shell, presentation mode, and run summary panels brought to a stable demo and screenshot baseline
+- richer deterministic replay fixtures, validator/schema sync, and warning-aware summaries so the canonical demo bundle better reflects real planner and scheduler activity
+- large-log replay improvements now include lazy URL hydration, an in-app diagnostics panel, and a cleaner local launch story through `start-studio.sh`
+
+### shipped artefacts
+
+- `muesli-studio-v0.2.0-source.tar.gz`
+- `muesli-studio-v0.2.0-source.zip`
+- `muesli-studio-v0.2.0-linux-intel.tar.gz` (prebuilt inspector + studio static assets)
+- `muesli-studio-v0.2.0-macos-arm.tar.gz` (prebuilt inspector + studio static assets)
+- `.sha256` files for all archives
+
+### notes
+
+- release binaries are built on `ubuntu-latest` (Intel) and `macos-14` (Apple Silicon) GitHub runners
+- inspector fallback pin now tracks `muesli-bt v0.3.1`
+- detached signatures are still a post-`v0.2.0` follow-up item
+
 ## v0.1.1 - 2026-03-14
 
 ### highlights

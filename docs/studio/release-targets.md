@@ -28,15 +28,15 @@ First published release using this target set: `v0.1.0`.
 Workflow trigger:
 
 ```bash
-git tag v0.1.1
-git push origin v0.1.1
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
 Binary packaging script (used by CI and available locally):
 
 ```bash
-pnpm release:package -- --target linux-intel --version v0.1.1
-pnpm release:package -- --target macos-arm --version v0.1.1
+pnpm release:package -- --target linux-intel --version v0.2.0
+pnpm release:package -- --target macos-arm --version v0.2.0
 ```
 
 Published asset names:
@@ -57,11 +57,11 @@ Binary bundle contents:
 ## example
 
 ```bash
-git tag v0.1.1
-git push origin v0.1.1
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
-Then open the release page for `v0.1.1` and download the required artefact.
+Then open the release page for `v0.2.0` and download the required artefact.
 
 After unpacking a binary bundle:
 

@@ -4,20 +4,33 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+No unreleased changes yet.
+
+## [0.2.0] - 2026-03-15
+
+### added
+
+- added a single `./start-studio.sh` launcher for repo demo starts and packaged release-bundle launches.
+- added a first-class presentation mode in Studio with clean overview, summary, node, diff, and DSL layouts, PNG and SVG export, and publication bundle export that writes replay data, sidecar index, run summary, screenshots, and reproduction notes.
+- added an in-app replay diagnostics panel for large-log mode, seek latency, pending range hydration, and rough replay footprint estimates.
+
 ### changed
 
-- prepared the `v0.1.1` patch release metadata and docs for the `muesli-bt v0.3.1` compatibility pin update.
 - synced the vendored `muesli-bt` schema, contract, and generated protocol types to the current pinned upstream contract.
 - replaced the minimal `studio_demo` fixture with a richer deterministic Webots-flavoured navigation run and synced the local protocol validator plus bundle summaries for current warning and async-cancel event variants.
 - advanced the inspector fallback pin from the `v0.2.0` release line to commit `050c5e8793052d2a1a5d307897960d8b78e2afbc` (tagged `v0.3.1`) after verifying the inspector still configures, builds, and runs without source changes.
 - reframed the top-level README around tool-first positioning, a demo-first flow, and screenshot-led product presentation.
 - extended large sidecar-backed replay loading so URL auto-loads can bootstrap and scrub lazily via HTTP byte ranges instead of eagerly fetching the whole log.
-- added an in-app replay diagnostics panel for large-log mode, seek latency, pending range hydration, and rough replay footprint estimates.
-- added a single `./start-studio.sh` launcher for repo demo starts and packaged release-bundle launches.
 - applied the first v0.2 design pass across the studio shell, tree timeline, side panels, empty states, and refreshed README screenshots.
 - promoted run summary into a first-class Studio panel and expanded deterministic screenshot refresh to capture overview plus individual summary, node, diff, and DSL panels from the canonical demo bundle.
 - replaced the generic lead README screenshot with a dedicated hero capture built from the same canonical demo fixture and deterministic capture-state pipeline.
-- added a first-class presentation mode in Studio with clean overview/summary/node/diff/DSL layouts, PNG/SVG export, and publication bundle export that writes replay data, sidecar index, run summary, screenshots, and reproduction notes.
+
+## [0.1.1] - 2026-03-14
+
+### changed
+
+- refreshed the release metadata and docs for the `muesli-bt v0.3.1` compatibility pin update.
+- advanced the inspector fallback pin from the `v0.2.0` release line to commit `050c5e8793052d2a1a5d307897960d8b78e2afbc` (tagged `v0.3.1`) after verifying the inspector still configures, builds, and runs without source changes.
 
 ## [0.1.0] - 2026-03-04
 
