@@ -121,16 +121,14 @@ async function captureScreenshots(): Promise<void> {
     {
       fileName: 'studio-node-inspector.png',
       selector: '#node-inspector-panel',
-      viewport: '1100,1080',
-      fullPage: true,
+      viewport: '1100,420',
       waitMs: 1200,
       url: `${baseUrl}/?demo_fixture=/demo/studio_demo/events.jsonl&demo_tick=4&demo_node=5&demo_capture=node`,
     },
     {
       fileName: 'studio-blackboard-diff.png',
       selector: '#blackboard-diff',
-      viewport: '1240,1160',
-      fullPage: true,
+      viewport: '1240,340',
       waitMs: 1200,
       url: `${baseUrl}/?demo_fixture=/demo/studio_demo/events.jsonl&demo_tick=4&demo_capture=diff`,
     },

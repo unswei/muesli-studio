@@ -6,9 +6,9 @@
 
 [Try the demo](#try-it-now) · [Download releases](https://github.com/unswei/muesli-studio/releases) · [Read the docs](#documentation)
 
-![hero capture of the studio demo](docs/images/studio-tree-scrubber.png)
+![studio demo overview](docs/images/studio-tree-scrubber.png)
 
-*Hero capture from the canonical deterministic demo bundle.*
+*Studio overview during replanning.*
 
 ## try it now
 
@@ -50,23 +50,23 @@ Connect to a running system over WebSocket and follow new events as they arrive 
 
 ## more views
 
-Run summary for the canonical demo:
+Run summary:
 
 ![run summary panel](docs/images/studio-run-summary.png)
 
-*Run summary panel with tree identity, timing, warnings, and event-family counts.*
+*Run summary with tree identity, timing, warnings, and event-family counts.*
 
-Node inspector with deterministic selection:
+Node inspector:
 
 ![node inspector panel](docs/images/studio-node-inspector.png)
 
-*Node history for the controller-dispatch branch in the canonical demo.*
+*Node history for the controller branch.*
 
 Blackboard diff at the selected tick:
 
 ![blackboard diff panel](docs/images/studio-blackboard-diff.png)
 
-*Blackboard diff view for the selected tick in the canonical demo bundle.*
+*Blackboard diff for the selected tick.*
 
 Refresh the README screenshots with:
 

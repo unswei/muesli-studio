@@ -81,7 +81,6 @@ code {
 
 .app-shell--capture {
   max-width: 1280px;
-  min-height: 100vh;
   align-content: start;
 }
 
