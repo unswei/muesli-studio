@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { summariseRun, type RunEventRecord } from '@muesli/replay';
+
 import { BlackboardDiff } from './components/BlackboardDiff';
 import { decodeWebSocketData, parseLivePayload } from './live';
 import { DslEditor } from './components/DslEditor';
 import { NodeInspector } from './components/NodeInspector';
+import { RunSummaryPanel } from './components/RunSummaryPanel';
 import { TreeView } from './components/TreeView';
 import { parseDemoFixtureQuery } from './demo-fixture';
 import { useStudioStore } from './store';
@@ -49,6 +52,15 @@ export function App() {
   const reconnectEnabledRef = useRef(liveReconnectEnabled);
   const manualDisconnectRef = useRef(false);
   const demoLoadRef = useRef(false);
+  const demoSelectionRef = useRef(false);
+  const demoQuery = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
+    return parseDemoFixtureQuery(window.location.search);
+  }, []);
+  const captureMode = demoQuery?.captureMode ?? null;
 
   const treeSummary = useMemo(() => {
     if (!replay?.btDef) {
@@ -60,6 +72,40 @@ export function App() {
       edgeCount: replay.btDef.data.edges.length,
     };
   }, [replay, treeRevision]);
+  const hasReplay = replay !== null;
+  const maxTick = Math.max(replayMaxTick, 0);
+  const tickCount = replayMaxTick >= 0 ? replayMaxTick + 1 : 0;
+  const replayStats = useMemo(() => {
+    if (!replay) {
+      return [];
+    }
+
+    return [
+      { label: 'run', value: replay.runStart?.run_id ?? 'unknown' },
+      { label: 'mode', value: mode === 'live' ? 'live session' : 'replay' },
+      { label: 'index', value: replayIndexed ? 'indexed' : 'unindexed' },
+      { label: 'events', value: eventCount.toLocaleString() },
+      { label: 'ticks', value: tickCount.toLocaleString() },
+      {
+        label: 'tree',
+        value: treeSummary ? `${treeSummary.nodeCount} nodes / ${treeSummary.edgeCount} edges` : 'unavailable',
+      },
+    ];
+  }, [eventCount, mode, replay, replayIndexed, tickCount, treeSummary]);
+  const replaySummary = useMemo(() => {
+    if (!replay) {
+      return null;
+    }
+
+    const runStartData = replay.runStart?.data as Record<string, unknown> | undefined;
+    const contractVersion =
+      typeof runStartData?.contract_version === 'string' ? runStartData.contract_version : undefined;
+
+    return summariseRun(replay.getAllEvents() as readonly RunEventRecord[], {
+      contractVersion,
+      schemaVersion: replay.runStart?.schema ?? replay.btDef?.schema,
+    });
+  }, [eventCount, replay]);
 
   const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -85,7 +131,6 @@ export function App() {
     }
 
     demoLoadRef.current = true;
-    const demoQuery = parseDemoFixtureQuery(window.location.search);
     if (!demoQuery) {
       return;
     }
@@ -107,7 +152,23 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [addParseError, loadJsonlFromUrl]);
+  }, [addParseError, demoQuery, loadJsonlFromUrl]);
+
+  useEffect(() => {
+    if (!demoQuery || !replay || demoSelectionRef.current) {
+      return;
+    }
+
+    if (demoQuery.selectedTick !== null) {
+      setSelectedTick(demoQuery.selectedTick);
+    }
+
+    if (demoQuery.selectedNodeId !== null) {
+      setSelectedNodeId(demoQuery.selectedNodeId);
+    }
+
+    demoSelectionRef.current = true;
+  }, [demoQuery, replay, setSelectedNodeId, setSelectedTick]);
 
   const clearReconnectTimer = useCallback(() => {
     if (!reconnectTimerRef.current) {
@@ -241,171 +302,321 @@ export function App() {
     };
   }, [clearReconnectTimer]);
 
+  if (captureMode && captureMode !== 'overview') {
+    return (
+      <main className={`app-shell app-shell--capture app-shell--capture-${captureMode}`}>
+        <section className="capture-panel-shell">
+          {captureMode === 'summary' && replay && replaySummary ? (
+            <RunSummaryPanel replay={replay} summary={replaySummary} eventCount={eventCount} />
+          ) : null}
+          {captureMode === 'node' && replay ? (
+            <NodeInspector replay={replay} selectedNodeId={selectedNodeId} tick={selectedTick} />
+          ) : null}
+          {captureMode === 'diff' && replay ? <BlackboardDiff replay={replay} tick={selectedTick} /> : null}
+          {captureMode === 'dsl' && replay ? (
+            <DslEditor replay={replay} onApplyCompiled={applyCompiledTree} onResetCompiled={resetCompiledTree} />
+          ) : null}
+          {!replay ? (
+            <section className="panel detail-panel capture-loading-panel">
+              <div className="panel-heading">
+                <div>
+                  <p className="panel-kicker">capture mode</p>
+                  <h2>loading</h2>
+                </div>
+              </div>
+              <p className="panel-copy muted">Loading the deterministic demo fixture for capture.</p>
+            </section>
+          ) : null}
+        </section>
+      </main>
+    );
+  }
+
   return (
-    <main className="app-shell">
-      <header className="header">
-        <div>
+    <main className={captureMode === 'overview' ? 'app-shell app-shell--capture app-shell--capture-overview' : 'app-shell'}>
+      <header className="topbar">
+        <div className="brand-block">
+          <p className="eyebrow">replay-first run inspection</p>
           <h1>muesli-studio</h1>
-          <p className="muted">Replay + live monitoring over WebSocket, sharing one append-only replay engine.</p>
+          <p className="topbar-copy muted">
+            Understand a run quickly, trust what changed, and capture clean figures without fighting the interface.
+          </p>
         </div>
 
-        <div className="live-controls">
+        <div className="topbar-actions">
           <label className="file-input">
-            <span>open JSONL</span>
+            <span>open replay</span>
+            <small>choose `events.jsonl`</small>
             <input type="file" accept=".jsonl,application/json,text/plain" onChange={onFileChange} />
           </label>
           <label className="file-input">
-            <span>open sidecar (optional)</span>
+            <span>open sidecar</span>
+            <small>optional tick index</small>
             <input type="file" accept=".json,application/json" onChange={onSidecarChange} />
           </label>
         </div>
       </header>
 
-      {replayLoadProgress !== null ? (
-        <section className="panel controls">
-          <h2>replay loading</h2>
-          <p className="muted">
-            progress: <code>{replayLoadProgress}%</code>
-          </p>
-        </section>
-      ) : null}
+      <section className="workspace-shell">
+        <div className="workspace-main">
+          {hasReplay ? (
+            <section className="panel instrument-panel">
+              <div className="panel-heading">
+                <div>
+                  <p className="panel-kicker">main instrument</p>
+                  <h2>tree timeline</h2>
+                  <p className="panel-copy muted">The central surface stays stable while state and tick focus update around it.</p>
+                </div>
+                <div className="tree-summary-badges">
+                  <span className={`status-badge ${replayIndexed ? 'status-badge--indexed' : 'status-badge--subtle'}`}>
+                    {replayIndexed ? 'indexed replay' : 'full scan'}
+                  </span>
+                  <span className="status-badge status-badge--subtle">
+                    {mode === 'live' ? (liveAutoFollow ? 'live auto-follow' : 'live manual') : 'manual scrub'}
+                  </span>
+                </div>
+              </div>
 
-      {replayLoadWarning ? (
-        <section className="panel error-panel">
-          <h2>replay warning</h2>
-          <p>{replayLoadWarning}</p>
-        </section>
-      ) : null}
-
-      <section className="panel controls">
-        <h2>live monitor</h2>
-        <div className="live-controls">
-          <label className="live-url">
-            <span>endpoint</span>
-            <input
-              type="url"
-              value={liveUrl}
-              onChange={(event) => setLiveUrl(event.target.value)}
-              placeholder="ws://localhost:8765/events"
-            />
-          </label>
-
-          <button type="button" onClick={connectLiveManual} disabled={liveStatus === 'connecting' || liveStatus === 'connected'}>
-            connect
-          </button>
-          <button type="button" onClick={disconnectLive} disabled={liveStatus === 'disconnected'}>
-            disconnect
-          </button>
-
-          <label className="checkbox">
-            <input type="checkbox" checked={liveAutoFollow} onChange={(event) => setLiveAutoFollow(event.target.checked)} />
-            auto-follow
-          </label>
-          <label className="checkbox">
-            <input type="checkbox" checked={liveReconnectEnabled} onChange={(event) => setLiveReconnectEnabled(event.target.checked)} />
-            auto-reconnect
-          </label>
-          <button type="button" onClick={clearLiveHistory}>
-            clear history
-          </button>
-        </div>
-        <p className="muted">
-          status: <code>{liveStatus}</code>
-          {liveLastError ? ` - ${liveLastError}` : ''}
-          {liveLastEventUnixMs ? ` · last event ${new Date(liveLastEventUnixMs).toLocaleTimeString()}` : ''}
-        </p>
-        <div className="history-list compact">
-          {liveHistory.length === 0 ? (
-            <p className="muted">No connection history yet.</p>
-          ) : (
-            <ul>
-              {liveHistory
-                .slice(-8)
-                .reverse()
-                .map((entry) => (
-                  <li key={`${entry.atUnixMs}:${entry.message}`}>
-                    [{new Date(entry.atUnixMs).toLocaleTimeString()}] {entry.level}: {entry.message}
-                  </li>
+              <div className="metric-grid">
+                {replayStats.map((item) => (
+                  <div key={item.label} className="metric-card">
+                    <span className="metric-label">{item.label}</span>
+                    <span className="metric-value">{item.value}</span>
+                  </div>
                 ))}
-            </ul>
+              </div>
+
+              <div className="scrubber-panel">
+                <div className="scrubber-header">
+                  <div>
+                    <span className="metric-label">selected tick</span>
+                    <div className="scrubber-tick">{selectedTick}</div>
+                  </div>
+                  <div className="scrubber-meta">
+                    <span className="status-badge status-badge--subtle">0 → {maxTick}</span>
+                    {liveLastEventUnixMs ? (
+                      <span className="scrubber-note muted">last event {new Date(liveLastEventUnixMs).toLocaleTimeString()}</span>
+                    ) : null}
+                  </div>
+                </div>
+
+                <label className="tick-row" htmlFor="tick-scrubber">
+                  <span>
+                    <span>tick scrubber</span>
+                    <span>{tickCount} tick(s)</span>
+                  </span>
+                  <input
+                    id="tick-scrubber"
+                    type="range"
+                    min={0}
+                    max={maxTick}
+                    value={selectedTick}
+                    onChange={(evt) => {
+                      if (liveAutoFollow) {
+                        setLiveAutoFollow(false);
+                      }
+                      setSelectedTick(Number(evt.target.value));
+                    }}
+                    disabled={replayMaxTick <= 0}
+                  />
+                </label>
+
+                <div className="scrubber-scale">
+                  <span>0</span>
+                  <span>{Math.max(Math.floor(maxTick / 2), 0)}</span>
+                  <span>{maxTick}</span>
+                </div>
+              </div>
+            </section>
+          ) : (
+            <section className="panel instrument-panel empty-state-panel">
+              <div className="panel-heading">
+                <div>
+                  <p className="panel-kicker">get started</p>
+                  <h2>load a run</h2>
+                  <p className="panel-copy muted">Open a recorded log or connect to a live runtime. Once events arrive, the tree becomes the dominant surface.</p>
+                </div>
+              </div>
+
+              <div className="empty-action-grid">
+                <div className="empty-action">
+                  <h3>recorded replay</h3>
+                  <p>Choose `events.jsonl`, then add the optional sidecar index for larger runs.</p>
+                </div>
+                <div className="empty-action">
+                  <h3>live monitor</h3>
+                  <p>Connect a runtime over WebSocket and let new events append into the same inspection model.</p>
+                </div>
+                <div className="empty-action">
+                  <h3>clean capture</h3>
+                  <p>Use the deterministic demo fixture as the baseline for screenshots, talks, and publication polish.</p>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {replay ? (
+            <TreeView replay={replay} selectedTick={selectedTick} selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
+          ) : (
+            <div className="panel tree-panel tree-panel--empty">
+              <div className="empty-tree-state">
+                <p className="panel-kicker">focal surface</p>
+                <h2>behaviour tree</h2>
+                <p className="panel-copy muted">Load a replay log to render a stable tree layout and inspect each tick without relayout noise.</p>
+              </div>
+            </div>
           )}
         </div>
-      </section>
 
-      {parseErrors.length > 0 ? (
-        <section className="panel error-panel">
-          <h2>ingest warnings</h2>
-          <p>{parseErrors.length} item(s) were skipped due to parse or schema issues.</p>
-          <ul>
-            {parseErrors.slice(0, 5).map((error) => (
-              <li key={`${error.line}:${error.message}`}>
-                {error.line > 0 ? `line ${error.line}: ` : ''}
-                {error.message}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+        <aside className="workspace-sidebar">
+          {replay && replaySummary ? <RunSummaryPanel replay={replay} summary={replaySummary} eventCount={eventCount} /> : null}
 
-      {replay ? (
-        <section className="panel controls">
-          <div className="meta-row">
-            <span>
-              run: <code>{replay.runStart?.run_id ?? 'unknown'}</code>
-            </span>
-            <span>
-              mode: <code>{mode}</code>
-            </span>
-            <span>
-              index: <code>{replayIndexed ? 'indexed' : 'unindexed'}</code>
-            </span>
-            <span>
-              source bytes: <code>{replaySourceBytes}</code>
-            </span>
-            <span>
-              events: <code>{eventCount}</code>
-            </span>
-            <span>
-              ticks: <code>{replayMaxTick >= 0 ? replayMaxTick + 1 : 0}</code>
-            </span>
-            {treeSummary ? (
-              <span>
-                tree: <code>{treeSummary.nodeCount}</code> nodes / <code>{treeSummary.edgeCount}</code> edges
-              </span>
-            ) : null}
-          </div>
+          {replayLoadProgress !== null ? (
+            <section className="panel notice-panel notice-panel--loading">
+              <div className="panel-heading">
+                <div>
+                  <p className="panel-kicker">loading</p>
+                  <h2>replay</h2>
+                </div>
+                <span className="status-badge status-badge--subtle">{replayLoadProgress}%</span>
+              </div>
+              <div className="progress-track" aria-hidden="true">
+                <div className="progress-fill" style={{ width: `${replayLoadProgress}%` }} />
+              </div>
+              <p className="panel-copy muted">Large logs hydrate in controlled ranges so the main tree stays responsive.</p>
+            </section>
+          ) : null}
 
-          <label className="tick-row" htmlFor="tick-scrubber">
-            <span>tick {selectedTick}</span>
-            <input
-              id="tick-scrubber"
-              type="range"
-              min={0}
-              max={Math.max(replayMaxTick, 0)}
-              value={selectedTick}
-              onChange={(evt) => {
-                if (liveAutoFollow) {
-                  setLiveAutoFollow(false);
-                }
-                setSelectedTick(Number(evt.target.value));
-              }}
-              disabled={replayMaxTick <= 0}
-            />
-          </label>
-        </section>
-      ) : null}
+          {replayLoadWarning ? (
+            <section className="panel notice-panel notice-panel--warning">
+              <div className="panel-heading">
+                <div>
+                  <p className="panel-kicker">replay state</p>
+                  <h2>warning</h2>
+                </div>
+              </div>
+              <p>{replayLoadWarning}</p>
+            </section>
+          ) : null}
 
-      <section className="content-grid">
-        {replay ? (
-          <>
-            <TreeView replay={replay} selectedTick={selectedTick} selectedNodeId={selectedNodeId} onSelectNode={setSelectedNodeId} />
-            <NodeInspector replay={replay} selectedNodeId={selectedNodeId} tick={selectedTick} />
-            <DslEditor replay={replay} onApplyCompiled={applyCompiledTree} onResetCompiled={resetCompiledTree} />
-            <BlackboardDiff replay={replay} tick={selectedTick} />
-          </>
-        ) : (
-          <div className="panel empty">Load a replay log to begin.</div>
-        )}
+          {parseErrors.length > 0 ? (
+            <section className="panel notice-panel notice-panel--error">
+              <div className="panel-heading">
+                <div>
+                  <p className="panel-kicker">ingest</p>
+                  <h2>warnings</h2>
+                </div>
+                <span className="status-badge status-badge--error">{parseErrors.length}</span>
+              </div>
+              <p className="panel-copy muted">{parseErrors.length} item(s) were skipped due to parse or schema issues.</p>
+              <ul className="detail-list">
+                {parseErrors.slice(0, 5).map((error) => (
+                  <li key={`${error.line}:${error.message}`} className="detail-list-item">
+                    <span className="detail-list-primary">{error.line > 0 ? `line ${error.line}` : 'replay input'}</span>
+                    <span className="detail-list-secondary">{error.message}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          <section className="panel detail-panel live-panel">
+            <div className="panel-heading">
+              <div>
+                <p className="panel-kicker">live monitor</p>
+                <h2>connection</h2>
+                <p className="panel-copy muted">Follow the same canonical event stream over WebSocket.</p>
+              </div>
+              <span className={`status-badge status-badge--${liveStatus}`}>{liveStatus}</span>
+            </div>
+
+            <div className="control-stack">
+              <label className="live-url">
+                <span>endpoint</span>
+                <input
+                  type="url"
+                  value={liveUrl}
+                  onChange={(event) => setLiveUrl(event.target.value)}
+                  placeholder="ws://localhost:8765/events"
+                />
+              </label>
+
+              <div className="button-row">
+                <button
+                  type="button"
+                  className="button-primary"
+                  onClick={connectLiveManual}
+                  disabled={liveStatus === 'connecting' || liveStatus === 'connected'}
+                >
+                  connect
+                </button>
+                <button type="button" className="button-ghost" onClick={disconnectLive} disabled={liveStatus === 'disconnected'}>
+                  disconnect
+                </button>
+                <button type="button" className="button-ghost" onClick={clearLiveHistory}>
+                  clear history
+                </button>
+              </div>
+
+              <div className="toggle-row">
+                <label className="checkbox">
+                  <input type="checkbox" checked={liveAutoFollow} onChange={(event) => setLiveAutoFollow(event.target.checked)} />
+                  auto-follow
+                </label>
+                <label className="checkbox">
+                  <input type="checkbox" checked={liveReconnectEnabled} onChange={(event) => setLiveReconnectEnabled(event.target.checked)} />
+                  auto-reconnect
+                </label>
+              </div>
+            </div>
+
+            <p className="status-line muted">
+              status <code>{liveStatus}</code>
+              {liveLastError ? ` · ${liveLastError}` : ''}
+              {liveLastEventUnixMs ? ` · last event ${new Date(liveLastEventUnixMs).toLocaleTimeString()}` : ''}
+            </p>
+
+            <div className="history-list compact">
+              {liveHistory.length === 0 ? (
+                <p className="panel-empty-copy muted">No connection history yet.</p>
+              ) : (
+                <ul className="detail-list">
+                  {liveHistory
+                    .slice(-8)
+                    .reverse()
+                    .map((entry) => (
+                      <li key={`${entry.atUnixMs}:${entry.message}`} className="detail-list-item">
+                        <div className="detail-list-row">
+                          <span className="detail-list-primary">[{new Date(entry.atUnixMs).toLocaleTimeString()}]</span>
+                          <span className={`status-badge status-badge--history-${entry.level}`}>{entry.level}</span>
+                        </div>
+                        <span className="detail-list-secondary">{entry.message}</span>
+                      </li>
+                    ))}
+                </ul>
+              )}
+            </div>
+          </section>
+
+          {replay ? (
+            <>
+              <NodeInspector replay={replay} selectedNodeId={selectedNodeId} tick={selectedTick} />
+              <BlackboardDiff replay={replay} tick={selectedTick} />
+              <DslEditor replay={replay} onApplyCompiled={applyCompiledTree} onResetCompiled={resetCompiledTree} />
+            </>
+          ) : (
+            <section className="panel detail-panel">
+              <div className="panel-heading">
+                <div>
+                  <p className="panel-kicker">side panels</p>
+                  <h2>details</h2>
+                </div>
+              </div>
+              <p className="panel-copy muted">Node history, blackboard changes, and DSL editing appear here once a replay is loaded.</p>
+              <p className="panel-copy muted">Until then, use the loader above or connect to a live runtime from this sidebar.</p>
+            </section>
+          )}
+        </aside>
       </section>
     </main>
   );

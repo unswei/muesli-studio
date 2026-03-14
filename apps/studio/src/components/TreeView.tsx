@@ -33,10 +33,10 @@ interface NormalisedBtEdge {
   to: string;
 }
 
-const NODE_WIDTH = 150;
-const NODE_HEIGHT = 54;
-const H_SPACING = 210;
-const V_SPACING = 120;
+const NODE_WIDTH = 188;
+const NODE_HEIGHT = 72;
+const H_SPACING = 288;
+const V_SPACING = 118;
 
 function normaliseId(value: unknown): string | null {
   if (typeof value === 'string' && value.trim().length > 0) {
@@ -176,59 +176,104 @@ export function TreeView({ replay, selectedTick, selectedNodeId, onSelectNode }:
   }, [btDef]);
 
   const nodePosition = useMemo(() => new Map(layout.nodes.map((node) => [node.id, node])), [layout.nodes]);
+  const selectedNode = useMemo(
+    () => layout.nodes.find((node) => node.id === selectedNodeId) ?? null,
+    [layout.nodes, selectedNodeId],
+  );
 
   if (!btDef) {
-    return <div className="panel empty">Load a JSONL replay log to render the tree.</div>;
+    return (
+      <div className="panel tree-panel tree-panel--empty">
+        <div className="empty-tree-state">
+          <p className="panel-kicker">focal surface</p>
+          <h2>behaviour tree</h2>
+          <p className="panel-copy muted">Load a replay log to render the stable tree layout and scrub state changes over time.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="panel tree-panel">
-      <h2>tree view</h2>
-      <svg width="100%" viewBox={`0 0 ${Math.max(layout.size.width, 600)} ${Math.max(layout.size.height, 320)}`} role="img" aria-label="Behaviour tree">
-        {layout.edges.map((edge) => {
-          const from = nodePosition.get(edge.from);
-          const to = nodePosition.get(edge.to);
-          if (!from || !to) {
-            return null;
-          }
+    <div className="panel tree-panel focal-panel">
+      <div className="panel-heading panel-heading--tree">
+        <div>
+          <p className="panel-kicker">focal surface</p>
+          <h2>behaviour tree</h2>
+          <p className="panel-copy muted">Stable structure, state repaint only. Scrub the run without losing your place.</p>
+        </div>
+        <div className="tree-summary-badges">
+          <span className="status-badge status-badge--subtle">tick {selectedTick}</span>
+          {selectedNode ? (
+            <span className="status-badge status-badge--subtle">
+              {selectedNode.name} · {replay.getNodeStatusAt(selectedNode.id, selectedTick)?.status ?? 'unknown'}
+            </span>
+          ) : null}
+        </div>
+      </div>
 
-          return (
-            <line
-              key={`${edge.from}-${edge.to}`}
-              x1={from.x + NODE_WIDTH}
-              y1={from.y + NODE_HEIGHT / 2}
-              x2={to.x}
-              y2={to.y + NODE_HEIGHT / 2}
-              stroke="#9ba6b2"
-              strokeWidth={2}
-            />
-          );
-        })}
+      <div className="tree-canvas">
+        <svg
+          className="tree-svg"
+          width="100%"
+          viewBox={`0 0 ${Math.max(layout.size.width, 820)} ${Math.max(layout.size.height, 340)}`}
+          role="img"
+          aria-label="Behaviour tree"
+        >
+          {layout.edges.map((edge) => {
+            const from = nodePosition.get(edge.from);
+            const to = nodePosition.get(edge.to);
+            if (!from || !to) {
+              return null;
+            }
 
-        {layout.nodes.map((node) => {
-          const status = replay.getNodeStatusAt(node.id, selectedTick)?.status ?? 'unknown';
-          const statusStyle = styleForStatus(status as NodeStatus);
-          const isSelected = node.id === selectedNodeId;
-          const shapeStyle: CSSProperties = {
-            fill: typeof statusStyle.backgroundColor === 'string' ? statusStyle.backgroundColor : '#f2f2f2',
-            stroke: isSelected ? '#111827' : '#8ea0b2',
-            strokeWidth: isSelected ? 3 : 2,
-            cursor: 'pointer',
-          };
+            const fromX = from.x + NODE_WIDTH;
+            const fromY = from.y + NODE_HEIGHT / 2;
+            const toX = to.x;
+            const toY = to.y + NODE_HEIGHT / 2;
+            const controlX = Math.max(32, (toX - fromX) / 2);
 
-          return (
-            <g key={node.id} onClick={() => onSelectNode(node.id)}>
-              <rect x={node.x} y={node.y} width={NODE_WIDTH} height={NODE_HEIGHT} rx={8} style={shapeStyle} />
-              <text x={node.x + 10} y={node.y + 22} fontSize={14} fill="#112233">
-                {node.name}
-              </text>
-              <text x={node.x + 10} y={node.y + 40} fontSize={12} fill="#425466">
-                {node.kind} · {status}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
+            return (
+              <path
+                key={`${edge.from}-${edge.to}`}
+                d={`M ${fromX} ${fromY} C ${fromX + controlX} ${fromY}, ${toX - controlX} ${toY}, ${toX} ${toY}`}
+                fill="none"
+                stroke="#d1d9e2"
+                strokeWidth={1.75}
+                strokeLinecap="round"
+              />
+            );
+          })}
+
+          {layout.nodes.map((node) => {
+            const status = replay.getNodeStatusAt(node.id, selectedTick)?.status ?? 'unknown';
+            const statusStyle = styleForStatus(status as NodeStatus);
+            const isSelected = node.id === selectedNodeId;
+            const shapeStyle: CSSProperties = {
+              fill: typeof statusStyle.backgroundColor === 'string' ? statusStyle.backgroundColor : '#eef2f5',
+              stroke: isSelected ? '#101925' : '#d7dfe7',
+              strokeWidth: isSelected ? 2.5 : 1.5,
+              cursor: 'pointer',
+            };
+            const textColour = typeof statusStyle.color === 'string' ? statusStyle.color : '#263445';
+
+            return (
+              <g key={node.id} className="tree-node-group" onClick={() => onSelectNode(node.id)}>
+                <rect x={node.x} y={node.y} width={NODE_WIDTH} height={NODE_HEIGHT} rx={16} style={shapeStyle} />
+                <circle cx={node.x + 16} cy={node.y + 18} r={4.5} fill={textColour} opacity={0.9} />
+                <text x={node.x + 28} y={node.y + 22} className="tree-node-name">
+                  {node.name}
+                </text>
+                <text x={node.x + 16} y={node.y + 44} className="tree-node-kind">
+                  {node.kind}
+                </text>
+                <text x={node.x + 16} y={node.y + 61} className="tree-node-status">
+                  {status}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
     </div>
   );
 }

@@ -1,11 +1,25 @@
 {
-  "event_count": 8,
-  "events_sha256": "ba95ee3035a5952e46a914532de4fe260d65380d1fa6da937325e823b9ed633c",
+  "absent_types": [
+    "deadline_exceeded",
+    "vla_submit",
+    "error"
+  ],
+  "event_count": 76,
+  "events_sha256": "da4b69f48cf04528df75eacfabac1063d0bfec4f67baf6a9ff8b9931401c2a1e",
   "required_types": [
     "run_start",
     "bt_def",
     "tick_begin",
+    "node_enter",
+    "node_status",
     "bb_write",
+    "bb_delete",
+    "planner_call_start",
+    "planner_call_end",
+    "sched_submit",
+    "sched_start",
+    "sched_finish",
+    "budget_warning",
     "tick_end"
   ]
 }

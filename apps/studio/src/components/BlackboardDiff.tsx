@@ -9,33 +9,58 @@ export function BlackboardDiff({ replay, tick }: BlackboardDiffProps) {
   const diff = replay.getBlackboardDiff(tick);
 
   return (
-    <div id="blackboard-diff" className="panel split-panel">
-      <h2>blackboard diff @ tick {tick}</h2>
-      <div className="split-grid">
+    <div id="blackboard-diff" className="panel split-panel detail-panel">
+      <div className="panel-heading">
         <div>
+          <p className="panel-kicker">state diff</p>
+          <h2>blackboard</h2>
+        </div>
+        <span className="status-badge status-badge--subtle">tick {tick}</span>
+      </div>
+
+      <div className="detail-summary-grid">
+        <div className="detail-stat">
+          <span className="detail-label">writes</span>
+          <strong>{diff.writes.length}</strong>
+        </div>
+        <div className="detail-stat">
+          <span className="detail-label">deletes</span>
+          <strong>{diff.deletes.length}</strong>
+        </div>
+        <div className="detail-stat">
+          <span className="detail-label">ordering</span>
+          <strong>stable</strong>
+        </div>
+      </div>
+
+      <div className="split-grid diff-grid">
+        <div className="diff-column">
           <h3>writes</h3>
           {diff.writes.length === 0 ? (
-            <p className="muted">No writes at this tick.</p>
+            <p className="panel-empty-copy muted">No writes at this tick.</p>
           ) : (
-            <ul>
+            <ul className="detail-list">
               {diff.writes.map((entry) => (
-                <li key={entry.key}>
-                  <code>{entry.key}</code> = <code>{entry.digest}</code>
-                  {entry.preview ? ` (${entry.preview})` : ''}
+                <li key={entry.key} className="detail-list-item">
+                  <div className="detail-list-row">
+                    <code>{entry.key}</code>
+                    <code>{entry.digest}</code>
+                  </div>
+                  {entry.preview ? <span className="detail-list-secondary">{entry.preview}</span> : null}
                 </li>
               ))}
             </ul>
           )}
         </div>
 
-        <div>
+        <div className="diff-column">
           <h3>deletes</h3>
           {diff.deletes.length === 0 ? (
-            <p className="muted">No deletes at this tick.</p>
+            <p className="panel-empty-copy muted">No deletes at this tick.</p>
           ) : (
-            <ul>
+            <ul className="detail-list">
               {diff.deletes.map((key) => (
-                <li key={key}>
+                <li key={key} className="detail-list-item">
                   <code>{key}</code>
                 </li>
               ))}

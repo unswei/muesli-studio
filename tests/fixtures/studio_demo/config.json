@@ -1,5 +1,6 @@
 {
   "deterministic_mode": true,
-  "scenario": "studio_demo",
-  "tick_budget_ms": 20
+  "scenario": "studio_demo_webots_navigation",
+  "tick_budget_ms": 20,
+  "flavour": "webots"
 }

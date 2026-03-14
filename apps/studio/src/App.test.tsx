@@ -40,7 +40,8 @@ describe('studio replay fixtures', () => {
     expect(tick0Markup).toContain('root');
     expect(tick0Markup).toContain('always-true');
     expect(tick1Markup).toContain('always-success');
-    expect(tick1Markup).toContain('seq · unknown');
-    expect(tick1Markup).toContain('act · unknown');
+    expect(tick1Markup).toContain('class="tree-node-kind">seq');
+    expect(tick1Markup).toContain('class="tree-node-kind">act');
+    expect(tick1Markup).toContain('class="tree-node-status">unknown');
   });
 });

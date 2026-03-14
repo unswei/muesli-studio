@@ -15,6 +15,15 @@ const demoFixtureDir = path.join(repoRoot, 'tests', 'fixtures', 'studio_demo');
 const stagedDemoDir = path.join(repoRoot, 'apps', 'studio', 'public', 'demo', 'studio_demo');
 const imageDir = path.join(repoRoot, 'docs', 'images');
 
+interface ScreenshotSpec {
+  fileName: string;
+  selector: string;
+  viewport: `${number},${number}`;
+  url: string;
+  fullPage?: boolean;
+  waitMs?: number;
+}
+
 function pnpmCommand(): string {
   return process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 }
@@ -92,37 +101,70 @@ async function stopDevServer(devServer: ChildProcess): Promise<void> {
 async function captureScreenshots(): Promise<void> {
   await mkdir(imageDir, { recursive: true });
 
-  await run(pnpmCommand(), [
-    'dlx',
-    'playwright',
-    'screenshot',
-    '--browser',
-    'chromium',
-    '--viewport-size',
-    '1440,1024',
-    '--wait-for-selector',
-    '#tick-scrubber',
-    '--wait-for-timeout',
-    '1500',
-    `${baseUrl}/?demo_fixture=/demo/studio_demo/events.jsonl`,
-    path.join('docs', 'images', 'studio-tree-scrubber.png'),
-  ]);
+  const specs: ScreenshotSpec[] = [
+    {
+      fileName: 'studio-tree-scrubber.png',
+      selector: '#tick-scrubber',
+      viewport: '1440,1120',
+      waitMs: 1500,
+      url: `${baseUrl}/?demo_fixture=/demo/studio_demo/events.jsonl&demo_tick=3&demo_node=4`,
+    },
+    {
+      fileName: 'studio-run-summary.png',
+      selector: '#run-summary-panel',
+      viewport: '1180,1280',
+      fullPage: true,
+      waitMs: 1200,
+      url: `${baseUrl}/?demo_fixture=/demo/studio_demo/events.jsonl&demo_capture=summary`,
+    },
+    {
+      fileName: 'studio-node-inspector.png',
+      selector: '#node-inspector-panel',
+      viewport: '1100,1080',
+      fullPage: true,
+      waitMs: 1200,
+      url: `${baseUrl}/?demo_fixture=/demo/studio_demo/events.jsonl&demo_tick=4&demo_node=5&demo_capture=node`,
+    },
+    {
+      fileName: 'studio-blackboard-diff.png',
+      selector: '#blackboard-diff',
+      viewport: '1240,1160',
+      fullPage: true,
+      waitMs: 1200,
+      url: `${baseUrl}/?demo_fixture=/demo/studio_demo/events.jsonl&demo_tick=4&demo_capture=diff`,
+    },
+    {
+      fileName: 'studio-dsl-editor.png',
+      selector: '#dsl-editor-panel',
+      viewport: '1180,1100',
+      fullPage: true,
+      waitMs: 1200,
+      url: `${baseUrl}/?demo_fixture=/demo/studio_demo/events.jsonl&demo_capture=dsl`,
+    },
+  ];
 
-  await run(pnpmCommand(), [
-    'dlx',
-    'playwright',
-    'screenshot',
-    '--browser',
-    'chromium',
-    '--viewport-size',
-    '1440,1200',
-    '--wait-for-selector',
-    '#blackboard-diff',
-    '--wait-for-timeout',
-    '1500',
-    `${baseUrl}/?demo_fixture=/demo/studio_demo/events.jsonl`,
-    path.join('docs', 'images', 'studio-blackboard-diff.png'),
-  ]);
+  for (const spec of specs) {
+    const args = [
+      'dlx',
+      'playwright',
+      'screenshot',
+      '--browser',
+      'chromium',
+      '--viewport-size',
+      spec.viewport,
+      '--wait-for-selector',
+      spec.selector,
+      '--wait-for-timeout',
+      String(spec.waitMs ?? 1500),
+    ];
+
+    if (spec.fullPage) {
+      args.push('--full-page');
+    }
+
+    args.push(spec.url, path.join('docs', 'images', spec.fileName));
+    await run(pnpmCommand(), args);
+  }
 }
 
 function viteBinary(): string {

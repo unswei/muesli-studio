@@ -11,6 +11,7 @@ Use this flow when you:
 - import fixture cases from `muesli-bt`
 - verify contract/schema compatibility in CI
 - generate deterministic `run_summary.json` outputs
+- generate deterministic GitHub or publication screenshots from one canonical demo bundle
 
 ## how it works
 
@@ -53,12 +54,23 @@ pnpm studio inspect tests/fixtures/determinism_replay \
   --out /tmp/run_summary.json
 ```
 
-Fast UI demo bundle:
+Canonical UI demo bundle:
 
 ```bash
 pnpm studio inspect tests/fixtures/studio_demo
 ./start-studio.sh
+pnpm docs:screenshots
 ```
+
+`tests/fixtures/studio_demo` is the richer deterministic screenshot bundle. It uses a Webots-flavoured navigation run with planner activity, scheduler activity, node history, blackboard writes and deletes, and one warning event.
+
+`pnpm docs:screenshots` stages that same bundle into the Studio demo path and regenerates:
+
+- overview tree + scrubber screenshot
+- run summary panel screenshot
+- node inspector screenshot
+- blackboard diff screenshot
+- DSL editor screenshot
 
 Large deterministic fixture refresh:
 
@@ -76,6 +88,7 @@ pnpm bench:sidecar
 - `tests/fixtures/large_replay/events.jsonl` is intentionally large to support sidecar/index performance work.
 - sidecar indexes are optional; without one, studio falls back to full-scan ingest and now shows an explicit warning for large files.
 - with a valid sidecar, large replays now load lazily in studio for both file input and URL auto-loads (bootstrap + selected ticks first, then on-demand ranges).
+- screenshot automation uses demo query parameters for deterministic tick, node, and panel selection rather than UI clicks.
 
 ## see also
 

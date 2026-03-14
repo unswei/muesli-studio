@@ -3,12 +3,12 @@ import type { CSSProperties } from 'react';
 export type NodeStatus = 'idle' | 'running' | 'success' | 'failure' | 'skipped' | 'unknown';
 
 const statusColours: Record<NodeStatus, CSSProperties> = {
-  idle: { backgroundColor: '#f2f2f2', color: '#303030' },
-  running: { backgroundColor: '#d7f0ff', color: '#034f84' },
-  success: { backgroundColor: '#d9f7d6', color: '#186b1f' },
-  failure: { backgroundColor: '#f9d8d8', color: '#8a1111' },
-  skipped: { backgroundColor: '#ece7ff', color: '#443388' },
-  unknown: { backgroundColor: '#f0f0f0', color: '#555555' },
+  idle: { backgroundColor: '#eef2f5', color: '#536273' },
+  running: { backgroundColor: '#e3f0fb', color: '#19597f' },
+  success: { backgroundColor: '#e6f3ea', color: '#2d6a4f' },
+  failure: { backgroundColor: '#f9e9eb', color: '#9a3b4d' },
+  skipped: { backgroundColor: '#efebfb', color: '#5b4d95' },
+  unknown: { backgroundColor: '#eff2f5', color: '#687585' },
 };
 
 export function styleForStatus(status: NodeStatus): CSSProperties {

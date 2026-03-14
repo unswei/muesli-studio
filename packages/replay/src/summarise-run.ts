@@ -88,6 +88,10 @@ function numberFromUnknown(value: unknown): number | null {
 }
 
 function detectBudgetWarning(event: RunEventRecord): boolean {
+  if (event.type === 'budget_warning') {
+    return true;
+  }
+
   if (event.type === 'error') {
     const code = String(event.data.code ?? '').toLowerCase();
     const message = String(event.data.message ?? '').toLowerCase();
@@ -114,6 +118,10 @@ function detectBudgetWarning(event: RunEventRecord): boolean {
 }
 
 function detectDeadlineExceeded(event: RunEventRecord): boolean {
+  if (event.type === 'deadline_exceeded') {
+    return true;
+  }
+
   if (event.type === 'error') {
     const code = String(event.data.code ?? '').toLowerCase();
     const message = String(event.data.message ?? '').toLowerCase();

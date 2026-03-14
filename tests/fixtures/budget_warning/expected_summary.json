@@ -31,9 +31,8 @@
     }
   },
   "warnings": {
-    "budget_warning_count": 0,
+    "budget_warning_count": 1,
     "deadline_exceeded_count": 0
   },
   "digest": "fnv1a64:5aa86f16ee8ef8f9"
 }
-

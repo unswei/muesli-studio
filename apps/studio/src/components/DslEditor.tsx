@@ -116,10 +116,18 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
   };
 
   return (
-    <div className="panel split-panel">
-      <h2>bt dsl</h2>
+    <div id="dsl-editor-panel" className="panel split-panel detail-panel detail-panel--editor">
+      <div className="panel-heading">
+        <div>
+          <p className="panel-kicker">tree authoring</p>
+          <h2>bt dsl</h2>
+        </div>
+        <span className="status-badge status-badge--subtle">{runId}</span>
+      </div>
+      <p className="panel-copy muted">Apply and revert DSL changes without losing the runtime definition you started from.</p>
+
       {sourceDsl.length === 0 ? (
-        <p className="muted">No `bt_def.dsl` payload is available in this run.</p>
+        <p className="panel-empty-copy muted">No `bt_def.dsl` payload is available in this run.</p>
       ) : (
         <>
           <div className="dsl-toolbar">
@@ -137,8 +145,8 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
             </span>
           </div>
 
-          {errorMessage ? <p className="dsl-error">{errorMessage}</p> : null}
-          {statusMessage ? <p className="dsl-status">{statusMessage}</p> : null}
+          {errorMessage ? <p className="dsl-error notice-inline notice-inline--error">{errorMessage}</p> : null}
+          {statusMessage ? <p className="dsl-status notice-inline notice-inline--success">{statusMessage}</p> : null}
 
           <textarea
             className="dsl-editor"

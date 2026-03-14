@@ -16,6 +16,10 @@ async function loadFixture(name: string): Promise<string> {
   return readFile(path.join(rootDir, 'tools', 'fixtures', name), 'utf8');
 }
 
+async function loadBundleFixture(name: string): Promise<string> {
+  return readFile(path.join(rootDir, 'tests', 'fixtures', name, 'events.jsonl'), 'utf8');
+}
+
 describe('parseJsonlEvents', () => {
   it('parses canonical fixtures without errors', async () => {
     const text = await loadFixture('minimal_run.jsonl');
@@ -31,6 +35,14 @@ describe('parseJsonlEvents', () => {
 
     expect(result.errors.length).toBeGreaterThan(0);
     expect(firstError?.line).toBe(1);
+  });
+
+  it('parses the studio demo bundle without errors', async () => {
+    const text = await loadBundleFixture('studio_demo');
+    const result = parseJsonlEvents(text);
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.events.length).toBeGreaterThan(20);
   });
 });
 
@@ -90,6 +102,25 @@ describe('ReplayStore', () => {
 
     expect(store.getNodeStatusAt('1', 0)?.status).toBe('running');
     expect(store.getNodeStatusAt('1', 1)?.status).toBe('success');
+  });
+
+  it('indexes studio demo node history, planner activity, and blackboard deletes', async () => {
+    const text = await loadBundleFixture('studio_demo');
+    const { events, errors } = parseJsonlEvents(text);
+    expect(errors).toHaveLength(0);
+
+    const store = new ReplayStore();
+    store.appendMany(events);
+
+    expect(store.maxTick).toBe(4);
+    expect(store.btDef?.data.nodes.length).toBe(6);
+    expect(store.getNodeTimeline('1')).toHaveLength(4);
+    expect(store.getNodeStatusAt('1', 4)?.status).toBe('success');
+    expect(store.getNodeStatusAt('4', 3)?.message).toContain('Replanned');
+
+    const tick4Diff = store.getBlackboardDiff(4);
+    expect(tick4Diff.writes.map((entry) => entry.key)).toEqual(['nav.command', 'mission.status']);
+    expect(tick4Diff.deletes).toEqual(['nav.controller_job', 'nav.replan_reason']);
   });
 
   it('supports bt_def override apply/reset without mutating source events', () => {

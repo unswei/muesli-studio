@@ -10,6 +10,8 @@ export const eventTypeValues = [
   'node_enter',
   'node_exit',
   'node_status',
+  'budget_warning',
+  'deadline_exceeded',
   'bb_write',
   'bb_delete',
   'bb_snapshot',
@@ -24,6 +26,9 @@ export const eventTypeValues = [
   'vla_poll',
   'vla_cancel',
   'vla_result',
+  'async_cancel_requested',
+  'async_cancel_acknowledged',
+  'async_completion_dropped',
   'error',
 ] as const;
 
@@ -151,6 +156,16 @@ const nodeExitSchema = envelopeSchema.extend({
     .passthrough(),
 });
 
+const budgetWarningSchema = envelopeSchema.extend({
+  type: z.literal('budget_warning'),
+  data: z.record(z.unknown()),
+});
+
+const deadlineExceededSchema = envelopeSchema.extend({
+  type: z.literal('deadline_exceeded'),
+  data: z.record(z.unknown()),
+});
+
 const bbWriteSchema = envelopeSchema.extend({
   type: z.literal('bb_write'),
   tick: z.number().int().nonnegative(),
@@ -249,6 +264,21 @@ const vlaResultSchema = envelopeSchema.extend({
   data: z.record(z.unknown()),
 });
 
+const asyncCancelRequestedSchema = envelopeSchema.extend({
+  type: z.literal('async_cancel_requested'),
+  data: z.record(z.unknown()),
+});
+
+const asyncCancelAcknowledgedSchema = envelopeSchema.extend({
+  type: z.literal('async_cancel_acknowledged'),
+  data: z.record(z.unknown()),
+});
+
+const asyncCompletionDroppedSchema = envelopeSchema.extend({
+  type: z.literal('async_completion_dropped'),
+  data: z.record(z.unknown()),
+});
+
 const errorSchema = envelopeSchema.extend({
   type: z.literal('error'),
   data: z
@@ -270,6 +300,8 @@ export const mbtEventSchema = z.discriminatedUnion('type', [
   nodeEnterSchema,
   nodeExitSchema,
   nodeStatusSchema,
+  budgetWarningSchema,
+  deadlineExceededSchema,
   bbWriteSchema,
   bbDeleteSchema,
   bbSnapshotSchema,
@@ -284,6 +316,9 @@ export const mbtEventSchema = z.discriminatedUnion('type', [
   vlaPollSchema,
   vlaCancelSchema,
   vlaResultSchema,
+  asyncCancelRequestedSchema,
+  asyncCancelAcknowledgedSchema,
+  asyncCompletionDroppedSchema,
   errorSchema,
 ]);
 

@@ -16,6 +16,7 @@ Use replay mode when you need deterministic post-run inspection, debugging, or r
 - tree layout is computed once from `bt_def.nodes/edges` (supports `from/to` and `parent/child` edge variants)
 - tick scrubbing recolours nodes using indexed `node_status` events
 - blackboard diff panel shows `bb_write`/`bb_delete` for selected tick
+- run summary panel shows run identity, versions, timings, warnings, planner/scheduler counts, and the deterministic event digest
 - `bt_def.dsl` is editable in a dedicated panel:
   - `apply` compiles the draft DSL and refreshes the rendered tree immediately
   - `revert` restores the runtime definition from log events
@@ -25,12 +26,22 @@ Use replay mode when you need deterministic post-run inspection, debugging, or r
 - for large indexed logs, replay starts in lazy sidecar mode (bootstrap + first tick), then parses additional tick ranges on scrub demand
 - large sidecar-backed URL loads now use HTTP byte ranges for the same lazy bootstrap and scrub hydration path
 - demo bootstrapping can auto-load replay files via URL query (`demo_fixture`, optional `demo_sidecar`)
+- demo bootstrapping also supports deterministic capture-state queries (`demo_tick`, `demo_node`, `demo_capture`)
+- the canonical `studio_demo` bundle is a deterministic Webots-flavoured navigation/control trace with planner calls, scheduler events, node history, blackboard writes and deletes, and a warning event
 
 ## api / syntax
 
 Input: `.jsonl` where each line matches `mbt.evt.v1`.
 
 Bundle validation input (CLI): directory containing at least `manifest.json` + `events.jsonl`.
+
+Demo query parameters:
+
+- `demo_fixture=/demo/<fixture>/events.jsonl`
+- `demo_sidecar=/demo/<fixture>/events.sidecar.tick-index.v1.json`
+- `demo_tick=<n>`
+- `demo_node=<id>`
+- `demo_capture=summary|node|diff|dsl`
 
 ## example
 
@@ -58,6 +69,7 @@ Quick demo launcher:
 - replay UI consumes JSONL; bundle-level validation happens in Node tooling (`studio inspect`)
 - lazy mode for local file input now uses `File.slice` ranges to avoid retaining full JSONL text in memory
 - lazy URL mode depends on HTTP byte-range support from the host serving `events.jsonl`; unsupported hosts fall back to a normal fetch
+- the capture-state query parameters are intended for deterministic demos and screenshot automation; they are not a general saved-layout system yet
 - newer runtime event variants are retained in the stream even when UI panels do not yet render dedicated widgets
 - DSL compile errors are shown inline and do not mutate the currently rendered tree
 

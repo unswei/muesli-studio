@@ -8,7 +8,7 @@
 
 ![tree view and tick scrubber](docs/images/studio-tree-scrubber.png)
 
-*Tree view with tick scrubber in the deterministic demo bundle.*
+*Tree view with tick scrubber in the canonical deterministic demo bundle.*
 
 ## try it now
 
@@ -18,7 +18,7 @@ From the repo root:
 pnpm install && ./start-studio.sh
 ```
 
-Starts the studio with a deterministic demo bundle preloaded in the browser.
+Starts the studio with a deterministic Webots-flavoured demo bundle preloaded in the browser.
 
 `pnpm demo` remains available as a shorthand for the same path.
 
@@ -30,7 +30,7 @@ Open a recorded run, scrub through ticks, and inspect behaviour tree execution o
 
 ### inspect state
 
-See node statuses, examine blackboard diffs, and check exactly what changed at the selected tick.
+See the run summary first, inspect node statuses, examine blackboard diffs, and check exactly what changed at the selected tick.
 
 ### follow live
 
@@ -50,11 +50,23 @@ Connect to a running system over WebSocket and follow new events as they arrive 
 
 ## more views
 
+Run summary for the canonical demo:
+
+![run summary panel](docs/images/studio-run-summary.png)
+
+*Run summary panel with tree identity, timing, warnings, and event-family counts.*
+
+Node inspector with deterministic selection:
+
+![node inspector panel](docs/images/studio-node-inspector.png)
+
+*Node history for the controller-dispatch branch in the canonical demo.*
+
 Blackboard diff at the selected tick:
 
 ![blackboard diff panel](docs/images/studio-blackboard-diff.png)
 
-*Blackboard diff view for the currently selected tick.*
+*Blackboard diff view for the selected tick in the canonical demo bundle.*
 
 Refresh the README screenshots with:
 
@@ -112,7 +124,7 @@ pnpm studio inspect tests/fixtures/determinism_replay --out /tmp/run_summary.jso
 
 This validates the bundle, prints a concise summary, and writes `run_summary.json` when `--out` is provided. When a bundle sits under `tests/fixtures/<name>`, the CLI auto-uses `tests/fixtures/schema/mbt.evt.v1.schema.json`.
 
-For the quick UI demo fixture:
+For the canonical UI demo fixture:
 
 ```bash
 pnpm studio inspect tests/fixtures/studio_demo
@@ -139,10 +151,14 @@ Large indexed replays now bootstrap lazily for both local files and URL auto-loa
 
 The replay panel also includes a DSL editor for `bt_def.dsl`. Use `apply` to replace the rendered tree immediately, `revert` to restore the runtime definition, and `save` to export the edited DSL.
 
+Replay mode now includes a first-class run summary panel for versions, tree identity, timings, warning counts, planner/scheduler activity, and deterministic digests.
+
 The demo launcher uses URL query auto-load:
 
 - `demo_fixture=/demo/<fixture>/events.jsonl`
 - optional `demo_sidecar=/demo/<fixture>/events.sidecar.tick-index.v1.json`
+- optional `demo_tick=<n>` and `demo_node=<id>` for deterministic screenshot or demo state selection
+- optional `demo_capture=summary|node|diff|dsl` for single-panel capture views used by the screenshot automation
 
 ## live monitoring
 

@@ -13,6 +13,9 @@ describe('parseDemoFixtureQuery', () => {
     expect(parsed).toEqual({
       jsonlPath: '/demo/run/events.jsonl',
       sidecarPath: '/demo/run/events.sidecar.tick-index.v1.json',
+      selectedTick: null,
+      selectedNodeId: null,
+      captureMode: null,
     });
   });
 
@@ -21,6 +24,31 @@ describe('parseDemoFixtureQuery', () => {
     expect(parsed).toEqual({
       jsonlPath: '/demo/events.jsonl',
       sidecarPath: null,
+      selectedTick: null,
+      selectedNodeId: null,
+      captureMode: null,
+    });
+  });
+
+  it('parses deterministic capture state selectors', () => {
+    const parsed = parseDemoFixtureQuery('?demo_fixture=/demo/events.jsonl&demo_tick=3&demo_node=5&demo_capture=node');
+    expect(parsed).toEqual({
+      jsonlPath: '/demo/events.jsonl',
+      sidecarPath: null,
+      selectedTick: 3,
+      selectedNodeId: '5',
+      captureMode: 'node',
+    });
+  });
+
+  it('ignores invalid capture-state query parameters', () => {
+    const parsed = parseDemoFixtureQuery('?demo_fixture=/demo/events.jsonl&demo_tick=-1&demo_node=%20&demo_capture=tree');
+    expect(parsed).toEqual({
+      jsonlPath: '/demo/events.jsonl',
+      sidecarPath: null,
+      selectedTick: null,
+      selectedNodeId: null,
+      captureMode: null,
     });
   });
 });
