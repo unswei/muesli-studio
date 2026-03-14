@@ -15,10 +15,12 @@
 From the repo root:
 
 ```bash
-pnpm install && pnpm demo
+pnpm install && ./start-studio.sh
 ```
 
 Starts the studio with a deterministic demo bundle preloaded in the browser.
+
+`pnpm demo` remains available as a shorthand for the same path.
 
 ## what you can do
 
@@ -71,6 +73,12 @@ Tagged releases matching `v*` publish these artefacts:
 First release: `v0.1.0`.
 
 See [GitHub releases](https://github.com/unswei/muesli-studio/releases) and [release targets](docs/studio/release-targets.md) for workflow and asset naming.
+
+After unpacking a binary bundle, start the packaged UI with:
+
+```bash
+./start-studio.sh
+```
 
 ## documentation
 
@@ -126,6 +134,8 @@ Load either:
 - a validated bundle event log (`tests/fixtures/*/events.jsonl`) after running `studio inspect`
 
 Studio replay load supports the optional sidecar index file `events.sidecar.tick-index.v1.json`. The UI shows load progress, indexed or unindexed state, and warns when large logs fall back to full-scan ingest.
+
+Large indexed replays now bootstrap lazily for both local files and URL auto-loads. File loads use `File.slice`; URL loads use HTTP byte ranges when the host supports them.
 
 The replay panel also includes a DSL editor for `bt_def.dsl`. Use `apply` to replace the rendered tree immediately, `revert` to restore the runtime definition, and `save` to export the edited DSL.
 

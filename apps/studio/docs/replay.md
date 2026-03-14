@@ -23,6 +23,7 @@ Use replay mode when you need deterministic post-run inspection, debugging, or r
 - fixture bundle support is validated by `studio inspect` using `@muesli/replay/node`, then the same `events.jsonl` can be opened in replay UI
 - replay UI now shows load progress, indexed/unindexed status, and explicit fallback warning for large unindexed logs
 - for large indexed logs, replay starts in lazy sidecar mode (bootstrap + first tick), then parses additional tick ranges on scrub demand
+- large sidecar-backed URL loads now use HTTP byte ranges for the same lazy bootstrap and scrub hydration path
 - demo bootstrapping can auto-load replay files via URL query (`demo_fixture`, optional `demo_sidecar`)
 
 ## api / syntax
@@ -48,7 +49,7 @@ pnpm studio inspect tests/fixtures/determinism_replay --schema tests/fixtures/sc
 Quick demo launcher:
 
 ```bash
-pnpm demo
+./start-studio.sh
 ```
 
 ## gotchas
@@ -56,7 +57,7 @@ pnpm demo
 - invalid lines are skipped and surfaced as parse warnings
 - replay UI consumes JSONL; bundle-level validation happens in Node tooling (`studio inspect`)
 - lazy mode for local file input now uses `File.slice` ranges to avoid retaining full JSONL text in memory
-- URL-based replay loads still fetch full text; range-based HTTP loading is future work
+- lazy URL mode depends on HTTP byte-range support from the host serving `events.jsonl`; unsupported hosts fall back to a normal fetch
 - newer runtime event variants are retained in the stream even when UI panels do not yet render dedicated widgets
 - DSL compile errors are shown inline and do not mutate the currently rendered tree
 

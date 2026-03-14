@@ -57,7 +57,7 @@ Fast UI demo bundle:
 
 ```bash
 pnpm studio inspect tests/fixtures/studio_demo
-pnpm demo
+./start-studio.sh
 ```
 
 Large deterministic fixture refresh:
@@ -75,7 +75,7 @@ pnpm bench:sidecar
 - fallback validation protects CI determinism, but subprocess validation remains the preferred path.
 - `tests/fixtures/large_replay/events.jsonl` is intentionally large to support sidecar/index performance work.
 - sidecar indexes are optional; without one, studio falls back to full-scan ingest and now shows an explicit warning for large files.
-- with a valid sidecar, large replays now load lazily in studio (bootstrap + selected ticks first, then on-demand ranges).
+- with a valid sidecar, large replays now load lazily in studio for both file input and URL auto-loads (bootstrap + selected ticks first, then on-demand ranges).
 
 ## see also
 

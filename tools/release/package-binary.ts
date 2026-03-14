@@ -1,4 +1,4 @@
-import { cp, mkdir, rm, stat, writeFile } from 'node:fs/promises';
+import { chmod, cp, mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -108,6 +108,7 @@ async function main(): Promise<void> {
   const contractPath = path.join(repoRoot, 'contracts', 'muesli-studio-integration.md');
   const readmePath = path.join(repoRoot, 'README.md');
   const licensePath = path.join(repoRoot, 'LICENSE');
+  const launcherPath = path.join(repoRoot, 'start-studio.sh');
 
   await assertExists(inspectorBinaryPath, 'inspector binary');
   await assertExists(studioDistPath, 'studio dist');
@@ -115,6 +116,7 @@ async function main(): Promise<void> {
   await assertExists(contractPath, 'contract');
   await assertExists(readmePath, 'README');
   await assertExists(licensePath, 'LICENSE');
+  await assertExists(launcherPath, 'launcher script');
 
   await rm(stagingDir, { recursive: true, force: true });
   await mkdir(path.join(stagingDir, 'bin'), { recursive: true });
@@ -128,6 +130,8 @@ async function main(): Promise<void> {
   await cp(contractPath, path.join(stagingDir, 'contracts', 'muesli-studio-integration.md'));
   await cp(readmePath, path.join(stagingDir, 'README.md'));
   await cp(licensePath, path.join(stagingDir, 'LICENSE'));
+  await cp(launcherPath, path.join(stagingDir, 'start-studio.sh'));
+  await chmod(path.join(stagingDir, 'start-studio.sh'), 0o755);
 
   const releaseNotes = [
     '# release bundle',
@@ -136,6 +140,7 @@ async function main(): Promise<void> {
     `version: ${args.version}`,
     '',
     'contains:',
+    '- start-studio.sh',
     '- bin/mbt_inspector',
     '- studio/dist/ (static web app)',
     '- schema and contract copies',

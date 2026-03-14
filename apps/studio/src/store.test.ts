@@ -31,6 +31,11 @@ function resetStore(): void {
   });
 }
 
+function utf8Slice(text: string, byteStart: number, byteEnd: number): string {
+  const bytes = new TextEncoder().encode(text);
+  return new TextDecoder().decode(bytes.subarray(byteStart, byteEnd));
+}
+
 describe('studio live store behaviour', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -244,21 +249,23 @@ describe('studio live store behaviour', () => {
     ].join('\n');
     const sidecar = buildTickSidecarIndex(jsonl, 'events.jsonl');
 
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(
-        new Response(jsonl, {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('events.sidecar.tick-index.v1.json')) {
+        return new Response(JSON.stringify(sidecar), { status: 200 });
+      }
+
+      if (url.endsWith('events.jsonl')) {
+        return new Response(jsonl, {
           status: 200,
           headers: {
             'content-length': String(new TextEncoder().encode(jsonl).byteLength),
           },
-        }),
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify(sidecar), {
-          status: 200,
-        }),
-      );
+        });
+      }
+
+      throw new Error(`unexpected fetch URL: ${url}`);
+    });
     vi.stubGlobal('fetch', fetchMock);
 
     await useStudioStore.getState().loadJsonlFromUrl('/demo/determinism/events.jsonl', '/demo/determinism/events.sidecar.tick-index.v1.json');
@@ -269,6 +276,116 @@ describe('studio live store behaviour', () => {
     expect(state.replayIndexed).toBe(true);
     expect(state.replayLoadWarning).toBeNull();
     expect(state.replay?.runStart?.run_id).toBe('run-demo');
+  });
+
+  it('uses URL byte ranges for large sidecar-backed replay loads', async () => {
+    resetStore();
+
+    const largeDsl = `(bt (seq ${'(act padded) '.repeat(180_000)}))`;
+    const jsonl = [
+      '{"schema":"mbt.evt.v1","type":"run_start","run_id":"run-url-large","unix_ms":1,"seq":1,"data":{"git_sha":"fixture","host":{"name":"studio","version":"0.1.0","platform":"test"},"tick_hz":20,"tree_hash":"fnv1a64:1","capabilities":{"reset":true}}}',
+      JSON.stringify({
+        schema: 'mbt.evt.v1',
+        type: 'bt_def',
+        run_id: 'run-url-large',
+        unix_ms: 2,
+        seq: 2,
+        data: {
+          dsl: largeDsl,
+          nodes: [
+            { id: 1, kind: 'seq', name: 'root' },
+            { id: 2, kind: 'act', name: 'one' },
+            { id: 3, kind: 'act', name: 'two' },
+            { id: 4, kind: 'act', name: 'three' },
+          ],
+          edges: [
+            { parent: 1, child: 2, index: 0 },
+            { parent: 1, child: 3, index: 1 },
+            { parent: 1, child: 4, index: 2 },
+          ],
+        },
+      }),
+      '{"schema":"mbt.evt.v1","type":"tick_begin","run_id":"run-url-large","unix_ms":3,"seq":3,"tick":1,"data":{}}',
+      '{"schema":"mbt.evt.v1","type":"tick_end","run_id":"run-url-large","unix_ms":4,"seq":4,"tick":1,"data":{"root_status":"running","tick_ms":1.1}}',
+      '{"schema":"mbt.evt.v1","type":"tick_begin","run_id":"run-url-large","unix_ms":5,"seq":5,"tick":2,"data":{}}',
+      '{"schema":"mbt.evt.v1","type":"tick_end","run_id":"run-url-large","unix_ms":6,"seq":6,"tick":2,"data":{"root_status":"running","tick_ms":1.2}}',
+      '{"schema":"mbt.evt.v1","type":"tick_begin","run_id":"run-url-large","unix_ms":7,"seq":7,"tick":3,"data":{}}',
+      '{"schema":"mbt.evt.v1","type":"tick_end","run_id":"run-url-large","unix_ms":8,"seq":8,"tick":3,"data":{"root_status":"success","tick_ms":1.3}}',
+    ].join('\n');
+    const sidecar = buildTickSidecarIndex(jsonl, 'events.jsonl');
+
+    expect(sidecar.tick_entries.at(-1)?.byte_end ?? 0).toBeGreaterThan(2 * 1024 * 1024);
+
+    const jsonlUrl = '/demo/large/events.jsonl';
+    const sidecarUrl = '/demo/large/events.sidecar.tick-index.v1.json';
+    const rangeCalls: string[] = [];
+    const fullJsonlCalls: string[] = [];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === sidecarUrl) {
+        return new Response(JSON.stringify(sidecar), { status: 200 });
+      }
+
+      if (url !== jsonlUrl) {
+        throw new Error(`unexpected fetch URL: ${url}`);
+      }
+
+      const rangeHeader = new Headers(init?.headers).get('Range');
+      if (!rangeHeader) {
+        fullJsonlCalls.push(url);
+        return new Response(jsonl, {
+          status: 200,
+          headers: {
+            'content-length': String(new TextEncoder().encode(jsonl).byteLength),
+          },
+        });
+      }
+
+      rangeCalls.push(rangeHeader);
+      const match = /^bytes=(\d+)-(\d+)$/.exec(rangeHeader);
+      if (!match) {
+        throw new Error(`unexpected range header: ${rangeHeader}`);
+      }
+
+      const byteStart = Number(match[1]);
+      const byteEndInclusive = Number(match[2]);
+      const chunk = utf8Slice(jsonl, byteStart, byteEndInclusive + 1);
+
+      return new Response(chunk, {
+        status: 206,
+        headers: {
+          'content-range': `bytes ${byteStart}-${byteEndInclusive}/${sidecar.tick_entries.at(-1)?.byte_end ?? 0}`,
+          'content-length': String(new TextEncoder().encode(chunk).byteLength),
+        },
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await useStudioStore.getState().loadJsonlFromUrl(jsonlUrl, sidecarUrl);
+
+    const initial = useStudioStore.getState();
+    expect(initial.replayIndexed).toBe(true);
+    expect(initial.replayLoadWarning).toContain('lazy loading');
+    expect(initial.selectedTick).toBe(1);
+    expect(initial.eventCount).toBe(4);
+    expect(initial.replaySourceBytes).toBeGreaterThan(2 * 1024 * 1024);
+    expect(rangeCalls).toHaveLength(2);
+    expect(fullJsonlCalls).toHaveLength(0);
+
+    useStudioStore.getState().setSelectedTick(3);
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      if ((useStudioStore.getState().replay?.getTick(3).length ?? 0) > 0) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+
+    const afterHydration = useStudioStore.getState();
+    expect(afterHydration.replay?.getTick(2).length).toBeGreaterThan(0);
+    expect(afterHydration.replay?.getTick(3).length).toBeGreaterThan(0);
+    expect(afterHydration.eventCount).toBe(8);
+    expect(rangeCalls).toHaveLength(4);
+    expect(fullJsonlCalls).toHaveLength(0);
   });
 
   it('clears replay loading progress when demo URL load fails', async () => {

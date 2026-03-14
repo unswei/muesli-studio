@@ -12,7 +12,7 @@
     "sync:contract": "tools/sync_contract.sh",
     "check:fixtures": "node tools/fixtures/validate-fixtures.mjs",
     "fixtures:large": "pnpm exec tsx tools/fixtures/generate-large-bundle.ts",
-    "demo": "pnpm exec tsx tools/demo.ts",
+    "demo": "bash ./start-studio.sh demo",
     "docs:screenshots": "pnpm exec tsx tools/docs/capture-studio-screenshots.ts",
     "release:package": "pnpm exec tsx tools/release/package-binary.ts",
     "bench:sidecar": "pnpm exec tsx tools/bench/benchmark-sidecar.ts",

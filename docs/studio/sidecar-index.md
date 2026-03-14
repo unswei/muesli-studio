@@ -20,7 +20,8 @@ Use a sidecar index when:
 1. A generator scans `events.jsonl`.
 2. It records the byte range where each tick starts and ends.
 3. Studio and replay tooling may use the sidecar path when present.
-4. If sidecar parsing fails, tooling falls back to normal full-scan JSONL parsing and emits a warning.
+4. For large studio replays, the browser can bootstrap from sidecar byte ranges first, then hydrate later ticks on demand.
+5. If sidecar parsing fails, tooling falls back to normal full-scan JSONL parsing and emits a warning.
 
 ## api / syntax
 
@@ -61,6 +62,7 @@ The generator writes `tests/fixtures/large_replay/events.sidecar.tick-index.v1.j
 - byte offsets are UTF-8 byte offsets, not character offsets.
 - sidecar files are optional. Missing or invalid sidecars should not block replay.
 - sidecar and `events.jsonl` must stay in sync. Regenerate both together when fixtures change.
+- Studio lazy file loads use `File.slice`, while lazy URL loads depend on HTTP byte-range support from the host serving `events.jsonl`.
 
 ## see also
 

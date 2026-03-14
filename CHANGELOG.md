@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file.
 - synced the vendored `muesli-bt` schema, contract, and generated protocol types to the current pinned upstream contract.
 - advanced the inspector fallback pin from the `v0.2.0` release line to commit `050c5e8793052d2a1a5d307897960d8b78e2afbc` (tagged `v0.3.1`) after verifying the inspector still configures, builds, and runs without source changes.
 - reframed the top-level README around tool-first positioning, a demo-first flow, and screenshot-led product presentation.
+- extended large sidecar-backed replay loading so URL auto-loads can bootstrap and scrub lazily via HTTP byte ranges instead of eagerly fetching the whole log.
+- added a single `./start-studio.sh` launcher for repo demo starts and packaged release-bundle launches.
 
 ## [0.1.0] - 2026-03-04
 
