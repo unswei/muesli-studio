@@ -37,6 +37,27 @@ Release entry template:
 
 ## example
 
+## v0.1.1 - 2026-03-14
+
+### highlights
+
+- patch release that refreshes the inspector fallback pin to `muesli-bt v0.3.1`
+- verified inspector configure, build, smoke, and WS/JSONL parity against the new upstream pin
+- no Studio-side feature or contract changes; this release stays on the `0.1.x` line
+
+### shipped artefacts
+
+- `muesli-studio-v0.1.1-source.tar.gz`
+- `muesli-studio-v0.1.1-source.zip`
+- `muesli-studio-v0.1.1-linux-intel.tar.gz` (prebuilt inspector + studio static assets)
+- `muesli-studio-v0.1.1-macos-arm.tar.gz` (prebuilt inspector + studio static assets)
+- `.sha256` files for all archives
+
+### notes
+
+- release binaries are built on `ubuntu-latest` (Intel) and `macos-14` (Apple Silicon) GitHub runners
+- inspector fallback pin now tracks `muesli-bt v0.3.1`
+
 ## v0.1.0 - 2026-03-04
 
 ### highlights

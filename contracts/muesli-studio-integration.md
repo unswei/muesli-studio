@@ -33,7 +33,7 @@ Required:
 - optional integration targets are exported when enabled and available:
   - `muesli_bt::integration_pybullet`
   - `muesli_bt::integration_webots`
-  - `muesli_bt::integration_ros2` (skeleton target)
+  - `muesli_bt::integration_ros2` (Linux ROS2 transport target)
 - installed share assets include:
   - `${prefix}/share/muesli_bt/contracts/muesli-studio-integration.md`
   - `${prefix}/share/muesli_bt/schemas/event_log/v1/mbt.evt.v1.schema.json`
@@ -53,7 +53,7 @@ Required capabilities include:
   - `muslisp::create_global_env(runtime_config)`
   - integration adapter attach entry points (for example `bt::set_racecar_sim_adapter(...)` for PyBullet)
   - Webots attach entry point (`muslisp::integrations::webots::make_extension(...)`)
-  - ROS2 skeleton attach entry point (`muslisp::integrations::ros2::make_extension(...)`)
+  - ROS2 attach entry point (`muslisp::integrations::ros2::make_extension(...)`)
 
 ### requirement 3: event callback contract
 
@@ -189,7 +189,7 @@ add_executable(mbt_inspector ...)
 target_link_libraries(mbt_inspector PRIVATE muesli_bt::runtime muesli_bt::integration_webots)
 ```
 
-Optional ROS2 integration skeleton target (when built and installed with `MUESLI_BT_BUILD_INTEGRATION_ROS2=ON`):
+Optional ROS2 integration target (when built and installed with `MUESLI_BT_BUILD_INTEGRATION_ROS2=ON`):
 
 ```cmake
 find_package(muesli_bt CONFIG REQUIRED)
@@ -233,7 +233,7 @@ muslisp::eval_source("(env.attach \"webots\")", env);
 
 Legacy note: `bt::integrations::webots::install_callbacks(...)` remains available as a compatibility shim but is not required for new attach flows.
 
-ROS2 skeleton attach flow:
+ROS2 attach flow:
 
 ```cpp
 muslisp::runtime_config cfg;

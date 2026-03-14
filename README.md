@@ -155,7 +155,7 @@ Then connect studio to `ws://localhost:8765/events`.
 Inspector pin metadata lives in [`apps/inspector/cmake/MuesliBtVersion.cmake`](./apps/inspector/cmake/MuesliBtVersion.cmake).
 
 - default CI and local fallback builds use that pinned URL and commit
-- current pinned commit: `affa99d13995a7659bfddfeef08249a8365f4bc5` (tagged `v0.2.0`)
+- current pinned commit: `050c5e8793052d2a1a5d307897960d8b78e2afbc` (tagged `v0.3.1`)
 - scheduled CI builds inspector against [`muesli-bt`](https://github.com/unswei/muesli-bt) `main` as an advisory check
 - canonical contract reference: [muesli-bt studio integration contract](https://github.com/unswei/muesli-bt/blob/main/docs/contracts/muesli-studio-integration.md)
 
