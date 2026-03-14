@@ -17,6 +17,17 @@ function resetStore(): void {
     replayIndexed: false,
     replayLoadWarning: null,
     replaySourceBytes: 0,
+    replaySourceKind: 'text',
+    replayLoadedBytesEstimate: 0,
+    replaySeekStats: {
+      count: 0,
+      last_duration_ms: null,
+      mean_duration_ms: null,
+      max_duration_ms: null,
+      last_tick: null,
+      last_mode: null,
+      last_hydrated_ticks: 0,
+    },
     replayMaxTick: 0,
     treeRevision: 0,
     lazySidecar: null,
@@ -163,6 +174,28 @@ describe('studio live store behaviour', () => {
     expect(state.replayLoadWarning).toBeNull();
   });
 
+  it('records replay diagnostics for eager scrubs', () => {
+    resetStore();
+
+    const jsonl = [
+      '{"schema":"mbt.evt.v1","type":"run_start","run_id":"run-diagnostics","unix_ms":1,"seq":1,"data":{"git_sha":"fixture","host":{"name":"studio","version":"0.1.0","platform":"test"},"tick_hz":20,"tree_hash":"fnv1a64:1","capabilities":{"reset":true}}}',
+      '{"schema":"mbt.evt.v1","type":"tick_begin","run_id":"run-diagnostics","unix_ms":2,"seq":2,"tick":1,"data":{}}',
+      '{"schema":"mbt.evt.v1","type":"tick_end","run_id":"run-diagnostics","unix_ms":3,"seq":3,"tick":1,"data":{"root_status":"running","tick_ms":1.1}}',
+      '{"schema":"mbt.evt.v1","type":"tick_begin","run_id":"run-diagnostics","unix_ms":4,"seq":4,"tick":2,"data":{}}',
+      '{"schema":"mbt.evt.v1","type":"tick_end","run_id":"run-diagnostics","unix_ms":5,"seq":5,"tick":2,"data":{"root_status":"success","tick_ms":1.2}}',
+    ].join('\n');
+
+    useStudioStore.getState().loadJsonl(jsonl, null, 2048, 'text');
+    useStudioStore.getState().setSelectedTick(1);
+
+    const state = useStudioStore.getState();
+    expect(state.replaySourceKind).toBe('text');
+    expect(state.replayLoadedBytesEstimate).toBe(2048);
+    expect(state.replaySeekStats.count).toBe(1);
+    expect(state.replaySeekStats.last_tick).toBe(1);
+    expect(state.replaySeekStats.last_mode).toBe('full-scan');
+  });
+
   it('lazily loads sidecar ticks for very large replay logs', () => {
     resetStore();
 
@@ -222,11 +255,17 @@ describe('studio live store behaviour', () => {
     expect(initial.replayLoadWarning).toContain('lazy loading');
     expect(initial.eventCount).toBe(4);
     expect(initial.replayMaxTick).toBe(3);
+    expect(initial.replaySourceKind).toBe('file');
+    expect(initial.replayLoadedBytesEstimate).toBeGreaterThan(0);
+    expect(initial.replayLoadedBytesEstimate).toBeLessThan(initial.replaySourceBytes);
     expect(streamSpy).not.toHaveBeenCalled();
 
     useStudioStore.getState().setSelectedTick(3);
     for (let attempt = 0; attempt < 20; attempt += 1) {
-      if ((useStudioStore.getState().replay?.getTick(3).length ?? 0) > 0) {
+      if (
+        (useStudioStore.getState().replay?.getTick(3).length ?? 0) > 0 &&
+        useStudioStore.getState().replaySeekStats.count > 0
+      ) {
         break;
       }
       await new Promise((resolve) => setTimeout(resolve, 5));
@@ -236,6 +275,9 @@ describe('studio live store behaviour', () => {
     expect(afterHydration.replay?.getTick(2).length).toBeGreaterThan(0);
     expect(afterHydration.replay?.getTick(3).length).toBeGreaterThan(0);
     expect(afterHydration.eventCount).toBe(8);
+    expect(afterHydration.replayLoadedBytesEstimate).toBeGreaterThan(initial.replayLoadedBytesEstimate);
+    expect(afterHydration.replaySeekStats.last_mode).toBe('hydrated');
+    expect(afterHydration.replaySeekStats.last_hydrated_ticks).toBeGreaterThan(0);
   });
 
   it('loads replay JSONL from URL sources for demo mode', async () => {
@@ -368,13 +410,19 @@ describe('studio live store behaviour', () => {
     expect(initial.replayLoadWarning).toContain('lazy loading');
     expect(initial.selectedTick).toBe(1);
     expect(initial.eventCount).toBe(4);
+    expect(initial.replaySourceKind).toBe('url');
     expect(initial.replaySourceBytes).toBeGreaterThan(2 * 1024 * 1024);
+    expect(initial.replayLoadedBytesEstimate).toBeGreaterThan(0);
+    expect(initial.replayLoadedBytesEstimate).toBeLessThan(initial.replaySourceBytes);
     expect(rangeCalls).toHaveLength(2);
     expect(fullJsonlCalls).toHaveLength(0);
 
     useStudioStore.getState().setSelectedTick(3);
     for (let attempt = 0; attempt < 20; attempt += 1) {
-      if ((useStudioStore.getState().replay?.getTick(3).length ?? 0) > 0) {
+      if (
+        (useStudioStore.getState().replay?.getTick(3).length ?? 0) > 0 &&
+        useStudioStore.getState().replaySeekStats.count > 0
+      ) {
         break;
       }
       await new Promise((resolve) => setTimeout(resolve, 5));
@@ -386,6 +434,9 @@ describe('studio live store behaviour', () => {
     expect(afterHydration.eventCount).toBe(8);
     expect(rangeCalls).toHaveLength(4);
     expect(fullJsonlCalls).toHaveLength(0);
+    expect(afterHydration.replayLoadedBytesEstimate).toBeGreaterThan(initial.replayLoadedBytesEstimate);
+    expect(afterHydration.replaySeekStats.last_mode).toBe('hydrated');
+    expect(afterHydration.replaySeekStats.last_hydrated_ticks).toBeGreaterThan(0);
   });
 
   it('clears replay loading progress when demo URL load fails', async () => {

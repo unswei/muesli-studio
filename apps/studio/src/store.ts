@@ -14,11 +14,23 @@ import type { CompiledBtDefinition } from './dsl-compiler';
 
 export type LiveStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 export type LiveHistoryLevel = 'info' | 'warning' | 'error';
+export type ReplaySourceKind = 'text' | 'file' | 'url';
+export type ReplaySeekMode = 'full-scan' | 'cached' | 'hydrated';
 
 export interface LiveHistoryEntry {
   atUnixMs: number;
   level: LiveHistoryLevel;
   message: string;
+}
+
+export interface ReplaySeekStats {
+  count: number;
+  last_duration_ms: number | null;
+  mean_duration_ms: number | null;
+  max_duration_ms: number | null;
+  last_tick: number | null;
+  last_mode: ReplaySeekMode | null;
+  last_hydrated_ticks: number;
 }
 
 const LARGE_LOG_FALLBACK_THRESHOLD_BYTES = 2 * 1024 * 1024;
@@ -51,6 +63,7 @@ interface LazySidecarLoad {
   selectedTick: number;
   loadedTicks: Set<number>;
   sourceBytes?: number;
+  loadedBytesEstimate: number;
 }
 
 class RangeFallbackToFullTextError extends Error {
@@ -139,6 +152,53 @@ function estimateSourceBytesFromIndex(index: TickSidecarIndexV1): number {
   return lastEntry?.byte_end ?? 0;
 }
 
+function textByteLength(text: string): number {
+  return new TextEncoder().encode(text).byteLength;
+}
+
+function nowMs(): number {
+  if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+    return performance.now();
+  }
+
+  return Date.now();
+}
+
+function emptyReplaySeekStats(): ReplaySeekStats {
+  return {
+    count: 0,
+    last_duration_ms: null,
+    mean_duration_ms: null,
+    max_duration_ms: null,
+    last_tick: null,
+    last_mode: null,
+    last_hydrated_ticks: 0,
+  };
+}
+
+function recordReplaySeek(
+  stats: ReplaySeekStats,
+  durationMs: number,
+  tick: number,
+  mode: ReplaySeekMode,
+  hydratedTicks: number,
+): ReplaySeekStats {
+  const safeDurationMs = Math.max(0, durationMs);
+  const count = stats.count + 1;
+  const meanDurationMs =
+    stats.mean_duration_ms === null ? safeDurationMs : ((stats.mean_duration_ms * stats.count) + safeDurationMs) / count;
+
+  return {
+    count,
+    last_duration_ms: safeDurationMs,
+    mean_duration_ms: meanDurationMs,
+    max_duration_ms: stats.max_duration_ms === null ? safeDurationMs : Math.max(stats.max_duration_ms, safeDurationMs),
+    last_tick: tick,
+    last_mode: mode,
+    last_hydrated_ticks: hydratedTicks,
+  };
+}
+
 function appendTickEventsFromText(
   replay: ReplayStore,
   eventsText: string,
@@ -181,6 +241,7 @@ function initialiseLazySidecarReplay(eventsText: string, index: TickSidecarIndex
     errors: parseErrors,
     selectedTick,
     loadedTicks,
+    loadedBytesEstimate: encoded.length,
   };
 }
 
@@ -266,6 +327,7 @@ async function initialiseLazySidecarReplayFromFile(
     errors: parseErrors.slice(-100),
     selectedTick,
     loadedTicks,
+    loadedBytesEstimate: loadedBytes,
   };
 }
 
@@ -328,6 +390,7 @@ async function initialiseLazySidecarReplayFromUrl(
     selectedTick,
     loadedTicks,
     sourceBytes,
+    loadedBytesEstimate: loadedBytes,
   };
 }
 
@@ -372,6 +435,9 @@ interface StudioState {
   replayIndexed: boolean;
   replayLoadWarning: string | null;
   replaySourceBytes: number;
+  replaySourceKind: ReplaySourceKind;
+  replayLoadedBytesEstimate: number;
+  replaySeekStats: ReplaySeekStats;
   replayMaxTick: number;
   treeRevision: number;
   lazySidecar: LazySidecarReplayState | null;
@@ -383,7 +449,7 @@ interface StudioState {
   liveLastError: string | null;
   liveLastEventUnixMs: number | null;
   liveHistory: LiveHistoryEntry[];
-  loadJsonl: (text: string, sidecarText?: string | null, sourceBytes?: number) => void;
+  loadJsonl: (text: string, sidecarText?: string | null, sourceBytes?: number, sourceKind?: ReplaySourceKind) => void;
   loadJsonlFromFiles: (jsonlFile: File, sidecarFile?: File | null) => Promise<void>;
   loadJsonlFromUrl: (jsonlUrl: string, sidecarUrl?: string | null) => Promise<void>;
   appendLiveEvents: (events: ValidatedMbtEvent[]) => void;
@@ -401,17 +467,18 @@ interface StudioState {
 }
 
 export const useStudioStore = create<StudioState>((set, get) => {
-  const ensureLazyFileTicksLoadedUpTo = async (targetTick: number): Promise<void> => {
+  const ensureLazyFileTicksLoadedUpTo = async (targetTick: number): Promise<number> => {
     const start = get().lazySidecar;
     if (!start || start.source.kind !== 'file') {
-      return;
+      return 0;
     }
 
     const ticks = lazyTicksToHydrate(start.index, start.loadedTicks, start.pendingTicks, targetTick);
+    let loadedTickCount = 0;
     for (const tick of ticks) {
       const beforeLoad = get().lazySidecar;
       if (!beforeLoad || beforeLoad.source.kind !== 'file') {
-        return;
+        return loadedTickCount;
       }
 
       const entry = beforeLoad.index.tick_entries.find((candidate) => candidate.tick === tick);
@@ -433,6 +500,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
         const parsed = parseJsonlEvents(text);
         const tickEvents = parsed.events.filter((event) => event.tick === tick);
         const shiftedErrors = shiftJsonlParseErrors(parsed.errors, entry.line_start - 1);
+        const loadedBytes = Math.max(0, entry.byte_end - entry.byte_start);
 
         set((state) => {
           const currentLazy = state.lazySidecar;
@@ -464,6 +532,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
           return {
             replay,
             eventCount: replay.getAllEvents().length,
+            replayLoadedBytesEstimate: state.replayLoadedBytesEstimate + loadedBytes,
             selectedNodeId: state.selectedNodeId ?? replay.getFirstTreeNodeId(),
             parseErrors: mergeParseErrors(state.parseErrors, shiftedErrors),
             lazySidecar: {
@@ -473,6 +542,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
             },
           };
         });
+        loadedTickCount += 1;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         set((state) => {
@@ -499,15 +569,18 @@ export const useStudioStore = create<StudioState>((set, get) => {
         });
       }
     }
+
+    return loadedTickCount;
   };
 
-  const ensureLazyUrlTicksLoadedUpTo = async (targetTick: number): Promise<void> => {
+  const ensureLazyUrlTicksLoadedUpTo = async (targetTick: number): Promise<number> => {
     const start = get().lazySidecar;
     if (!start || start.source.kind !== 'url') {
-      return;
+      return 0;
     }
 
     const ticks = lazyTicksToHydrate(start.index, start.loadedTicks, start.pendingTicks, targetTick);
+    let loadedTickCount = 0;
     for (let index = 0; index < ticks.length; index += 1) {
       const tick = ticks[index];
       if (tick === undefined) {
@@ -516,7 +589,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
 
       const beforeLoad = get().lazySidecar;
       if (!beforeLoad || beforeLoad.source.kind !== 'url') {
-        return;
+        return loadedTickCount;
       }
 
       const entry = beforeLoad.index.tick_entries.find((candidate) => candidate.tick === tick);
@@ -536,6 +609,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
       try {
         const range = await fetchUrlSliceText(beforeLoad.source.jsonlUrl, entry.byte_start, entry.byte_end);
         if (!range.partial) {
+          const remainingTicks = ticks.slice(index);
           set((state) => {
             const currentLazy = state.lazySidecar;
             if (!currentLazy || currentLazy.source.kind !== 'url') {
@@ -547,7 +621,6 @@ export const useStudioStore = create<StudioState>((set, get) => {
 
             const replay = state.replay ?? new ReplayStore();
             const nextLoaded = new Set(currentLazy.loadedTicks);
-            const remainingTicks = ticks.slice(index);
             const hydratedTicks = appendTickEventsFromText(replay, range.text, currentLazy.index, remainingTicks);
             for (const hydratedTick of hydratedTicks) {
               nextLoaded.add(hydratedTick);
@@ -557,6 +630,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
               replay,
               eventCount: replay.getAllEvents().length,
               replaySourceBytes: Math.max(state.replaySourceBytes, range.sourceBytes),
+              replayLoadedBytesEstimate: Math.max(state.replayLoadedBytesEstimate, range.sourceBytes),
               selectedNodeId: state.selectedNodeId ?? replay.getFirstTreeNodeId(),
               lazySidecar: {
                 source: {
@@ -569,12 +643,14 @@ export const useStudioStore = create<StudioState>((set, get) => {
               },
             };
           });
-          return;
+          loadedTickCount += remainingTicks.length;
+          return loadedTickCount;
         }
 
         const parsed = parseJsonlEvents(range.text);
         const tickEvents = parsed.events.filter((event) => event.tick === tick);
         const shiftedErrors = shiftJsonlParseErrors(parsed.errors, entry.line_start - 1);
+        const loadedBytes = Math.max(0, entry.byte_end - entry.byte_start);
 
         set((state) => {
           const currentLazy = state.lazySidecar;
@@ -608,6 +684,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
             replay,
             eventCount: replay.getAllEvents().length,
             replaySourceBytes: Math.max(state.replaySourceBytes, range.sourceBytes),
+            replayLoadedBytesEstimate: state.replayLoadedBytesEstimate + loadedBytes,
             selectedNodeId: state.selectedNodeId ?? replay.getFirstTreeNodeId(),
             parseErrors: mergeParseErrors(state.parseErrors, shiftedErrors),
             lazySidecar: {
@@ -617,6 +694,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
             },
           };
         });
+        loadedTickCount += 1;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         set((state) => {
@@ -643,6 +721,8 @@ export const useStudioStore = create<StudioState>((set, get) => {
         });
       }
     }
+
+    return loadedTickCount;
   };
 
   return {
@@ -655,6 +735,9 @@ export const useStudioStore = create<StudioState>((set, get) => {
     replayIndexed: false,
     replayLoadWarning: null,
     replaySourceBytes: 0,
+    replaySourceKind: 'text',
+    replayLoadedBytesEstimate: 0,
+    replaySeekStats: emptyReplaySeekStats(),
     replayMaxTick: 0,
     treeRevision: 0,
     lazySidecar: null,
@@ -667,9 +750,10 @@ export const useStudioStore = create<StudioState>((set, get) => {
     liveLastEventUnixMs: null,
     liveHistory: [],
 
-    loadJsonl: (text, sidecarText = null, sourceBytes = 0) => {
+    loadJsonl: (text, sidecarText = null, sourceBytes = 0, sourceKind = 'text') => {
+      const effectiveSourceBytes = Math.max(sourceBytes, textByteLength(text));
       const hasSidecarText = Boolean(sidecarText && sidecarText.trim().length > 0);
-      const prefersLazySidecar = sourceBytes >= LARGE_LOG_LAZY_THRESHOLD_BYTES && hasSidecarText;
+      const prefersLazySidecar = effectiveSourceBytes >= LARGE_LOG_LAZY_THRESHOLD_BYTES && hasSidecarText;
       if (prefersLazySidecar && sidecarText) {
         try {
           const index = parseTickSidecarIndex(sidecarText);
@@ -682,7 +766,10 @@ export const useStudioStore = create<StudioState>((set, get) => {
               replayLoadProgress: null,
               replayIndexed: true,
               replayLoadWarning: 'large log lazy loading is active; sidecar ranges are parsed on tick demand.',
-              replaySourceBytes: sourceBytes,
+              replaySourceBytes: effectiveSourceBytes,
+              replaySourceKind: sourceKind,
+              replayLoadedBytesEstimate: lazy.loadedBytesEstimate,
+              replaySeekStats: emptyReplaySeekStats(),
               replayMaxTick: index.max_tick,
               treeRevision: 0,
               selectedTick: lazy.selectedTick,
@@ -709,7 +796,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
       const replay = new ReplayStore();
       replay.appendMany(result.events);
 
-      const warnings = [result.sidecar.warning, largeLogFallbackWarning(sourceBytes, result.sidecar.index_used)].filter(
+      const warnings = [result.sidecar.warning, largeLogFallbackWarning(effectiveSourceBytes, result.sidecar.index_used)].filter(
         (warning): warning is string => Boolean(warning && warning.length > 0),
       );
       const replayLoadWarning = warnings.length > 0 ? warnings.join(' ') : null;
@@ -721,7 +808,10 @@ export const useStudioStore = create<StudioState>((set, get) => {
         replayLoadProgress: null,
         replayIndexed: result.sidecar.index_used,
         replayLoadWarning,
-        replaySourceBytes: sourceBytes,
+        replaySourceBytes: effectiveSourceBytes,
+        replaySourceKind: sourceKind,
+        replayLoadedBytesEstimate: effectiveSourceBytes,
+        replaySeekStats: emptyReplaySeekStats(),
         replayMaxTick: result.sidecar.index_used ? result.sidecar.max_tick : Math.max(replay.maxTick, 0),
         treeRevision: 0,
         selectedTick: replay.maxTick >= 0 ? replay.maxTick : 0,
@@ -760,6 +850,9 @@ export const useStudioStore = create<StudioState>((set, get) => {
               replayIndexed: true,
               replayLoadWarning: 'large log lazy loading is active; sidecar ranges are parsed on tick demand.',
               replaySourceBytes: jsonlFile.size,
+              replaySourceKind: 'file',
+              replayLoadedBytesEstimate: lazy.loadedBytesEstimate,
+              replaySeekStats: emptyReplaySeekStats(),
               replayMaxTick: index.max_tick,
               treeRevision: 0,
               selectedTick: lazy.selectedTick,
@@ -786,7 +879,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
         set({ replayLoadProgress: percent });
       });
 
-      get().loadJsonl(text, sidecarText, jsonlFile.size);
+      get().loadJsonl(text, sidecarText, jsonlFile.size, 'file');
     },
 
     loadJsonlFromUrl: async (jsonlUrl, sidecarUrl = null) => {
@@ -825,6 +918,9 @@ export const useStudioStore = create<StudioState>((set, get) => {
                   replayIndexed: true,
                   replayLoadWarning: 'large log lazy loading is active; sidecar ranges are parsed on tick demand.',
                   replaySourceBytes: lazy.sourceBytes ?? estimatedSourceBytes,
+                  replaySourceKind: 'url',
+                  replayLoadedBytesEstimate: lazy.loadedBytesEstimate,
+                  replaySeekStats: emptyReplaySeekStats(),
                   replayMaxTick: index.max_tick,
                   treeRevision: 0,
                   selectedTick: lazy.selectedTick,
@@ -843,7 +939,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
                 return;
               } catch (error) {
                 if (error instanceof RangeFallbackToFullTextError) {
-                  get().loadJsonl(error.fullText, sidecarText, error.sourceBytes);
+                  get().loadJsonl(error.fullText, sidecarText, error.sourceBytes, 'url');
                   return;
                 }
               }
@@ -862,7 +958,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
         const sourceBytes =
           parseHeaderByteCount(jsonlResponse.headers.get('content-length')) ?? new TextEncoder().encode(text).byteLength;
 
-        get().loadJsonl(text, sidecarText, sourceBytes);
+        get().loadJsonl(text, sidecarText, sourceBytes, 'url');
       } catch (error) {
         set({ replayLoadProgress: null });
         throw error;
@@ -941,11 +1037,21 @@ export const useStudioStore = create<StudioState>((set, get) => {
         return;
       }
 
+      const seekStartedAt = nowMs();
       const maxTick = Math.max(state.replayMaxTick, replay.maxTick, 0);
       const bounded = Math.max(0, Math.min(tick, maxTick));
       const lazy = state.lazySidecar;
       if (!lazy || lazy.loadedTicks.has(bounded)) {
-        set({ selectedTick: bounded });
+        set((current) => ({
+          selectedTick: bounded,
+          replaySeekStats: recordReplaySeek(
+            current.replaySeekStats,
+            nowMs() - seekStartedAt,
+            bounded,
+            current.replayIndexed ? 'cached' : 'full-scan',
+            0,
+          ),
+        }));
         return;
       }
 
@@ -962,6 +1068,13 @@ export const useStudioStore = create<StudioState>((set, get) => {
           eventCount: replay.getAllEvents().length,
           selectedTick: bounded,
           selectedNodeId: state.selectedNodeId ?? replay.getFirstTreeNodeId(),
+          replaySeekStats: recordReplaySeek(
+            state.replaySeekStats,
+            nowMs() - seekStartedAt,
+            bounded,
+            hydratedTicks.size > 0 ? 'hydrated' : 'cached',
+            hydratedTicks.size,
+          ),
           lazySidecar: {
             ...lazy,
             loadedTicks,
@@ -972,11 +1085,43 @@ export const useStudioStore = create<StudioState>((set, get) => {
 
       set({ selectedTick: bounded });
       if (lazy.source.kind === 'file') {
-        void ensureLazyFileTicksLoadedUpTo(bounded);
+        void ensureLazyFileTicksLoadedUpTo(bounded)
+          .then((hydratedTickCount) => {
+            set((current) => ({
+              replaySeekStats: recordReplaySeek(
+                current.replaySeekStats,
+                nowMs() - seekStartedAt,
+                bounded,
+                hydratedTickCount > 0 ? 'hydrated' : 'cached',
+                hydratedTickCount,
+              ),
+            }));
+          })
+          .catch(() => {
+            set((current) => ({
+              replaySeekStats: recordReplaySeek(current.replaySeekStats, nowMs() - seekStartedAt, bounded, 'cached', 0),
+            }));
+          });
         return;
       }
 
-      void ensureLazyUrlTicksLoadedUpTo(bounded);
+      void ensureLazyUrlTicksLoadedUpTo(bounded)
+        .then((hydratedTickCount) => {
+          set((current) => ({
+            replaySeekStats: recordReplaySeek(
+              current.replaySeekStats,
+              nowMs() - seekStartedAt,
+              bounded,
+              hydratedTickCount > 0 ? 'hydrated' : 'cached',
+              hydratedTickCount,
+            ),
+          }));
+        })
+        .catch(() => {
+          set((current) => ({
+            replaySeekStats: recordReplaySeek(current.replaySeekStats, nowMs() - seekStartedAt, bounded, 'cached', 0),
+          }));
+        });
     },
 
     setSelectedNodeId: (nodeId) => {

@@ -22,6 +22,7 @@ Use this workflow when:
    - later tick ranges hydrate on scrub demand
 5. Local files use `File.slice` for range reads.
 6. URL-backed replays use HTTP byte ranges when the host supports them.
+7. The replay diagnostics panel shows the current replay mode, recent seek latency, and a rough replay footprint estimate.
 
 Without a sidecar, Studio falls back to a full scan and shows a warning for large logs.
 
@@ -52,11 +53,19 @@ Then open:
 
 The Studio replay header should show `indexed replay` rather than `full scan`.
 
+Then open the replay diagnostics panel in the right rail to confirm:
+
+- whether Studio is in `full scan`, `indexed`, or `lazy indexed` mode
+- how many tick ranges are currently loaded
+- the most recent seek latency after scrubbing
+- the rough replay footprint estimate
+
 ## gotchas
 
 - lazy URL replay needs HTTP byte-range support from the host serving `events.jsonl`
 - invalid or stale sidecars fall back to normal parsing
 - bundle export hydrates the remaining ticks first so the exported `events.jsonl` stays complete
+- rough memory is heuristic only; Studio estimates it from loaded replay bytes plus parsed event count rather than reading the browser heap
 
 ## see also
 

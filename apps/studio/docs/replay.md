@@ -25,6 +25,7 @@ Use replay mode when you need deterministic post-run inspection, debugging, or r
 - replay UI now shows load progress, indexed/unindexed status, and explicit fallback warning for large unindexed logs
 - for large indexed logs, replay starts in lazy sidecar mode (bootstrap + first tick), then parses additional tick ranges on scrub demand
 - large sidecar-backed URL loads now use HTTP byte ranges for the same lazy bootstrap and scrub hydration path
+- the replay diagnostics panel shows large-log mode, seek timing, pending range hydration, and a rough footprint estimate
 - demo bootstrapping can auto-load replay files via URL query (`demo_fixture`, optional `demo_sidecar`)
 - demo bootstrapping also supports deterministic capture-state queries (`demo_tick`, `demo_node`, `demo_capture`)
 - the right rail includes a presentation panel for clean capture layouts and publication bundle export

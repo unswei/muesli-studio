@@ -503,6 +503,11 @@ code {
   gap: 1rem;
 }
 
+.replay-diagnostics-panel {
+  display: grid;
+  gap: 1rem;
+}
+
 .presentation-panel {
   display: grid;
   gap: 0.9rem;
@@ -583,6 +588,22 @@ code {
   line-height: 1.45;
   color: var(--text);
   word-break: break-word;
+}
+
+.diagnostics-note {
+  margin: 0;
+  padding: 0.85rem 0.95rem;
+  border-radius: 0.9rem;
+  border: 1px solid #e0e7ee;
+  background: rgba(255, 255, 255, 0.72);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.diagnostics-note--warning {
+  border-color: rgba(168, 111, 19, 0.25);
+  background: rgba(255, 244, 223, 0.9);
+  color: #7f5312;
 }
 
 .event-family-grid {

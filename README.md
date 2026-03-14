@@ -159,6 +159,8 @@ The replay panel also includes a DSL editor for `bt_def.dsl`. Use `apply` to rep
 
 Replay mode now includes a first-class run summary panel for versions, tree identity, timings, warning counts, planner/scheduler activity, and deterministic digests.
 
+Replay mode also includes an in-app diagnostics panel for large-log replay mode, recent seek latency, and rough replay memory use.
+
 Replay mode also includes a first-class presentation flow in the right rail. Use it to open clean overview, summary, node, diff, or DSL layouts, then export PNG, SVG, or a zipped publication bundle.
 
 The demo launcher uses URL query auto-load:

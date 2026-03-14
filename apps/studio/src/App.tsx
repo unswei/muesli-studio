@@ -12,6 +12,7 @@ import { HeroCapture } from './components/HeroCapture';
 import { NodeInspector } from './components/NodeInspector';
 import { PresentationPanel } from './components/PresentationPanel';
 import { PresentationToolbar } from './components/PresentationToolbar';
+import { ReplayDiagnosticsPanel } from './components/ReplayDiagnosticsPanel';
 import { RunSummaryPanel } from './components/RunSummaryPanel';
 import { TreeView } from './components/TreeView';
 import { parseDemoFixtureQuery } from './demo-fixture';
@@ -89,8 +90,12 @@ export function App() {
   const replayIndexed = useStudioStore((state) => state.replayIndexed);
   const replayLoadWarning = useStudioStore((state) => state.replayLoadWarning);
   const replaySourceBytes = useStudioStore((state) => state.replaySourceBytes);
+  const replaySourceKind = useStudioStore((state) => state.replaySourceKind);
+  const replayLoadedBytesEstimate = useStudioStore((state) => state.replayLoadedBytesEstimate);
+  const replaySeekStats = useStudioStore((state) => state.replaySeekStats);
   const replayMaxTick = useStudioStore((state) => state.replayMaxTick);
   const treeRevision = useStudioStore((state) => state.treeRevision);
+  const lazySidecar = useStudioStore((state) => state.lazySidecar);
   const mode = useStudioStore((state) => state.mode);
   const liveUrl = useStudioStore((state) => state.liveUrl);
   const liveStatus = useStudioStore((state) => state.liveStatus);
@@ -178,6 +183,26 @@ export function App() {
       schemaVersion: replay.runStart?.schema ?? replay.btDef?.schema,
     });
   }, [eventCount, replay]);
+  const replayDiagnostics = useMemo(() => {
+    if (!replay) {
+      return null;
+    }
+
+    const loadedTickIds = new Set<number>();
+    for (const event of replay.getAllEvents()) {
+      if (typeof event.tick === 'number') {
+        loadedTickIds.add(event.tick);
+      }
+    }
+
+    return {
+      loadedTickCount: loadedTickIds.size,
+      knownTickCount: lazySidecar ? lazySidecar.index.tick_entries.length : loadedTickIds.size,
+      pendingTickCount: lazySidecar?.pendingTicks.size ?? 0,
+      highestTick: Math.max(replayMaxTick, replay.maxTick, 0),
+      lazyActive: lazySidecar !== null,
+    };
+  }, [eventCount, lazySidecar, replay, replayMaxTick]);
   const forcedPresentationLayout = captureMode && captureMode !== 'overview' ? captureMode : null;
   const activePresentationLayout = forcedPresentationLayout ?? presentationLayout;
   const showsPresentationToolbar = forcedPresentationLayout === null && presentationLayout !== null;
@@ -794,6 +819,23 @@ export function App() {
 
         <aside className="workspace-sidebar">
           {replay && replaySummary ? <RunSummaryPanel replay={replay} summary={replaySummary} eventCount={eventCount} /> : null}
+          {replay && mode === 'replay' && replayDiagnostics ? (
+            <ReplayDiagnosticsPanel
+              eventCount={eventCount}
+              selectedTick={selectedTick}
+              replayIndexed={replayIndexed}
+              lazyActive={replayDiagnostics.lazyActive}
+              sourceKind={replaySourceKind}
+              sourceBytes={replaySourceBytes}
+              loadedBytesEstimate={replayLoadedBytesEstimate}
+              loadedTickCount={replayDiagnostics.loadedTickCount}
+              knownTickCount={replayDiagnostics.knownTickCount}
+              highestTick={replayDiagnostics.highestTick}
+              pendingTickCount={replayDiagnostics.pendingTickCount}
+              loadWarning={replayLoadWarning}
+              seekStats={replaySeekStats}
+            />
+          ) : null}
           {replay && replaySummary ? (
             <PresentationPanel
               currentLayout={presentationLayout}

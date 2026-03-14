@@ -1,9 +1,5 @@
 # todo
 
-## v0.2 release backlog
-
-- [ ] add an in-app large-log diagnostics panel for replay mode, seek latency, and rough memory use
-
 ## design follow-up
 
 - [ ] add keyboard-first tick navigation, panel switching, and search/jump flows
