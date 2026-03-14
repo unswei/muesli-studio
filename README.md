@@ -6,9 +6,9 @@
 
 [Try the demo](#try-it-now) · [Download releases](https://github.com/unswei/muesli-studio/releases) · [Read the docs](#documentation)
 
-![tree view and tick scrubber](docs/images/studio-tree-scrubber.png)
+![hero capture of the studio demo](docs/images/studio-tree-scrubber.png)
 
-*Tree view with tick scrubber in the canonical deterministic demo bundle.*
+*Hero capture from the canonical deterministic demo bundle.*
 
 ## try it now
 
@@ -158,7 +158,7 @@ The demo launcher uses URL query auto-load:
 - `demo_fixture=/demo/<fixture>/events.jsonl`
 - optional `demo_sidecar=/demo/<fixture>/events.sidecar.tick-index.v1.json`
 - optional `demo_tick=<n>` and `demo_node=<id>` for deterministic screenshot or demo state selection
-- optional `demo_capture=summary|node|diff|dsl` for single-panel capture views used by the screenshot automation
+- optional `demo_capture=hero|summary|node|diff|dsl` for deterministic README and panel capture views
 
 ## live monitoring
 

@@ -41,7 +41,7 @@ Demo query parameters:
 - `demo_sidecar=/demo/<fixture>/events.sidecar.tick-index.v1.json`
 - `demo_tick=<n>`
 - `demo_node=<id>`
-- `demo_capture=summary|node|diff|dsl`
+- `demo_capture=hero|summary|node|diff|dsl`
 
 ## example
 

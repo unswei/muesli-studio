@@ -104,10 +104,11 @@ async function captureScreenshots(): Promise<void> {
   const specs: ScreenshotSpec[] = [
     {
       fileName: 'studio-tree-scrubber.png',
-      selector: '#tick-scrubber',
-      viewport: '1440,1120',
+      selector: '#readme-hero',
+      viewport: '1520,1080',
+      fullPage: true,
       waitMs: 1500,
-      url: `${baseUrl}/?demo_fixture=/demo/studio_demo/events.jsonl&demo_tick=3&demo_node=4`,
+      url: `${baseUrl}/?demo_fixture=/demo/studio_demo/events.jsonl&demo_tick=3&demo_node=4&demo_capture=hero`,
     },
     {
       fileName: 'studio-run-summary.png',

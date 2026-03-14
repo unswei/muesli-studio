@@ -66,7 +66,7 @@ pnpm docs:screenshots
 
 `pnpm docs:screenshots` stages that same bundle into the Studio demo path and regenerates:
 
-- overview tree + scrubber screenshot
+- README hero capture
 - run summary panel screenshot
 - node inspector screenshot
 - blackboard diff screenshot

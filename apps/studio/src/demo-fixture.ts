@@ -6,7 +6,7 @@ export interface DemoFixtureQuery {
   captureMode: DemoCaptureMode | null;
 }
 
-export type DemoCaptureMode = 'overview' | 'summary' | 'node' | 'diff' | 'dsl';
+export type DemoCaptureMode = 'overview' | 'hero' | 'summary' | 'node' | 'diff' | 'dsl';
 
 function sanitisePath(value: string | null): string | null {
   if (!value) {
@@ -53,7 +53,14 @@ function sanitiseCaptureMode(value: string | null): DemoCaptureMode | null {
   }
 
   const trimmed = value.trim().toLowerCase();
-  if (trimmed === 'overview' || trimmed === 'summary' || trimmed === 'node' || trimmed === 'diff' || trimmed === 'dsl') {
+  if (
+    trimmed === 'overview' ||
+    trimmed === 'hero' ||
+    trimmed === 'summary' ||
+    trimmed === 'node' ||
+    trimmed === 'diff' ||
+    trimmed === 'dsl'
+  ) {
     return trimmed;
   }
 

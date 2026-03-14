@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
 - added a single `./start-studio.sh` launcher for repo demo starts and packaged release-bundle launches.
 - applied the first v0.2 design pass across the studio shell, tree timeline, side panels, empty states, and refreshed README screenshots.
 - promoted run summary into a first-class Studio panel and expanded deterministic screenshot refresh to capture overview plus individual summary, node, diff, and DSL panels from the canonical demo bundle.
+- replaced the generic lead README screenshot with a dedicated hero capture built from the same canonical demo fixture and deterministic capture-state pipeline.
 
 ## [0.1.0] - 2026-03-04
 

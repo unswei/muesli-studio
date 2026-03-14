@@ -5,6 +5,7 @@ import { summariseRun, type RunEventRecord } from '@muesli/replay';
 import { BlackboardDiff } from './components/BlackboardDiff';
 import { decodeWebSocketData, parseLivePayload } from './live';
 import { DslEditor } from './components/DslEditor';
+import { HeroCapture } from './components/HeroCapture';
 import { NodeInspector } from './components/NodeInspector';
 import { RunSummaryPanel } from './components/RunSummaryPanel';
 import { TreeView } from './components/TreeView';
@@ -301,6 +302,36 @@ export function App() {
       clearReconnectTimer();
     };
   }, [clearReconnectTimer]);
+
+  if (captureMode === 'hero') {
+    return (
+      <main className="app-shell app-shell--capture app-shell--capture-hero">
+        {replay && replaySummary ? (
+          <HeroCapture
+            replay={replay}
+            summary={replaySummary}
+            selectedTick={selectedTick}
+            selectedNodeId={selectedNodeId}
+            maxTick={maxTick}
+            tickCount={tickCount}
+            replayIndexed={replayIndexed}
+            onSelectNode={setSelectedNodeId}
+            onSelectTick={setSelectedTick}
+          />
+        ) : (
+          <section className="panel detail-panel capture-loading-panel">
+            <div className="panel-heading">
+              <div>
+                <p className="panel-kicker">hero capture</p>
+                <h2>loading</h2>
+              </div>
+            </div>
+            <p className="panel-copy muted">Loading the deterministic demo fixture for the README hero capture.</p>
+          </section>
+        )}
+      </main>
+    );
+  }
 
   if (captureMode && captureMode !== 'overview') {
     return (

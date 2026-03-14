@@ -2,7 +2,7 @@
 
 ## v0.2 release backlog
 
-- [ ] promote the current deterministic capture states into a first-class presentation/capture mode with fixed layouts and PNG/SVG exports
+- [ ] promote the current deterministic hero and panel capture states into a first-class presentation/capture mode with fixed layouts and PNG/SVG exports
 - [ ] export a paper/demo bundle with manifest, run summary, screenshots, and short reproduction notes
 - [ ] add an in-app large-log diagnostics panel for replay mode, seek latency, and rough memory use
 - [ ] tighten the README/release-note/doc opening copy and add short publication and large-log workflow docs
