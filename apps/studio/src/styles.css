@@ -96,7 +96,7 @@ code {
 .hero-stage-panel {
   display: grid;
   gap: 1rem;
-  padding: 1.35rem;
+  padding: 1.35rem 1.35rem 1.15rem;
   border-radius: 26px;
   border: 1px solid rgba(215, 224, 232, 0.9);
   background:
@@ -442,6 +442,7 @@ code {
 
 .app-shell--capture-hero {
   max-width: 1480px;
+  padding-bottom: 0.9rem;
 }
 
 .app-shell--capture-hero .tree-panel {
