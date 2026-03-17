@@ -1,0 +1,36 @@
+{
+  "schema": "mbt.sidecar.tick-index.v1",
+  "source": "events.jsonl",
+  "event_count": 76,
+  "max_tick": 4,
+  "tick_entries": [
+    {
+      "tick": 1,
+      "byte_start": 1210,
+      "byte_end": 5256,
+      "line_start": 3,
+      "first_seq": 3
+    },
+    {
+      "tick": 2,
+      "byte_start": 5256,
+      "byte_end": 8806,
+      "line_start": 22,
+      "first_seq": 22
+    },
+    {
+      "tick": 3,
+      "byte_start": 8806,
+      "byte_end": 12280,
+      "line_start": 39,
+      "first_seq": 39
+    },
+    {
+      "tick": 4,
+      "byte_start": 12280,
+      "byte_end": 16842,
+      "line_start": 55,
+      "first_seq": 55
+    }
+  ]
+}

@@ -91,6 +91,9 @@ jobs:
       - name: package release binary
         run: pnpm release:package -- --target "${{ matrix.target }}" --version "${{ needs.source.outputs.version }}"
 
+      - name: verify packaged bundle
+        run: pnpm release:verify-bundle -- "dist/release/muesli-studio-${{ needs.source.outputs.version }}-${{ matrix.target }}.tar.gz"
+
       - name: upload binary assets
         uses: actions/upload-artifact@v4
         with:

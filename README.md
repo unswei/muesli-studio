@@ -4,6 +4,8 @@
 
 `muesli-studio` is the inspector for [`muesli-bt`](https://github.com/unswei/muesli-bt). Open a recorded run, scrub ticks, inspect node state, examine state changes, or follow live events over WebSocket.
 
+Compatibility target: `muesli-bt v0.3.1` release line and the pinned fallback commit in [`apps/inspector/cmake/MuesliBtVersion.cmake`](apps/inspector/cmake/MuesliBtVersion.cmake).
+
 [Try the demo](#try-it-now) · [Download releases](https://github.com/unswei/muesli-studio/releases) · [Read the docs](#documentation)
 
 ![studio demo overview](docs/images/studio-tree-scrubber.png)
@@ -18,7 +20,7 @@ From the repo root:
 pnpm install && ./start-studio.sh
 ```
 
-Starts the studio with a deterministic Webots-flavoured demo bundle preloaded in the browser.
+Starts the studio with the deterministic Webots-flavoured demo bundle preloaded in the browser, opens the indexed replay at tick `3`, and preselects `plan-global-path` so the first screen already shows replanning pressure, state changes, and node context.
 
 `pnpm demo` remains available as a shorthand for the same path.
 
@@ -64,7 +66,7 @@ Node inspector:
 
 ![node inspector panel](docs/images/studio-node-inspector.png)
 
-*Node history for the controller branch.*
+*Node history for the replanning node at the canonical demo tick.*
 
 Blackboard diff at the selected tick:
 
@@ -90,11 +92,25 @@ First release: `v0.1.0`.
 
 See [GitHub releases](https://github.com/unswei/muesli-studio/releases) and [release targets](docs/studio/release-targets.md) for workflow and asset naming.
 
+Recommended assets:
+
+- local inspection on Linux Intel: `muesli-studio-<version>-linux-intel.tar.gz`
+- local inspection on macOS Apple Silicon: `muesli-studio-<version>-macos-arm.tar.gz`
+- source review or packaging audit: `muesli-studio-<version>-source.tar.gz` or `.zip`
+
 After unpacking a binary bundle, start the packaged UI with:
 
 ```bash
 ./start-studio.sh
 ```
+
+Verify a downloaded archive before launching it:
+
+```bash
+shasum -a 256 -c muesli-studio-<version>-<target>.tar.gz.sha256
+```
+
+The release bundle also includes `RELEASE.md` with the packaged target, version, compatibility line, and launch reminder.
 
 ## documentation
 
@@ -104,6 +120,7 @@ After unpacking a binary bundle, start the packaged UI with:
 - [large log workflow](docs/studio/large-logs.md)
 - [sidecar tick-index format and usage](docs/studio/sidecar-index.md)
 - [release targets and artefacts](docs/studio/release-targets.md)
+- [release verification](docs/studio/release-verification.md)
 - [release notes](docs/studio/release-notes.md)
 - [studio replay mode](apps/studio/docs/replay.md)
 - [studio live monitoring](apps/studio/docs/live.md)
@@ -169,6 +186,13 @@ The demo launcher uses URL query auto-load:
 - optional `demo_sidecar=/demo/<fixture>/events.sidecar.tick-index.v1.json`
 - optional `demo_tick=<n>` and `demo_node=<id>` for deterministic screenshot or demo state selection
 - optional `demo_capture=hero|summary|node|diff|dsl` for deterministic README and panel capture views
+
+Canonical repo demo state:
+
+- `demo_fixture=/demo/studio_demo/events.jsonl`
+- `demo_sidecar=/demo/studio_demo/events.sidecar.tick-index.v1.json`
+- `demo_tick=3`
+- `demo_node=4`
 
 ## live monitoring
 

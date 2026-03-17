@@ -4,7 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-No unreleased changes yet.
+### changed
+
+- refined the canonical Studio demo path so repo launches now preload the indexed `studio_demo` bundle at the curated replanning tick and selected planner node.
+- tightened first-run replay copy in the Studio shell so demo, file, and bundle loading states explain what is happening and why.
+- expanded release trust material in the README, release-target docs, and packaged `RELEASE.md` so compatibility and checksum verification stay visible after download.
+- refreshed the canonical README screenshots and tightened the capture recipe so the node and DSL exports frame the intended panel content more cleanly.
+- added a repeatable release-bundle verifier and wired it into the release workflow so packaged archives now check checksum, bundle metadata, and host-matched launcher smoke before upload.
 
 ## [0.2.0] - 2026-03-15
 

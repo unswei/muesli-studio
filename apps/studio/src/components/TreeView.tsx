@@ -185,9 +185,9 @@ export function TreeView({ replay, selectedTick, selectedNodeId, onSelectNode }:
     return (
       <div className="panel tree-panel tree-panel--empty">
         <div className="empty-tree-state">
-          <p className="panel-kicker">focal surface</p>
+          <p className="panel-kicker">inspection tree</p>
           <h2>behaviour tree</h2>
-          <p className="panel-copy muted">Load a replay log to render the stable tree layout and scrub state changes over time.</p>
+          <p className="panel-copy muted">Load a replay to render the stable tree layout and repaint node state as you scrub through ticks.</p>
         </div>
       </div>
     );
@@ -197,9 +197,9 @@ export function TreeView({ replay, selectedTick, selectedNodeId, onSelectNode }:
     <div className="panel tree-panel focal-panel">
       <div className="panel-heading panel-heading--tree">
         <div>
-          <p className="panel-kicker">focal surface</p>
+          <p className="panel-kicker">inspection tree</p>
           <h2>behaviour tree</h2>
-          <p className="panel-copy muted">Stable structure, state repaint only. Scrub the run without losing your place.</p>
+          <p className="panel-copy muted">The structure stays fixed while node state repaints by tick, so you can scrub without losing your place.</p>
         </div>
         <div className="tree-summary-badges">
           <span className="status-badge status-badge--subtle">tick {selectedTick}</span>

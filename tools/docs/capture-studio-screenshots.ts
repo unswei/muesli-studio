@@ -4,6 +4,8 @@ import process from 'node:process';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+import { buildCanonicalDemoSearch } from '../../apps/studio/src/demo-fixture';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
 const studioDir = path.join(repoRoot, 'apps', 'studio');
@@ -108,7 +110,7 @@ async function captureScreenshots(): Promise<void> {
       viewport: '1520,1080',
       fullPage: true,
       waitMs: 1500,
-      url: `${baseUrl}/?demo_fixture=/demo/studio_demo/events.jsonl&demo_tick=3&demo_node=4&demo_capture=hero`,
+      url: `${baseUrl}/${buildCanonicalDemoSearch({ captureMode: 'hero' })}`,
     },
     {
       fileName: 'studio-run-summary.png',
@@ -116,29 +118,28 @@ async function captureScreenshots(): Promise<void> {
       viewport: '1180,1280',
       fullPage: true,
       waitMs: 1200,
-      url: `${baseUrl}/?demo_fixture=/demo/studio_demo/events.jsonl&demo_capture=summary`,
+      url: `${baseUrl}/${buildCanonicalDemoSearch({ selectedTick: null, selectedNodeId: null, captureMode: 'summary' })}`,
     },
     {
       fileName: 'studio-node-inspector.png',
       selector: '#node-inspector-panel',
-      viewport: '1100,500',
+      viewport: '1100,640',
       waitMs: 1200,
-      url: `${baseUrl}/?demo_fixture=/demo/studio_demo/events.jsonl&demo_tick=4&demo_node=5&demo_capture=node`,
+      url: `${baseUrl}/${buildCanonicalDemoSearch({ selectedTick: 3, selectedNodeId: '4', captureMode: 'node' })}`,
     },
     {
       fileName: 'studio-blackboard-diff.png',
       selector: '#blackboard-diff',
       viewport: '1240,390',
       waitMs: 1200,
-      url: `${baseUrl}/?demo_fixture=/demo/studio_demo/events.jsonl&demo_tick=4&demo_capture=diff`,
+      url: `${baseUrl}/${buildCanonicalDemoSearch({ selectedTick: 4, selectedNodeId: null, captureMode: 'diff' })}`,
     },
     {
       fileName: 'studio-dsl-editor.png',
       selector: '#dsl-editor-panel',
-      viewport: '1180,1100',
-      fullPage: true,
+      viewport: '1180,520',
       waitMs: 1200,
-      url: `${baseUrl}/?demo_fixture=/demo/studio_demo/events.jsonl&demo_capture=dsl`,
+      url: `${baseUrl}/${buildCanonicalDemoSearch({ captureMode: 'dsl' })}`,
     },
   ];
 

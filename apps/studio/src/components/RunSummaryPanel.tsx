@@ -70,9 +70,9 @@ export function RunSummaryPanel({ replay, summary, eventCount }: RunSummaryPanel
     <section id="run-summary-panel" className="panel detail-panel run-summary-panel">
       <div className="panel-heading">
         <div>
-          <p className="panel-kicker">run summary</p>
-          <h2>overview</h2>
-          <p className="panel-copy muted">Start with the overall run shape before scrubbing into individual ticks and node histories.</p>
+          <p className="panel-kicker">run</p>
+          <h2>summary</h2>
+          <p className="panel-copy muted">Check identity, timing, warnings, and event footprint before scrubbing into individual ticks and node histories.</p>
         </div>
 
         <div className="tree-summary-badges">
@@ -84,7 +84,7 @@ export function RunSummaryPanel({ replay, summary, eventCount }: RunSummaryPanel
                 : 'status-badge--indexed'
             }`}
           >
-            {summary.warnings.budget_warning_count > 0 || summary.warnings.deadline_exceeded_count > 0 ? 'attention needed' : 'clean overall'}
+            {summary.warnings.budget_warning_count > 0 || summary.warnings.deadline_exceeded_count > 0 ? 'run warnings' : 'no run warnings'}
           </span>
         </div>
       </div>
@@ -164,7 +164,7 @@ export function RunSummaryPanel({ replay, summary, eventCount }: RunSummaryPanel
         </section>
 
         <section className="summary-section">
-          <h3>research signals</h3>
+          <h3>planner and scheduler</h3>
           <dl className="summary-definition-list">
             <div>
               <dt>planner calls</dt>
@@ -205,7 +205,7 @@ export function RunSummaryPanel({ replay, summary, eventCount }: RunSummaryPanel
       <section className="summary-section summary-section--full">
         <div className="summary-section-heading">
           <h3>event families</h3>
-          <p className="panel-empty-copy muted">Counts stay visible here so publication screenshots and supplements can show the overall run footprint at a glance.</p>
+          <p className="panel-empty-copy muted">Keeps the overall run footprint visible while you inspect the replay or prepare a screenshot.</p>
         </div>
         <div className="event-family-grid">
           {eventFamilies.map(([type, count]) => (

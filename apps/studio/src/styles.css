@@ -218,6 +218,12 @@ code {
   max-width: 58ch;
 }
 
+.brand-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
 .eyebrow,
 .panel-kicker {
   font-size: 0.68rem;
@@ -829,6 +835,12 @@ button:disabled {
   background: #e7f2ee;
   border-color: #d6e8df;
   color: #2f6f53;
+}
+
+.notice-inline--info {
+  background: #eaf3f7;
+  border-color: #d8e7ef;
+  color: #2d607d;
 }
 
 .status-badge--connecting {

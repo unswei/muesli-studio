@@ -58,6 +58,14 @@ Deterministic demo capture query parameters:
 - `demo_node=<id>`
 - `demo_capture=hero|summary|node|diff|dsl`
 
+Canonical capture recipe:
+
+```bash
+pnpm docs:screenshots
+```
+
+This stages `tests/fixtures/studio_demo`, serves Studio locally, and captures the committed README images from the same indexed demo state used by `./start-studio.sh`.
+
 ## example
 
 1. Start Studio with the canonical demo:
@@ -74,11 +82,17 @@ Deterministic demo capture query parameters:
 
 5. Use `export bundle` to write a zipped supplement for review.
 
+To recreate the committed README figures exactly:
+
+```bash
+pnpm docs:screenshots
+```
+
 ## gotchas
 
 - `SVG` export is best for panel-style surfaces. Very large graph captures may still be easier to use as `PNG`.
 - bundle export may take longer on large indexed runs because Studio hydrates the full replay first.
-- deterministic doc screenshots still use `demo_capture` query parameters; interactive presentation mode is the user-facing path.
+- deterministic doc screenshots use the canonical `studio_demo` sidecar and `demo_capture` query parameters; interactive presentation mode remains the user-facing path.
 
 ## see also
 

@@ -99,9 +99,9 @@ export function HeroCapture({
     <section id="readme-hero" className="hero-stage-panel">
       <div className="hero-stage-heading">
         <div>
-          <p className="eyebrow">polished inspection and publication workflow</p>
+          <p className="eyebrow">canonical inspection view</p>
           <h2>{treeName}</h2>
-          <p className="panel-copy muted">Replan under budget pressure, keep the tree readable, and preserve the run story in one calm surface.</p>
+          <p className="panel-copy muted">Track the replanning tick, keep the tree stable, and read the node and blackboard story without leaving this view.</p>
         </div>
 
         <div className="tree-summary-badges">
@@ -160,7 +160,7 @@ export function HeroCapture({
 
         <aside className="hero-story-panel">
           <div className="hero-story-header">
-            <p className="panel-kicker">selected story</p>
+            <p className="panel-kicker">selected node</p>
             <h3>{selectedNodeName}</h3>
             <p className="panel-copy muted">
               {selectedNodeStatus?.message ?? 'Select a node to keep the current branch, timing, and blackboard changes in view.'}
@@ -201,7 +201,7 @@ export function HeroCapture({
           </dl>
 
           <div className="hero-story-section">
-            <h3>recent node history</h3>
+            <h3>recent status history</h3>
             {selectedNodeTimeline.length === 0 ? (
               <p className="panel-empty-copy muted">No node status history for this selection.</p>
             ) : (
@@ -220,7 +220,7 @@ export function HeroCapture({
           </div>
 
           <div className="hero-story-section">
-            <h3>blackboard at tick {selectedTick}</h3>
+            <h3>blackboard diff at tick {selectedTick}</h3>
             {diff.writes.length === 0 && diff.deletes.length === 0 ? (
               <p className="panel-empty-copy muted">No blackboard changes at this tick.</p>
             ) : (

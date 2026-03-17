@@ -2,6 +2,7 @@
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+canonical_demo_query='/?demo_fixture=/demo/studio_demo/events.jsonl&demo_sidecar=/demo/studio_demo/events.sidecar.tick-index.v1.json&demo_tick=3&demo_node=4'
 
 usage() {
   cat <<'EOF'
@@ -108,9 +109,9 @@ run_repo_command() {
   case "${command_name}" in
     demo)
       stage_demo_fixture
-      printf 'Validating demo fixture bundle...\n'
+      printf 'Validating canonical demo fixture bundle...\n'
       pnpm studio inspect tests/fixtures/studio_demo
-      open_path='/?demo_fixture=/demo/studio_demo/events.jsonl'
+      open_path="${canonical_demo_query}"
       ;;
     app)
       ;;

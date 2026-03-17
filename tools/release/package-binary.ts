@@ -1,4 +1,4 @@
-import { chmod, cp, mkdir, rm, stat, writeFile } from 'node:fs/promises';
+import { chmod, cp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -95,6 +95,22 @@ async function sha256(filePath: string): Promise<string> {
   return hash.digest('hex');
 }
 
+async function detectMuesliBtCompatibilityLine(repoRootPath: string): Promise<string> {
+  const versionFile = path.join(repoRootPath, 'apps', 'inspector', 'cmake', 'MuesliBtVersion.cmake');
+  const source = await readFile(versionFile, 'utf8');
+  const releaseLineMatch = source.match(/# Immutable upstream pin for the (v[0-9.]+) release line\./u);
+  if (releaseLineMatch?.[1]) {
+    return `muesli-bt ${releaseLineMatch[1]}`;
+  }
+
+  const tagMatch = source.match(/set\(MUESLI_BT_GIT_TAG "([^"]+)"/u);
+  if (tagMatch?.[1]) {
+    return `muesli-bt pinned commit ${tagMatch[1]}`;
+  }
+
+  return 'muesli-bt compatibility not detected';
+}
+
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   const bundleName = `muesli-studio-${args.version}-${args.target}`;
@@ -109,6 +125,7 @@ async function main(): Promise<void> {
   const readmePath = path.join(repoRoot, 'README.md');
   const licensePath = path.join(repoRoot, 'LICENSE');
   const launcherPath = path.join(repoRoot, 'start-studio.sh');
+  const compatibilityLine = await detectMuesliBtCompatibilityLine(repoRoot);
 
   await assertExists(inspectorBinaryPath, 'inspector binary');
   await assertExists(studioDistPath, 'studio dist');
@@ -138,12 +155,19 @@ async function main(): Promise<void> {
     '',
     `target: ${args.target}`,
     `version: ${args.version}`,
+    `compatibility: ${compatibilityLine}`,
     '',
     'contains:',
     '- start-studio.sh',
     '- bin/mbt_inspector',
     '- studio/dist/ (static web app)',
     '- schema and contract copies',
+    '',
+    'launch:',
+    '- run ./start-studio.sh from the unpacked bundle root',
+    '',
+    'verify:',
+    `- compare the published ${path.basename(archivePath)}.sha256 file against ${path.basename(archivePath)} before launching`,
   ].join('\n');
   await writeFile(path.join(stagingDir, 'RELEASE.md'), `${releaseNotes}\n`, 'utf8');
 

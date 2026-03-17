@@ -33,9 +33,9 @@ export function PresentationPanel({
     <section className="panel detail-panel presentation-panel">
       <div className="panel-heading">
         <div>
-          <p className="panel-kicker">presentation</p>
-          <h2>capture</h2>
-          <p className="panel-copy muted">Switch into a clean layout for screenshots, then export PNG, SVG, or a bundled supplement.</p>
+          <p className="panel-kicker">exports</p>
+          <h2>capture and bundle</h2>
+          <p className="panel-copy muted">Open a clean capture layout or export a publication bundle from the current inspection state.</p>
         </div>
         {currentLayout ? <span className="status-badge status-badge--subtle">{layoutLabels[currentLayout]}</span> : null}
       </div>
@@ -55,12 +55,12 @@ export function PresentationPanel({
       </div>
 
       <p className="panel-empty-copy muted">
-        Current selection: tick {selectedTick}
+        Selection: tick {selectedTick}
         {selectedNodeId ? ` · node ${selectedNodeId}` : ''}
       </p>
 
       <button type="button" className="button-primary presentation-bundle-button" onClick={onExportBundle} disabled={busy}>
-        {busy ? 'exporting…' : 'export paper bundle'}
+        {busy ? 'exporting…' : 'export publication bundle'}
       </button>
 
       {statusMessage ? <p className="notice-inline notice-inline--success">{statusMessage}</p> : null}

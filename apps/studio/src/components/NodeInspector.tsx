@@ -6,32 +6,56 @@ interface NodeInspectorProps {
   tick: number;
 }
 
+function nodeLabelFromReplay(replay: ReplayStore, nodeId: string): string {
+  const rawNodes = replay.btDef?.data.nodes;
+  if (!Array.isArray(rawNodes)) {
+    return `node ${nodeId}`;
+  }
+
+  for (const rawNode of rawNodes) {
+    if (!rawNode || typeof rawNode !== 'object') {
+      continue;
+    }
+
+    const record = rawNode as Record<string, unknown>;
+    const candidate = record.id;
+    if ((typeof candidate === 'string' || typeof candidate === 'number') && String(candidate) === nodeId) {
+      const name = typeof record.name === 'string' ? record.name.trim() : '';
+      return name.length > 0 ? `${name} · node ${nodeId}` : `node ${nodeId}`;
+    }
+  }
+
+  return `node ${nodeId}`;
+}
+
 export function NodeInspector({ replay, selectedNodeId, tick }: NodeInspectorProps) {
   if (!selectedNodeId) {
     return (
       <div id="node-inspector-panel" className="panel split-panel detail-panel">
         <div className="panel-heading">
           <div>
-            <p className="panel-kicker">inspect</p>
-            <h2>node</h2>
+            <p className="panel-kicker">selected node</p>
+            <h2>history</h2>
+            <p className="panel-copy muted">Select a node in the tree to review its status changes, outcomes, and messages over time.</p>
           </div>
         </div>
-        <p className="panel-copy muted">Select a node in the tree to inspect status history and behaviour over time.</p>
       </div>
     );
   }
 
   const timeline = replay.getNodeTimeline(selectedNodeId);
   const current = replay.getNodeStatusAt(selectedNodeId, tick);
+  const nodeLabel = nodeLabelFromReplay(replay, selectedNodeId);
 
   return (
     <div id="node-inspector-panel" className="panel split-panel detail-panel">
       <div className="panel-heading">
         <div>
-          <p className="panel-kicker">inspect</p>
-          <h2>node</h2>
+          <p className="panel-kicker">selected node</p>
+          <h2>history</h2>
+          <p className="panel-copy muted">Review the current status and recent node messages without leaving the selected tick.</p>
         </div>
-        <span className="status-badge status-badge--subtle">node {selectedNodeId}</span>
+        <span className="status-badge status-badge--subtle">{nodeLabel}</span>
       </div>
 
       <div className="detail-summary-grid">
@@ -51,7 +75,7 @@ export function NodeInspector({ replay, selectedNodeId, tick }: NodeInspectorPro
 
       <div className="history-list">
         {timeline.length === 0 ? (
-          <p className="panel-empty-copy muted">No node status events for this node.</p>
+          <p className="panel-empty-copy muted">No node status events were recorded for this node.</p>
         ) : (
           <ul className="detail-list">
             {timeline.map((point) => (
