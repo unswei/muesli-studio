@@ -122,6 +122,7 @@ The release bundle also includes `RELEASE.md` with the packaged target, version,
 - [release targets and artefacts](docs/studio/release-targets.md)
 - [release verification](docs/studio/release-verification.md)
 - [release notes](docs/studio/release-notes.md)
+- [roadmap to 1.0](docs/roadmap-to-1.0.md)
 - [studio replay mode](apps/studio/docs/replay.md)
 - [studio live monitoring](apps/studio/docs/live.md)
 
@@ -252,3 +253,5 @@ tools/sync_contract.sh # sync contract from resolved muesli-bt source
 ## current scope
 
 The current release focuses on replay-first inspection and live monitoring. The studio also includes a lightweight DSL editor for swapping rendered tree definitions during inspection, while deeper authoring workflows remain out of scope for now.
+
+The broader release plan is tracked in [docs/roadmap-to-1.0.md](docs/roadmap-to-1.0.md).

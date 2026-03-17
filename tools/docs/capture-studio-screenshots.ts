@@ -123,14 +123,14 @@ async function captureScreenshots(): Promise<void> {
     {
       fileName: 'studio-node-inspector.png',
       selector: '#node-inspector-panel',
-      viewport: '1100,640',
+      viewport: '1100,470',
       waitMs: 1200,
       url: `${baseUrl}/${buildCanonicalDemoSearch({ selectedTick: 3, selectedNodeId: '4', captureMode: 'node' })}`,
     },
     {
       fileName: 'studio-blackboard-diff.png',
       selector: '#blackboard-diff',
-      viewport: '1240,390',
+      viewport: '1240,450',
       waitMs: 1200,
       url: `${baseUrl}/${buildCanonicalDemoSearch({ selectedTick: 4, selectedNodeId: null, captureMode: 'diff' })}`,
     },
