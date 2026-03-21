@@ -45,6 +45,7 @@ describe('HeroCapture', () => {
       />,
     );
 
+    expect(markup).toContain('canonical inspection view');
     expect(markup).toContain('webots-navigation-demo');
     expect(markup).toContain('Replanned around a moving obstacle');
     expect(markup).toContain('nav.replan_reason');

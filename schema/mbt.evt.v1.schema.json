@@ -26,6 +26,9 @@
       "type": "string",
       "enum": [
         "run_start",
+        "run_end",
+        "episode_begin",
+        "episode_end",
         "bt_def",
         "tick_begin",
         "tick_end",

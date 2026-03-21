@@ -12,8 +12,9 @@ export function BlackboardDiff({ replay, tick }: BlackboardDiffProps) {
     <div id="blackboard-diff" className="panel split-panel detail-panel">
       <div className="panel-heading">
         <div>
-          <p className="panel-kicker">state diff</p>
-          <h2>blackboard</h2>
+          <p className="panel-kicker">selected tick</p>
+          <h2>blackboard diff</h2>
+          <p className="panel-copy muted">Inspect writes and deletes recorded at the current tick in a stable key order.</p>
         </div>
         <span className="status-badge status-badge--subtle">tick {tick}</span>
       </div>
@@ -28,7 +29,7 @@ export function BlackboardDiff({ replay, tick }: BlackboardDiffProps) {
           <strong>{diff.deletes.length}</strong>
         </div>
         <div className="detail-stat">
-          <span className="detail-label">ordering</span>
+          <span className="detail-label">key order</span>
           <strong>stable</strong>
         </div>
       </div>
@@ -37,7 +38,7 @@ export function BlackboardDiff({ replay, tick }: BlackboardDiffProps) {
         <div className="diff-column">
           <h3>writes</h3>
           {diff.writes.length === 0 ? (
-            <p className="panel-empty-copy muted">No writes at this tick.</p>
+            <p className="panel-empty-copy muted">No writes were recorded at this tick.</p>
           ) : (
             <ul className="detail-list">
               {diff.writes.map((entry) => (
@@ -56,7 +57,7 @@ export function BlackboardDiff({ replay, tick }: BlackboardDiffProps) {
         <div className="diff-column">
           <h3>deletes</h3>
           {diff.deletes.length === 0 ? (
-            <p className="panel-empty-copy muted">No deletes at this tick.</p>
+            <p className="panel-empty-copy muted">No deletes were recorded at this tick.</p>
           ) : (
             <ul className="detail-list">
               {diff.deletes.map((key) => (

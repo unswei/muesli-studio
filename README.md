@@ -4,6 +4,8 @@
 
 `muesli-studio` is the inspector for [`muesli-bt`](https://github.com/unswei/muesli-bt). Open a recorded run, scrub ticks, inspect node state, examine state changes, or follow live events over WebSocket.
 
+Compatibility target: `muesli-bt v0.4.0` release line and the pinned fallback commit in [`apps/inspector/cmake/MuesliBtVersion.cmake`](apps/inspector/cmake/MuesliBtVersion.cmake).
+
 [Try the demo](#try-it-now) · [Download releases](https://github.com/unswei/muesli-studio/releases) · [Read the docs](#documentation)
 
 ![studio demo overview](docs/images/studio-tree-scrubber.png)
@@ -18,7 +20,7 @@ From the repo root:
 pnpm install && ./start-studio.sh
 ```
 
-Starts the studio with a deterministic Webots-flavoured demo bundle preloaded in the browser.
+Starts the studio with the deterministic Webots-flavoured demo bundle preloaded in the browser, opens the indexed replay at tick `3`, and preselects `plan-global-path` so the first screen already shows replanning pressure, state changes, and node context.
 
 `pnpm demo` remains available as a shorthand for the same path.
 
@@ -64,7 +66,7 @@ Node inspector:
 
 ![node inspector panel](docs/images/studio-node-inspector.png)
 
-*Node history for the controller branch.*
+*Node history for the replanning node at the canonical demo tick.*
 
 Blackboard diff at the selected tick:
 
@@ -90,11 +92,25 @@ First release: `v0.1.0`.
 
 See [GitHub releases](https://github.com/unswei/muesli-studio/releases) and [release targets](docs/studio/release-targets.md) for workflow and asset naming.
 
+Recommended assets:
+
+- local inspection on Linux Intel: `muesli-studio-<version>-linux-intel.tar.gz`
+- local inspection on macOS Apple Silicon: `muesli-studio-<version>-macos-arm.tar.gz`
+- source review or packaging audit: `muesli-studio-<version>-source.tar.gz` or `.zip`
+
 After unpacking a binary bundle, start the packaged UI with:
 
 ```bash
 ./start-studio.sh
 ```
+
+Verify a downloaded archive before launching it:
+
+```bash
+shasum -a 256 -c muesli-studio-<version>-<target>.tar.gz.sha256
+```
+
+The release bundle also includes `RELEASE.md` with the packaged target, version, compatibility line, and launch reminder.
 
 ## documentation
 
@@ -104,7 +120,9 @@ After unpacking a binary bundle, start the packaged UI with:
 - [large log workflow](docs/studio/large-logs.md)
 - [sidecar tick-index format and usage](docs/studio/sidecar-index.md)
 - [release targets and artefacts](docs/studio/release-targets.md)
+- [release verification](docs/studio/release-verification.md)
 - [release notes](docs/studio/release-notes.md)
+- [roadmap to 1.0](docs/roadmap-to-1.0.md)
 - [studio replay mode](apps/studio/docs/replay.md)
 - [studio live monitoring](apps/studio/docs/live.md)
 
@@ -170,6 +188,13 @@ The demo launcher uses URL query auto-load:
 - optional `demo_tick=<n>` and `demo_node=<id>` for deterministic screenshot or demo state selection
 - optional `demo_capture=hero|summary|node|diff|dsl` for deterministic README and panel capture views
 
+Canonical repo demo state:
+
+- `demo_fixture=/demo/studio_demo/events.jsonl`
+- `demo_sidecar=/demo/studio_demo/events.sidecar.tick-index.v1.json`
+- `demo_tick=3`
+- `demo_node=4`
+
 ## live monitoring
 
 ```bash
@@ -191,7 +216,7 @@ Then connect studio to `ws://localhost:8765/events`.
 Inspector pin metadata lives in [`apps/inspector/cmake/MuesliBtVersion.cmake`](./apps/inspector/cmake/MuesliBtVersion.cmake).
 
 - default CI and local fallback builds use that pinned URL and commit
-- current pinned commit: `050c5e8793052d2a1a5d307897960d8b78e2afbc` (tagged `v0.3.1`)
+- current pinned commit: `6100092ad2cb1ad54145a945518bd55e65abdff8` (tagged `v0.4.0`)
 - scheduled CI builds inspector against [`muesli-bt`](https://github.com/unswei/muesli-bt) `main` as an advisory check
 - canonical contract reference: [muesli-bt studio integration contract](https://github.com/unswei/muesli-bt/blob/main/docs/contracts/muesli-studio-integration.md)
 
@@ -228,3 +253,5 @@ tools/sync_contract.sh # sync contract from resolved muesli-bt source
 ## current scope
 
 The current release focuses on replay-first inspection and live monitoring. The studio also includes a lightweight DSL editor for swapping rendered tree definitions during inspection, while deeper authoring workflows remain out of scope for now.
+
+The broader release plan is tracked in [docs/roadmap-to-1.0.md](docs/roadmap-to-1.0.md).

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseDemoFixtureQuery } from './demo-fixture';
+import { buildCanonicalDemoSearch, canonicalDemoFixture, parseDemoFixtureQuery } from './demo-fixture';
 
 describe('parseDemoFixtureQuery', () => {
   it('returns null when no demo fixture query is provided', () => {
@@ -61,5 +61,21 @@ describe('parseDemoFixtureQuery', () => {
       selectedNodeId: null,
       captureMode: null,
     });
+  });
+
+  it('builds the canonical demo search with the curated first-run selection', () => {
+    expect(buildCanonicalDemoSearch()).toBe(
+      `?demo_fixture=${encodeURIComponent(canonicalDemoFixture.jsonlPath)}&demo_sidecar=${encodeURIComponent(
+        canonicalDemoFixture.sidecarPath,
+      )}&demo_tick=${canonicalDemoFixture.selectedTick}&demo_node=${canonicalDemoFixture.selectedNodeId}`,
+    );
+  });
+
+  it('can override the canonical demo search for deterministic capture states', () => {
+    expect(buildCanonicalDemoSearch({ selectedTick: null, selectedNodeId: null, captureMode: 'summary' })).toBe(
+      `?demo_fixture=${encodeURIComponent(canonicalDemoFixture.jsonlPath)}&demo_sidecar=${encodeURIComponent(
+        canonicalDemoFixture.sidecarPath,
+      )}&demo_capture=summary`,
+    );
   });
 });

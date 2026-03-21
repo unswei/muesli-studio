@@ -31,12 +31,15 @@ Required:
 - `muesli_btConfig.cmake` defines `muesli_bt_SHARE_DIR` to `${prefix}/share/muesli_bt`
 - public headers are installed under a stable include root
 - optional integration targets are exported when enabled and available:
-  - `muesli_bt::integration_pybullet`
-  - `muesli_bt::integration_webots`
-  - `muesli_bt::integration_ros2` (Linux ROS2 transport target)
+
+    - `muesli_bt::integration_pybullet`
+    - `muesli_bt::integration_webots`
+    - `muesli_bt::integration_ros2` (Linux ROS2 transport target)
+
 - installed share assets include:
-  - `${prefix}/share/muesli_bt/contracts/muesli-studio-integration.md`
-  - `${prefix}/share/muesli_bt/schemas/event_log/v1/mbt.evt.v1.schema.json`
+
+    - `${prefix}/share/muesli_bt/contracts/muesli-studio-integration.md`
+    - `${prefix}/share/muesli_bt/schemas/event_log/v1/mbt.evt.v1.schema.json`
 
 ### requirement 2: inspector-facing host api
 
@@ -49,11 +52,12 @@ Required capabilities include:
 - reading event stream lines in-order
 - reading blackboard snapshots/entries needed for inspection
 - stable C++ integration attach flow through public headers only:
-  - `muslisp::runtime_config::register_extension(...)`
-  - `muslisp::create_global_env(runtime_config)`
-  - integration adapter attach entry points (for example `bt::set_racecar_sim_adapter(...)` for PyBullet)
-  - Webots attach entry point (`muslisp::integrations::webots::make_extension(...)`)
-  - ROS2 attach entry point (`muslisp::integrations::ros2::make_extension(...)`)
+
+    - `muslisp::runtime_config::register_extension(...)`
+    - `muslisp::create_global_env(runtime_config)`
+    - integration adapter attach entry points (for example `bt::set_racecar_sim_adapter(...)` for PyBullet)
+    - Webots attach entry point (`muslisp::integrations::webots::make_extension(...)`)
+    - ROS2 attach entry point (`muslisp::integrations::ros2::make_extension(...)`)
 
 ### requirement 3: event callback contract
 

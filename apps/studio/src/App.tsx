@@ -15,7 +15,7 @@ import { PresentationToolbar } from './components/PresentationToolbar';
 import { ReplayDiagnosticsPanel } from './components/ReplayDiagnosticsPanel';
 import { RunSummaryPanel } from './components/RunSummaryPanel';
 import { TreeView } from './components/TreeView';
-import { parseDemoFixtureQuery } from './demo-fixture';
+import { canonicalDemoFixture, parseDemoFixtureQuery } from './demo-fixture';
 import {
   buildPublicationManifest,
   buildPublicationReadme,
@@ -206,6 +206,38 @@ export function App() {
   const forcedPresentationLayout = captureMode && captureMode !== 'overview' ? captureMode : null;
   const activePresentationLayout = forcedPresentationLayout ?? presentationLayout;
   const showsPresentationToolbar = forcedPresentationLayout === null && presentationLayout !== null;
+  const isCanonicalDemoReplay = replay?.runStart?.run_id === canonicalDemoFixture.runId;
+  const replayLoadNotice = useMemo(() => {
+    if (demoQuery) {
+      return {
+        kicker: 'opening demo',
+        heading: 'canonical bundle',
+        message: 'Loading the indexed demo run and restoring the curated replanning state for first inspection.',
+      };
+    }
+
+    if (replaySourceKind === 'file') {
+      return {
+        kicker: 'loading file',
+        heading: 'replay',
+        message: 'Parsing the selected log and preparing the tree, summary, and diagnostics surfaces.',
+      };
+    }
+
+    if (replaySourceKind === 'url') {
+      return {
+        kicker: 'opening bundle',
+        heading: 'replay',
+        message: 'Fetching the selected replay bundle and preparing indexed scrubbing where available.',
+      };
+    }
+
+    return {
+      kicker: 'loading',
+      heading: 'replay',
+      message: 'Preparing the replay and stabilising the inspection surfaces.',
+    };
+  }, [demoQuery, replaySourceKind]);
 
   const renderCaptureLoading = (kicker: string, message: string) => (
     <section className="panel detail-panel capture-loading-panel">
@@ -690,6 +722,10 @@ export function App() {
           <p className="topbar-copy muted">
             Understand a run quickly, trust what changed, and capture clean figures without fighting the interface.
           </p>
+          <div className="brand-meta">
+            <span className="status-badge status-badge--subtle">muesli-bt v0.4.0 line</span>
+            {isCanonicalDemoReplay ? <span className="status-badge status-badge--indexed">canonical demo ready</span> : null}
+          </div>
         </div>
 
         <div className="topbar-actions">
@@ -712,9 +748,9 @@ export function App() {
             <section className="panel instrument-panel">
               <div className="panel-heading">
                 <div>
-                  <p className="panel-kicker">main instrument</p>
-                  <h2>tree timeline</h2>
-                  <p className="panel-copy muted">The central surface stays stable while state and tick focus update around it.</p>
+                  <p className="panel-kicker">run</p>
+                  <h2>timeline</h2>
+                  <p className="panel-copy muted">Scrub the replay while keeping the tree, summary, and selection details aligned.</p>
                 </div>
                 <div className="tree-summary-badges">
                   <span className={`status-badge ${replayIndexed ? 'status-badge--indexed' : 'status-badge--subtle'}`}>
@@ -734,6 +770,12 @@ export function App() {
                   </div>
                 ))}
               </div>
+
+              {isCanonicalDemoReplay ? (
+                <p className="notice-inline notice-inline--info">
+                  Canonical demo state: the replanning tick is preselected so first contact lands on planner pressure, blackboard changes, and the active branch immediately.
+                </p>
+              ) : null}
 
               <div className="scrubber-panel">
                 <div className="scrubber-header">
@@ -781,26 +823,32 @@ export function App() {
             <section className="panel instrument-panel empty-state-panel">
               <div className="panel-heading">
                 <div>
-                  <p className="panel-kicker">get started</p>
-                  <h2>load a run</h2>
-                  <p className="panel-copy muted">Open a recorded log or connect to a live runtime. Once events arrive, the tree becomes the dominant surface.</p>
+                  <p className="panel-kicker">first run</p>
+                  <h2>open a replay</h2>
+                  <p className="panel-copy muted">
+                    Open an <code>events.jsonl</code> log or connect to a live runtime. The inspection tree appears once Studio has enough replay state to keep the layout stable.
+                  </p>
                 </div>
               </div>
 
               <div className="empty-action-grid">
                 <div className="empty-action">
-                  <h3>recorded replay</h3>
+                  <h3>replay log</h3>
                   <p>Choose `events.jsonl`, then add the optional sidecar index for larger runs.</p>
                 </div>
                 <div className="empty-action">
-                  <h3>live monitor</h3>
+                  <h3>live runtime</h3>
                   <p>Connect a runtime over WebSocket and let new events append into the same inspection model.</p>
                 </div>
                 <div className="empty-action">
-                  <h3>clean capture</h3>
+                  <h3>canonical demo</h3>
                   <p>Use the deterministic demo fixture as the baseline for screenshots, talks, and publication polish.</p>
                 </div>
               </div>
+
+              <p className="notice-inline notice-inline--info">
+                Repo first-run path: <code>./start-studio.sh</code> opens the indexed <code>studio_demo</code> fixture at the replanning tick so screenshots, docs, and first impressions all start from the same inspection state.
+              </p>
             </section>
           )}
 
@@ -809,9 +857,9 @@ export function App() {
           ) : (
             <div className="panel tree-panel tree-panel--empty">
               <div className="empty-tree-state">
-                <p className="panel-kicker">focal surface</p>
+                <p className="panel-kicker">inspection tree</p>
                 <h2>behaviour tree</h2>
-                <p className="panel-copy muted">Load a replay log to render a stable tree layout and inspect each tick without relayout noise.</p>
+                <p className="panel-copy muted">Load a replay to render a stable tree layout and inspect each tick without relayout noise.</p>
               </div>
             </div>
           )}
@@ -859,15 +907,15 @@ export function App() {
             <section className="panel notice-panel notice-panel--loading">
               <div className="panel-heading">
                 <div>
-                  <p className="panel-kicker">loading</p>
-                  <h2>replay</h2>
+                  <p className="panel-kicker">{replayLoadNotice.kicker}</p>
+                  <h2>{replayLoadNotice.heading}</h2>
                 </div>
                 <span className="status-badge status-badge--subtle">{replayLoadProgress}%</span>
               </div>
               <div className="progress-track" aria-hidden="true">
                 <div className="progress-fill" style={{ width: `${replayLoadProgress}%` }} />
               </div>
-              <p className="panel-copy muted">Large logs hydrate in controlled ranges so the main tree stays responsive.</p>
+              <p className="panel-copy muted">{replayLoadNotice.message}</p>
             </section>
           ) : null}
 
@@ -907,9 +955,9 @@ export function App() {
           <section className="panel detail-panel live-panel">
             <div className="panel-heading">
               <div>
-                <p className="panel-kicker">live monitor</p>
+                <p className="panel-kicker">live runtime</p>
                 <h2>connection</h2>
-                <p className="panel-copy muted">Follow the same canonical event stream over WebSocket.</p>
+                <p className="panel-copy muted">Attach to the runtime WebSocket and inspect incoming events through the same surfaces.</p>
               </div>
               <span className={`status-badge status-badge--${liveStatus}`}>{liveStatus}</span>
             </div>
@@ -992,11 +1040,11 @@ export function App() {
             <section className="panel detail-panel">
               <div className="panel-heading">
                 <div>
-                  <p className="panel-kicker">side panels</p>
+                  <p className="panel-kicker">selection</p>
                   <h2>details</h2>
+                  <p className="panel-copy muted">Node history, blackboard changes, and DSL editing appear here once a replay is loaded.</p>
                 </div>
               </div>
-              <p className="panel-copy muted">Node history, blackboard changes, and DSL editing appear here once a replay is loaded.</p>
               <p className="panel-copy muted">Until then, use the loader above or connect to a live runtime from this sidebar.</p>
             </section>
           )}
