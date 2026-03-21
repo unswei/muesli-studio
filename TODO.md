@@ -1,12 +1,12 @@
 # todo
 
-## v0.2 release finish-off
+## release hygiene follow-up
 
-- [ ] refine planner/scheduler surfaces with compact summaries and one consistent chart language
 - [ ] add detached signatures for release artefacts (`source`, `linux-intel`, `macos-arm`) in release workflow
 
 ## v0.3 debugging and navigation
 
+- [ ] refine planner/scheduler surfaces with compact summaries and one consistent chart language
 - [ ] add keyboard-first tick navigation, panel switching, and search/jump flows
 - [ ] add searchable timeline and event filtering across replay and live inspection
 - [ ] add jump-to controls for first failure, timeout, cancellation, planner activity, VLA activity, and blackboard change

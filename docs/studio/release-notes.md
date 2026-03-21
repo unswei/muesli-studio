@@ -37,7 +37,7 @@ Release entry template:
 
 ## example
 
-## v0.2.0 - 2026-03-15
+## v0.2.0 - 2026-03-21
 
 ### highlights
 

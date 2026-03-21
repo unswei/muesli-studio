@@ -2,13 +2,13 @@
 
 ## purpose
 
-This document sets a roadmap for `muesli-studio` from `v0.2` onward.
+This document sets a roadmap for `muesli-studio` from the shipped `v0.2.0` baseline onward.
 
 The goal is not to turn `muesli-studio` into a generic robotics IDE. The goal is to make it the best possible inspector and controlled authoring surface for `muesli-bt` runs.
 
 ## where we are now
 
-As of the `v0.1.x` line, `muesli-studio` already has a serious base:
+As of the `v0.2.0` line, `muesli-studio` already has a serious base:
 
 - replay-first inspection with tree rendering and a tick scrubber
 - blackboard diffs and node inspection
@@ -67,7 +67,9 @@ The right question for each release is not “what can we add?” but “what si
 
 ---
 
-## v0.2 - polished inspection release
+## v0.2 - polished inspection release (shipped)
+
+Status: shipped on 2026-03-21.
 
 ### theme
 
@@ -441,4 +443,3 @@ The opinionated part of this roadmap is simple:
 Its strength is that it sits close to the runtime, understands the event model, and can connect inspection, replay, live behaviour, controlled editing, and publication in one coherent tool.
 
 If we keep that discipline, the app will become much more than a viewer without turning into a bloated IDE.
-

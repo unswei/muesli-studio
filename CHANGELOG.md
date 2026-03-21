@@ -4,16 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-### changed
+No unreleased changes yet.
 
-- advanced the inspector fallback pin from the `v0.3.1` release line to commit `6100092ad2cb1ad54145a945518bd55e65abdff8` (tagged `v0.4.0`) and synced the vendored Studio contract/schema copies for the additive lifecycle events carried in the same `mbt.evt.v1` line.
-- refined the canonical Studio demo path so repo launches now preload the indexed `studio_demo` bundle at the curated replanning tick and selected planner node.
-- tightened first-run replay copy in the Studio shell so demo, file, and bundle loading states explain what is happening and why.
-- expanded release trust material in the README, release-target docs, and packaged `RELEASE.md` so compatibility and checksum verification stay visible after download.
-- refreshed the canonical README screenshots, tightened the capture recipe so the node, blackboard, and DSL exports frame the intended panel content more cleanly, and linked the broader roadmap from the README.
-- added a repeatable release-bundle verifier and wired it into the release workflow so packaged archives now check checksum, bundle metadata, and host-matched launcher smoke before upload.
-
-## [0.2.0] - 2026-03-15
+## [0.2.0] - 2026-03-21
 
 ### added
 
@@ -31,6 +24,12 @@ All notable changes to this project will be documented in this file.
 - applied the first v0.2 design pass across the studio shell, tree timeline, side panels, empty states, and refreshed README screenshots.
 - promoted run summary into a first-class Studio panel and expanded deterministic screenshot refresh to capture overview plus individual summary, node, diff, and DSL panels from the canonical demo bundle.
 - replaced the generic lead README screenshot with a dedicated hero capture built from the same canonical demo fixture and deterministic capture-state pipeline.
+- advanced the inspector fallback pin from the `v0.3.1` release line to commit `6100092ad2cb1ad54145a945518bd55e65abdff8` (tagged `v0.4.0`) and synced the vendored Studio contract/schema copies for the additive lifecycle events carried in the same `mbt.evt.v1` line.
+- refined the canonical Studio demo path so repo launches now preload the indexed `studio_demo` bundle at the curated replanning tick and selected planner node.
+- tightened first-run replay copy in the Studio shell so demo, file, and bundle loading states explain what is happening and why.
+- expanded release trust material in the README, release-target docs, and packaged `RELEASE.md` so compatibility and checksum verification stay visible after download.
+- refreshed the canonical README screenshots, tightened the capture recipe so the node, blackboard, and DSL exports frame the intended panel content more cleanly, and linked the broader roadmap from the README.
+- added a repeatable release-bundle verifier and wired it into the release workflow so packaged archives now check checksum, bundle metadata, and host-matched launcher smoke before upload.
 
 ## [0.1.1] - 2026-03-14
 

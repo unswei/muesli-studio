@@ -88,7 +88,7 @@ Tagged releases matching `v*` publish these artefacts:
 - Linux Intel binary bundle
 - macOS Apple Silicon binary bundle
 
-First release: `v0.1.0`.
+Latest tagged release: `v0.2.0`.
 
 See [GitHub releases](https://github.com/unswei/muesli-studio/releases) and [release targets](docs/studio/release-targets.md) for workflow and asset naming.
 
@@ -252,6 +252,6 @@ tools/sync_contract.sh # sync contract from resolved muesli-bt source
 
 ## current scope
 
-The current release focuses on replay-first inspection and live monitoring. The studio also includes a lightweight DSL editor for swapping rendered tree definitions during inspection, while deeper authoring workflows remain out of scope for now.
+The current stable release focuses on replay-first inspection and live monitoring. The studio also includes a lightweight DSL editor for swapping rendered tree definitions during inspection, while deeper authoring workflows remain out of scope for now.
 
 The broader release plan is tracked in [docs/roadmap-to-1.0.md](docs/roadmap-to-1.0.md).
