@@ -119,4 +119,40 @@ describe('protocol fixtures', () => {
       expect(() => parseEvent(event)).not.toThrow();
     }
   });
+
+  it('accepts v0.4.0 lifecycle anchors within the existing mbt.evt.v1 line', () => {
+    const events: unknown[] = [
+      {
+        schema: 'mbt.evt.v1',
+        contract_version: '1.0.0',
+        type: 'episode_begin',
+        run_id: 'run-ros',
+        unix_ms: 10,
+        seq: 10,
+        data: { episode_id: 'episode-1', use_sim_time: true },
+      },
+      {
+        schema: 'mbt.evt.v1',
+        contract_version: '1.0.0',
+        type: 'episode_end',
+        run_id: 'run-ros',
+        unix_ms: 11,
+        seq: 11,
+        data: { episode_id: 'episode-1', outcome: 'ok' },
+      },
+      {
+        schema: 'mbt.evt.v1',
+        contract_version: '1.0.0',
+        type: 'run_end',
+        run_id: 'run-ros',
+        unix_ms: 12,
+        seq: 12,
+        data: { outcome: 'ok', event_count: 12 },
+      },
+    ];
+
+    for (const event of events) {
+      expect(() => parseEvent(event)).not.toThrow();
+    }
+  });
 });

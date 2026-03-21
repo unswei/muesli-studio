@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### changed
 
+- advanced the inspector fallback pin from the `v0.3.1` release line to commit `6100092ad2cb1ad54145a945518bd55e65abdff8` (tagged `v0.4.0`) and synced the vendored Studio contract/schema copies for the additive lifecycle events carried in the same `mbt.evt.v1` line.
 - refined the canonical Studio demo path so repo launches now preload the indexed `studio_demo` bundle at the curated replanning tick and selected planner node.
 - tightened first-run replay copy in the Studio shell so demo, file, and bundle loading states explain what is happening and why.
 - expanded release trust material in the README, release-target docs, and packaged `RELEASE.md` so compatibility and checksum verification stay visible after download.

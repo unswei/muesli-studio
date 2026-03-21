@@ -4,6 +4,9 @@ export const EVENT_SCHEMA = 'mbt.evt.v1' as const;
 
 export const eventTypeValues = [
   'run_start',
+  'run_end',
+  'episode_begin',
+  'episode_end',
   'bt_def',
   'tick_begin',
   'tick_end',
@@ -67,6 +70,21 @@ const runStartSchema = envelopeSchema.extend({
       backend: z.string().optional(),
     })
     .passthrough(),
+});
+
+const runEndSchema = envelopeSchema.extend({
+  type: z.literal('run_end'),
+  data: z.record(z.unknown()),
+});
+
+const episodeBeginSchema = envelopeSchema.extend({
+  type: z.literal('episode_begin'),
+  data: z.record(z.unknown()),
+});
+
+const episodeEndSchema = envelopeSchema.extend({
+  type: z.literal('episode_end'),
+  data: z.record(z.unknown()),
 });
 
 const btNodeSchema = z
@@ -294,6 +312,9 @@ const errorSchema = envelopeSchema.extend({
 
 export const mbtEventSchema = z.discriminatedUnion('type', [
   runStartSchema,
+  runEndSchema,
+  episodeBeginSchema,
+  episodeEndSchema,
   btDefSchema,
   tickBeginSchema,
   tickEndSchema,

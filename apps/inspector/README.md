@@ -53,7 +53,7 @@ Pinned defaults are defined in [`cmake/MuesliBtVersion.cmake`](./cmake/MuesliBtV
 - `MUESLI_BT_GIT_URL`
 - `MUESLI_BT_GIT_TAG` (accepts a tag or commit; the default is an immutable commit pin)
 
-Current default commit: `050c5e8793052d2a1a5d307897960d8b78e2afbc` (tagged `v0.3.1`).
+Current default commit: `6100092ad2cb1ad54145a945518bd55e65abdff8` (tagged `v0.4.0`).
 
 ## build instructions
 

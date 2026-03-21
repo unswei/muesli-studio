@@ -56,7 +56,7 @@ Release entry template:
 ### notes
 
 - release binaries are built on `ubuntu-latest` (Intel) and `macos-14` (Apple Silicon) GitHub runners
-- inspector fallback pin now tracks `muesli-bt v0.3.1`
+- inspector fallback pin now tracks `muesli-bt v0.4.0`
 - detached signatures are still a post-`v0.2.0` follow-up item
 
 ## v0.1.1 - 2026-03-14

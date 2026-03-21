@@ -723,7 +723,7 @@ export function App() {
             Understand a run quickly, trust what changed, and capture clean figures without fighting the interface.
           </p>
           <div className="brand-meta">
-            <span className="status-badge status-badge--subtle">muesli-bt v0.3.1 line</span>
+            <span className="status-badge status-badge--subtle">muesli-bt v0.4.0 line</span>
             {isCanonicalDemoReplay ? <span className="status-badge status-badge--indexed">canonical demo ready</span> : null}
           </div>
         </div>

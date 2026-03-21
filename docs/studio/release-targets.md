@@ -14,7 +14,7 @@ Use this workflow when you want a tagged release that includes:
 - a `start-studio.sh` launcher inside each binary bundle
 - `.sha256` checksum files for every published archive
 
-Current compatibility target: `muesli-bt v0.3.1`.
+Current compatibility target: `muesli-bt v0.4.0`.
 
 First published release using this target set: `v0.1.0`.
 

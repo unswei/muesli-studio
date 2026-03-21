@@ -4,7 +4,7 @@
 
 `muesli-studio` is the inspector for [`muesli-bt`](https://github.com/unswei/muesli-bt). Open a recorded run, scrub ticks, inspect node state, examine state changes, or follow live events over WebSocket.
 
-Compatibility target: `muesli-bt v0.3.1` release line and the pinned fallback commit in [`apps/inspector/cmake/MuesliBtVersion.cmake`](apps/inspector/cmake/MuesliBtVersion.cmake).
+Compatibility target: `muesli-bt v0.4.0` release line and the pinned fallback commit in [`apps/inspector/cmake/MuesliBtVersion.cmake`](apps/inspector/cmake/MuesliBtVersion.cmake).
 
 [Try the demo](#try-it-now) · [Download releases](https://github.com/unswei/muesli-studio/releases) · [Read the docs](#documentation)
 
@@ -216,7 +216,7 @@ Then connect studio to `ws://localhost:8765/events`.
 Inspector pin metadata lives in [`apps/inspector/cmake/MuesliBtVersion.cmake`](./apps/inspector/cmake/MuesliBtVersion.cmake).
 
 - default CI and local fallback builds use that pinned URL and commit
-- current pinned commit: `050c5e8793052d2a1a5d307897960d8b78e2afbc` (tagged `v0.3.1`)
+- current pinned commit: `6100092ad2cb1ad54145a945518bd55e65abdff8` (tagged `v0.4.0`)
 - scheduled CI builds inspector against [`muesli-bt`](https://github.com/unswei/muesli-bt) `main` as an advisory check
 - canonical contract reference: [muesli-bt studio integration contract](https://github.com/unswei/muesli-bt/blob/main/docs/contracts/muesli-studio-integration.md)
 
