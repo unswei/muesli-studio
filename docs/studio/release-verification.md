@@ -32,17 +32,17 @@ Package and verify a local macOS Apple Silicon archive:
 ```bash
 pnpm build
 pnpm inspector:build
-pnpm release:package -- --target macos-arm --version v0.2.0-rc1
-pnpm release:sign-archive -- dist/release/muesli-studio-v0.2.0-rc1-macos-arm.tar.gz
-pnpm release:verify-bundle -- dist/release/muesli-studio-v0.2.0-rc1-macos-arm.tar.gz
+pnpm release:package -- --target macos-arm --version v0.3.0-rc1
+pnpm release:sign-archive -- dist/release/muesli-studio-v0.3.0-rc1-macos-arm.tar.gz
+pnpm release:verify-bundle -- dist/release/muesli-studio-v0.3.0-rc1-macos-arm.tar.gz
 ```
 
 Verify an existing archive with a custom smoke port and explicit signature path:
 
 ```bash
 pnpm release:verify-bundle -- \
-  --archive dist/release/muesli-studio-v0.2.0-macos-arm.tar.gz \
-  --signature dist/release/muesli-studio-v0.2.0-macos-arm.tar.gz.asc \
+  --archive dist/release/muesli-studio-v0.3.0-macos-arm.tar.gz \
+  --signature dist/release/muesli-studio-v0.3.0-macos-arm.tar.gz.asc \
   --port 4417
 ```
 
@@ -51,8 +51,8 @@ pnpm release:verify-bundle -- \
 On a macOS Apple Silicon host:
 
 ```bash
-pnpm release:package -- --target macos-arm --version v0.2.0-local
-pnpm release:verify-bundle -- dist/release/muesli-studio-v0.2.0-local-macos-arm.tar.gz
+pnpm release:package -- --target macos-arm --version v0.3.0-local
+pnpm release:verify-bundle -- dist/release/muesli-studio-v0.3.0-local-macos-arm.tar.gz
 ```
 
 Expected output includes:

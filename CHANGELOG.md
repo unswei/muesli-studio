@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-04-03
+
 ### added
 
 - added URL-stable replay deep links for URL-backed runs and canonical demo sessions, preserving the selected tick, node, and presentation view in the browser query.
