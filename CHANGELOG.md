@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-04-03
+
 ### added
 
 - added URL-stable replay deep links for URL-backed runs and canonical demo sessions, preserving the selected tick, node, and presentation view in the browser query.
@@ -20,6 +22,7 @@ All notable changes to this project will be documented in this file.
 
 - replay mode now clears stale sharable query state after local file loads so copied URLs only represent reopenable sessions.
 - publication bundle export now includes the compare capture alongside overview, summary, and diff screenshots.
+- removed contributor-facing wording from the Studio UI so loading, diagnostics, and editing copy now read as product-facing guidance rather than implementation detail.
 
 ## [0.2.0] - 2026-03-21
 

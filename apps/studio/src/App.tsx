@@ -234,7 +234,7 @@ export function App() {
     return [
       { label: 'run', value: replay.runStart?.run_id ?? 'unknown' },
       { label: 'mode', value: mode === 'live' ? 'live session' : 'replay' },
-      { label: 'index', value: replayIndexed ? 'indexed' : 'unindexed' },
+      { label: 'loading', value: replayIndexed ? 'quick access' : 'standard' },
       { label: 'events', value: eventCount.toLocaleString() },
       { label: 'ticks', value: tickCount.toLocaleString() },
       {
@@ -290,9 +290,9 @@ export function App() {
   const replayLoadNotice = useMemo(() => {
     if (demoQuery) {
       return {
-        kicker: 'opening demo',
-        heading: 'canonical bundle',
-        message: 'Loading the indexed demo run and restoring the curated replanning state for first inspection.',
+        kicker: 'opening sample',
+        heading: 'sample run',
+        message: 'Loading the sample run and opening a useful moment for first inspection.',
       };
     }
 
@@ -300,22 +300,22 @@ export function App() {
       return {
         kicker: 'loading file',
         heading: 'replay',
-        message: 'Parsing the selected log and preparing the tree, summary, and diagnostics surfaces.',
+        message: 'Parsing the selected log and preparing the tree, summary, and diagnostics panels.',
       };
     }
 
     if (replaySourceKind === 'url') {
       return {
-        kicker: 'opening bundle',
+        kicker: 'opening link',
         heading: 'replay',
-        message: 'Fetching the selected replay bundle and preparing indexed scrubbing where available.',
+        message: 'Opening the selected run and preparing faster navigation where available.',
       };
     }
 
     return {
       kicker: 'loading',
       heading: 'replay',
-      message: 'Preparing the replay and stabilising the inspection surfaces.',
+      message: 'Preparing the replay and getting the inspection view ready.',
     };
   }, [demoQuery, replaySourceKind]);
 
@@ -346,12 +346,12 @@ export function App() {
           onSelectTick={setSelectedTick}
         />
       ) : (
-        renderCaptureLoading('hero capture', 'Loading the deterministic demo fixture for the README hero capture.')
+        renderCaptureLoading('sample view', 'Loading the sample run for this capture view.')
       );
     }
 
     if (!replay) {
-      return renderCaptureLoading('capture mode', 'Loading the deterministic demo fixture for capture.');
+      return renderCaptureLoading('capture mode', 'Loading the sample run for this capture view.');
     }
 
     if (layout === 'summary') {
@@ -465,7 +465,7 @@ export function App() {
     try {
       const initialLazyState = useStudioStore.getState().lazySidecar;
       if (initialLazyState && initialLazyState.loadedTicks.size < initialLazyState.index.tick_entries.length) {
-        setPresentationStatusMessage('hydrating indexed replay…');
+        setPresentationStatusMessage('loading the full run…');
         useStudioStore.getState().setSelectedTick(Math.max(replayMaxTick, replay.maxTick, 0));
 
         const startedAt = Date.now();
@@ -476,7 +476,7 @@ export function App() {
           }
 
           if (Date.now() - startedAt > 30_000) {
-            throw new Error('timed out hydrating the full replay for bundle export');
+            throw new Error('timed out preparing the full run for bundle export');
           }
 
           await new Promise<void>((resolve) => {
@@ -940,26 +940,27 @@ export function App() {
     <main className={captureMode === 'overview' ? 'app-shell app-shell--capture app-shell--capture-overview' : 'app-shell'}>
       <header className="topbar">
         <div className="brand-block">
-          <p className="eyebrow">replay-first run inspection</p>
+          <p className="eyebrow">run inspection</p>
           <h1>muesli-studio</h1>
           <p className="topbar-copy muted">
             Understand a run quickly, trust what changed, and capture clean figures without fighting the interface.
           </p>
-          <div className="brand-meta">
-            <span className="status-badge status-badge--subtle">muesli-bt v0.4.0 line</span>
-            {isCanonicalDemoReplay ? <span className="status-badge status-badge--indexed">canonical demo ready</span> : null}
-          </div>
+          {isCanonicalDemoReplay ? (
+            <div className="brand-meta">
+              <span className="status-badge status-badge--indexed">sample run loaded</span>
+            </div>
+          ) : null}
         </div>
 
         <div className="topbar-actions">
           <label className="file-input">
             <span>open replay</span>
-            <small>choose `events.jsonl`</small>
+            <small>choose a run file</small>
             <input type="file" accept=".jsonl,application/json,text/plain" onChange={onFileChange} />
           </label>
           <label className="file-input">
-            <span>open sidecar</span>
-            <small>optional tick index</small>
+            <span>open index</span>
+            <small>optional for larger runs</small>
             <input type="file" accept=".json,application/json" onChange={onSidecarChange} />
           </label>
         </div>
@@ -977,7 +978,7 @@ export function App() {
                 </div>
                 <div className="tree-summary-badges">
                   <span className={`status-badge ${replayIndexed ? 'status-badge--indexed' : 'status-badge--subtle'}`}>
-                    {replayIndexed ? 'indexed replay' : 'full scan'}
+                    {replayIndexed ? 'quick access' : 'standard loading'}
                   </span>
                   <span className="status-badge status-badge--subtle">
                     {mode === 'live' ? (liveAutoFollow ? 'live auto-follow' : 'live manual') : 'manual scrub'}
@@ -996,7 +997,7 @@ export function App() {
 
               {isCanonicalDemoReplay ? (
                 <p className="notice-inline notice-inline--info">
-                  Canonical demo state: the replanning tick is preselected so first contact lands on planner pressure, blackboard changes, and the active branch immediately.
+                  The sample run opens at a useful moment so you can start inspecting straight away.
                 </p>
               ) : null}
 
@@ -1064,29 +1065,25 @@ export function App() {
                   <p className="panel-kicker">first run</p>
                   <h2>open a replay</h2>
                   <p className="panel-copy muted">
-                    Open an <code>events.jsonl</code> log or connect to a live runtime. The inspection tree appears once Studio has enough replay state to keep the layout stable.
+                    Open a run or connect live to start inspecting. The tree and timeline appear as soon as the run is ready.
                   </p>
                 </div>
               </div>
 
               <div className="empty-action-grid">
                 <div className="empty-action">
-                  <h3>replay log</h3>
-                  <p>Choose `events.jsonl`, then add the optional sidecar index for larger runs.</p>
+                  <h3>open a run</h3>
+                  <p>Load a recorded run. If you also have an index file, add it for faster movement through large runs.</p>
                 </div>
                 <div className="empty-action">
-                  <h3>live runtime</h3>
-                  <p>Connect a runtime over WebSocket and let new events append into the same inspection model.</p>
+                  <h3>connect live</h3>
+                  <p>Follow incoming activity in the same view and pause on the moments that matter.</p>
                 </div>
                 <div className="empty-action">
-                  <h3>canonical demo</h3>
-                  <p>Use the deterministic demo fixture as the baseline for screenshots, talks, and publication polish.</p>
+                  <h3>sample run</h3>
+                  <p>Start with the included sample if you want a quick tour of the interface before loading your own run.</p>
                 </div>
               </div>
-
-              <p className="notice-inline notice-inline--info">
-                Repo first-run path: <code>./start-studio.sh</code> opens the indexed <code>studio_demo</code> fixture at the replanning tick so screenshots, docs, and first impressions all start from the same inspection state.
-              </p>
             </section>
           )}
 
@@ -1197,7 +1194,7 @@ export function App() {
                 </div>
                 <span className="status-badge status-badge--error">{parseErrors.length}</span>
               </div>
-              <p className="panel-copy muted">{parseErrors.length} item(s) were skipped due to parse or schema issues.</p>
+              <p className="panel-copy muted">{parseErrors.length} item(s) could not be loaded from this run.</p>
               <ul className="detail-list">
                 {parseErrors.slice(0, 5).map((error) => (
                   <li key={`${error.line}:${error.message}`} className="detail-list-item">
@@ -1212,9 +1209,9 @@ export function App() {
           <section id="live-connection-panel" tabIndex={-1} className="panel detail-panel live-panel keyboard-panel-target">
             <div className="panel-heading">
               <div>
-                <p className="panel-kicker">live runtime</p>
+                <p className="panel-kicker">live connection</p>
                 <h2>connection</h2>
-                <p className="panel-copy muted">Attach to the runtime WebSocket and inspect incoming events through the same surfaces.</p>
+                <p className="panel-copy muted">Connect to a live event stream and inspect incoming activity in the same view.</p>
               </div>
               <span className={`status-badge status-badge--${liveStatus}`}>{liveStatus}</span>
             </div>
@@ -1299,10 +1296,10 @@ export function App() {
                 <div>
                   <p className="panel-kicker">selection</p>
                   <h2>details</h2>
-                  <p className="panel-copy muted">Node history, blackboard changes, and DSL editing appear here once a replay is loaded.</p>
+                  <p className="panel-copy muted">Node history, blackboard changes, and tree source editing appear here once a replay is loaded.</p>
                 </div>
               </div>
-              <p className="panel-copy muted">Until then, use the loader above or connect to a live runtime from this sidebar.</p>
+              <p className="panel-copy muted">Until then, use the loader above or connect to a live session from this sidebar.</p>
             </section>
           )}
         </aside>

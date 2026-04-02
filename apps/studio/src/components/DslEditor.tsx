@@ -35,7 +35,7 @@ async function saveDslToDisk(dsl: string, runId: string): Promise<SaveMode> {
   if (picker) {
     const handle = await picker({
       suggestedName,
-      types: [{ description: 'Behaviour tree DSL', accept: { 'text/plain': ['.dsl', '.bt', '.txt'] } }],
+      types: [{ description: 'Behaviour tree source', accept: { 'text/plain': ['.dsl', '.bt', '.txt'] } }],
     });
     const writable = await handle.createWritable();
     await writable.write(dsl);
@@ -85,7 +85,7 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
       setStatusMessage(`Applied ${compiled.nodes.length} node(s), ${compiled.edges.length} edge(s).`);
       setErrorMessage(null);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'DSL compile failed';
+      const message = error instanceof Error ? error.message : 'tree source could not be applied';
       setErrorMessage(message);
       setStatusMessage(null);
     }
@@ -94,7 +94,7 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
   const onRevert = () => {
     setDraftDsl(sourceDsl);
     onResetCompiled();
-    setStatusMessage('Reverted to runtime definition.');
+    setStatusMessage('Reverted to the starting tree.');
     setErrorMessage(null);
   };
 
@@ -103,7 +103,9 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
       setIsSaving(true);
       const saveMode = await saveDslToDisk(draftDsl, runId);
       setStatusMessage(
-        saveMode === 'picker' ? 'Saved DSL to selected file.' : 'Downloaded DSL file (browser save picker unavailable).',
+        saveMode === 'picker'
+          ? 'Saved tree source to the selected file.'
+          : 'Downloaded the tree source file (browser save picker unavailable).',
       );
       setErrorMessage(null);
     } catch (error) {
@@ -120,14 +122,14 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
       <div className="panel-heading">
         <div>
           <p className="panel-kicker">tree authoring</p>
-          <h2>bt dsl</h2>
+          <h2>tree source</h2>
         </div>
         <span className="status-badge status-badge--subtle">{runId}</span>
       </div>
-      <p className="panel-copy muted">Apply and revert DSL changes without losing the runtime definition you started from.</p>
+      <p className="panel-copy muted">Apply and revert tree source changes without losing the tree you started from.</p>
 
       {sourceDsl.length === 0 ? (
-        <p className="panel-empty-copy muted">No `bt_def.dsl` payload is available in this run.</p>
+        <p className="panel-empty-copy muted">No editable tree source is available in this run.</p>
       ) : (
         <>
           <div className="dsl-toolbar">
@@ -152,7 +154,7 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
             className="dsl-editor"
             value={draftDsl}
             onChange={(event) => setDraftDsl(event.target.value)}
-            aria-label="bt dsl text"
+            aria-label="tree source text"
             spellCheck={false}
           />
         </>

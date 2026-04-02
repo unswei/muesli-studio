@@ -104,7 +104,7 @@ describe('DslEditor', () => {
     });
     expect(onResetCompiled).toHaveBeenCalledTimes(1);
     expect(textarea?.value).toBe('(bt (seq (cond always-true) (act always-success)))');
-    expect(view.container.textContent).toContain('Reverted to runtime definition.');
+    expect(view.container.textContent).toContain('Reverted to the starting tree.');
   });
 
   it('saves via browser save picker when available', async () => {
@@ -130,7 +130,7 @@ describe('DslEditor', () => {
 
     expect(showSaveFilePicker).toHaveBeenCalledTimes(1);
     expect(createWritable).toHaveBeenCalledTimes(1);
-    expect(view.container.textContent).toContain('Saved DSL to selected file.');
+    expect(view.container.textContent).toContain('Saved tree source to the selected file.');
   });
 
   it('falls back to browser download when save picker is unavailable', async () => {
@@ -157,6 +157,6 @@ describe('DslEditor', () => {
     expect(createObjectUrl).toHaveBeenCalledTimes(1);
     expect(revokeObjectUrl).toHaveBeenCalledTimes(1);
     expect(clickSpy).toHaveBeenCalledTimes(1);
-    expect(view.container.textContent).toContain('Downloaded DSL file');
+    expect(view.container.textContent).toContain('Downloaded the tree source file');
   });
 });

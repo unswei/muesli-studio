@@ -2,13 +2,13 @@
 
 ## purpose
 
-This document sets a roadmap for `muesli-studio` from the shipped `v0.2.0` baseline onward.
+This document sets a roadmap for `muesli-studio` from the `v0.3.0` release-branch baseline onward.
 
 The goal is not to turn `muesli-studio` into a generic robotics IDE. The goal is to make it the best possible inspector and controlled authoring surface for `muesli-bt` runs.
 
 ## where we are now
 
-As of the `v0.2.0` line, `muesli-studio` already has a serious base:
+As of the `release/v0.3.0` branch, `muesli-studio` already has a serious base:
 
 - replay-first inspection with tree rendering and a tick scrubber
 - blackboard diffs and node inspection
@@ -108,7 +108,9 @@ Minimal. Editing remains present, but this release is not about broadening editi
 
 ---
 
-## v0.3 - debugging and navigation release
+## v0.3 - debugging and navigation release (shipped)
+
+Status: shipped on 2026-04-03.
 
 ### theme
 
@@ -132,6 +134,10 @@ A serious inspector is judged by how quickly it gets a user to the interesting m
 - URL-stable deep links to a run, tick, node, or view state
 - compact run summary cards that surface warnings and unusual event families immediately
 - better handling of large logs and lazy hydration in the UI
+
+### shipped result
+
+`v0.3.0` delivered the intended navigation and debugging step-change. Replay links can reopen a selected tick, node, and view; the timeline now supports search, filters, and one-click jump targets; keyboard-first inspection is in place; long runs load more gracefully; compare mode is polished enough for screenshots; and release artefacts now carry detached signatures.
 
 ### editing scope in this release
 

@@ -99,7 +99,7 @@ export function HeroCapture({
     <section id="readme-hero" className="hero-stage-panel">
       <div className="hero-stage-heading">
         <div>
-          <p className="eyebrow">canonical inspection view</p>
+          <p className="eyebrow">guided inspection view</p>
           <h2>{treeName}</h2>
           <p className="panel-copy muted">Track the replanning tick, keep the tree stable, and read the node and blackboard story without leaving this view.</p>
         </div>
@@ -126,7 +126,7 @@ export function HeroCapture({
               </div>
 
               <div className="hero-scrubber-facts">
-                <span className="status-badge status-badge--subtle">{replayIndexed ? 'indexed replay' : 'full scan'}</span>
+                <span className="status-badge status-badge--subtle">{replayIndexed ? 'quick access' : 'standard loading'}</span>
                 <span className="status-badge status-badge--subtle">{tickCount} tick(s)</span>
                 <span className="status-badge status-badge--subtle">{plannerCalls} planner call(s)</span>
               </div>
@@ -177,23 +177,11 @@ export function HeroCapture({
               <dd>{formatDurationMs(summary.ticks.mean_duration_ms)}</dd>
             </div>
             <div>
-              <dt>schema</dt>
-              <dd>
-                <code>{summary.schema_version}</code>
-              </dd>
-            </div>
-            <div>
-              <dt>contract</dt>
-              <dd>
-                <code>{summary.contract_version}</code>
-              </dd>
-            </div>
-            <div>
               <dt>scheduler jobs</dt>
               <dd>{summary.async_jobs.sched.submit}</dd>
             </div>
             <div>
-              <dt>event digest</dt>
+              <dt>run digest</dt>
               <dd>
                 <code>{summary.digest}</code>
               </dd>

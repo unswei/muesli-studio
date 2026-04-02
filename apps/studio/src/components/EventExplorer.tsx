@@ -540,7 +540,7 @@ export function EventExplorer({
 
       {lazyActive ? (
         <p className="notice-inline notice-inline--info">
-          Search covers the currently loaded event ranges. Scrub further to hydrate more ticks before searching very large indexed runs.
+          Search covers the part of the run that is loaded right now. Move further through a very large run to bring more results into view.
         </p>
       ) : null}
 

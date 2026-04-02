@@ -19,7 +19,7 @@ describe('ReplayDiagnosticsPanel', () => {
         loadedCoveragePercent={12.5}
         highestTick={511}
         pendingTickCount={3}
-        loadWarning="large log lazy loading is active; sidecar ranges are parsed on tick demand."
+        loadWarning="This large run loads nearby parts as needed so you can start inspecting sooner."
         seekStats={{
           count: 7,
           last_duration_ms: 3.6,
@@ -35,13 +35,13 @@ describe('ReplayDiagnosticsPanel', () => {
     );
 
     expect(markup).toContain('replay diagnostics');
-    expect(markup).toContain('lazy indexed');
+    expect(markup).toContain('on-demand loading');
     expect(markup).toContain('local file');
     expect(markup).toContain('13%');
     expect(markup).toContain('rough memory use');
-    expect(markup).toContain('hydrate nearby');
-    expect(markup).toContain('hydrate all');
-    expect(markup).toContain('hydrated');
-    expect(markup).toContain('large log lazy loading is active');
+    expect(markup).toContain('load nearby');
+    expect(markup).toContain('load all');
+    expect(markup).toContain('loaded now');
+    expect(markup).toContain('start inspecting sooner');
   });
 });

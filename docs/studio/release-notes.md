@@ -37,6 +37,29 @@ Release entry template:
 
 ## example
 
+## v0.3.0 - 2026-04-03
+
+### highlights
+
+- debugging and navigation release that turns replay into a faster inspection tool rather than a passive viewer
+- deep links, event search and jump flows, keyboard-first navigation, compare mode, and stronger run-summary surfacing all land in the same release line
+- release artefact trust is stronger through detached signatures, signature-aware verification, refreshed release and publication documentation, and cleaner product-facing UI copy
+
+### shipped artefacts
+
+- `muesli-studio-v0.3.0-source.tar.gz`
+- `muesli-studio-v0.3.0-source.zip`
+- `muesli-studio-v0.3.0-linux-intel.tar.gz` (prebuilt inspector + studio static assets)
+- `muesli-studio-v0.3.0-macos-arm.tar.gz` (prebuilt inspector + studio static assets)
+- `.sha256` files for all archives
+- detached `.asc` signatures for all archives
+
+### notes
+
+- release binaries are built on `ubuntu-latest` (Intel) and `macos-14` (Apple Silicon) GitHub runners
+- inspector fallback pin remains on `muesli-bt v0.4.0`
+- this release line includes the compare capture in publication bundles and refreshed README screenshots from the canonical demo fixture
+
 ## v0.2.0 - 2026-03-21
 
 ### highlights

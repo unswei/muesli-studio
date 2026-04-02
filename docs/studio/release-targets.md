@@ -34,27 +34,27 @@ First published release using this target set: `v0.1.0`.
 Workflow trigger:
 
 ```bash
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.3.0
+git push origin v0.3.0
 ```
 
 Binary packaging script (used by CI and available locally):
 
 ```bash
-pnpm release:package -- --target linux-intel --version v0.2.0
-pnpm release:package -- --target macos-arm --version v0.2.0
+pnpm release:package -- --target linux-intel --version v0.3.0
+pnpm release:package -- --target macos-arm --version v0.3.0
 ```
 
 Bundle verification script:
 
 ```bash
-pnpm release:verify-bundle -- dist/release/muesli-studio-v0.2.0-macos-arm.tar.gz
+pnpm release:verify-bundle -- dist/release/muesli-studio-v0.3.0-macos-arm.tar.gz
 ```
 
 Detached signing script:
 
 ```bash
-pnpm release:sign-archive -- dist/release/muesli-studio-v0.2.0-macos-arm.tar.gz
+pnpm release:sign-archive -- dist/release/muesli-studio-v0.3.0-macos-arm.tar.gz
 ```
 
 Published asset names:
@@ -83,11 +83,11 @@ Binary bundle contents:
 ## example
 
 ```bash
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.3.0
+git push origin v0.3.0
 ```
 
-Then open the release page for `v0.2.0` and download the required artefact.
+Then open the release page for `v0.3.0` and download the required artefact.
 
 After unpacking a binary bundle:
 
@@ -98,9 +98,9 @@ After unpacking a binary bundle:
 Verify an archive before unpacking it:
 
 ```bash
-shasum -a 256 -c muesli-studio-v0.2.0-linux-intel.tar.gz.sha256
-gpg --verify muesli-studio-v0.2.0-linux-intel.tar.gz.asc \
-  muesli-studio-v0.2.0-linux-intel.tar.gz
+shasum -a 256 -c muesli-studio-v0.3.0-linux-intel.tar.gz.sha256
+gpg --verify muesli-studio-v0.3.0-linux-intel.tar.gz.asc \
+  muesli-studio-v0.3.0-linux-intel.tar.gz
 ```
 
 ## gotchas
