@@ -268,7 +268,7 @@ export function PlannerSchedulerPanel({ replay, selectedTick }: PlannerScheduler
         <div>
           <p className="panel-kicker">execution depth</p>
           <h2>planner and scheduler</h2>
-          <p className="panel-copy muted">Read planner pressure and scheduler throughput in one surface before drilling into individual events.</p>
+          <p className="panel-copy muted">Read planner pressure and scheduler throughput together before drilling into individual events.</p>
         </div>
         <div className="tree-summary-badges">
           <span className="status-badge status-badge--subtle">{overview.activeTickCount} active tick{overview.activeTickCount === 1 ? '' : 's'}</span>

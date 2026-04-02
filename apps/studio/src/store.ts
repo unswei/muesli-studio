@@ -95,7 +95,7 @@ function largeLogFallbackWarning(sourceBytes: number, indexUsed: boolean): strin
     return null;
   }
 
-  return 'large log loaded without sidecar index; full-scan fallback is active and may be slow.';
+  return 'This large run opened in standard loading mode and may feel slower. Add an index file next time if you have one.';
 }
 
 function shiftJsonlParseErrors(errors: JsonlParseError[], lineOffset: number): JsonlParseError[] {
@@ -948,7 +948,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
               parseErrors: lazy.errors,
               replayLoadProgress: null,
               replayIndexed: true,
-              replayLoadWarning: 'large log lazy loading is active; sidecar ranges are parsed on tick demand.',
+              replayLoadWarning: 'This large run loads nearby parts as needed so you can start inspecting sooner.',
               replaySourceBytes: effectiveSourceBytes,
               replaySourceKind: sourceKind,
               replaySourceUrl: sourceUrl,
@@ -1035,7 +1035,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
               parseErrors: lazy.errors,
               replayLoadProgress: null,
               replayIndexed: true,
-              replayLoadWarning: 'large log lazy loading is active; sidecar ranges are parsed on tick demand.',
+              replayLoadWarning: 'This large run loads nearby parts as needed so you can start inspecting sooner.',
               replaySourceBytes: jsonlFile.size,
               replaySourceKind: 'file',
               replaySourceUrl: null,
@@ -1105,7 +1105,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
                   parseErrors: lazy.errors,
                   replayLoadProgress: null,
                   replayIndexed: true,
-                  replayLoadWarning: 'large log lazy loading is active; sidecar ranges are parsed on tick demand.',
+                  replayLoadWarning: 'This large run loads nearby parts as needed so you can start inspecting sooner.',
                   replaySourceBytes: lazy.sourceBytes ?? estimatedSourceBytes,
                   replaySourceKind: 'url',
                   replaySourceUrl: jsonlUrl,

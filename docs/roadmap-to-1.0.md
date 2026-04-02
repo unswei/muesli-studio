@@ -108,9 +108,9 @@ Minimal. Editing remains present, but this release is not about broadening editi
 
 ---
 
-## v0.3 - debugging and navigation release (release branch cut)
+## v0.3 - debugging and navigation release (shipped)
 
-Status: release branch cut on 2026-04-03.
+Status: shipped on 2026-04-03.
 
 ### theme
 
@@ -134,6 +134,10 @@ A serious inspector is judged by how quickly it gets a user to the interesting m
 - URL-stable deep links to a run, tick, node, or view state
 - compact run summary cards that surface warnings and unusual event families immediately
 - better handling of large logs and lazy hydration in the UI
+
+### shipped result
+
+`v0.3.0` delivered the intended navigation and debugging step-change. Replay links can reopen a selected tick, node, and view; the timeline now supports search, filters, and one-click jump targets; keyboard-first inspection is in place; long runs load more gracefully; compare mode is polished enough for screenshots; and release artefacts now carry detached signatures.
 
 ### editing scope in this release
 

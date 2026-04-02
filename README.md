@@ -97,9 +97,9 @@ Tagged releases matching `v*` publish these artefacts:
 
 Current release branch: `release/v0.3.0`.
 
-Planned next tag from this branch: `v0.3.0`.
+Current tag on this branch: `v0.3.0`.
 
-Latest tagged release: `v0.2.0`.
+Latest tagged release: `v0.3.0`.
 
 See [GitHub releases](https://github.com/unswei/muesli-studio/releases) and [release targets](docs/studio/release-targets.md) for workflow and asset naming.
 

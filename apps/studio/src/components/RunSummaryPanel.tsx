@@ -142,12 +142,8 @@ export function RunSummaryPanel({ replay, summary, eventCount }: RunSummaryPanel
           <strong>{runId}</strong>
         </div>
         <div className="detail-stat">
-          <span className="detail-label">schema</span>
-          <code>{summary.schema_version}</code>
-        </div>
-        <div className="detail-stat">
-          <span className="detail-label">contract</span>
-          <code>{summary.contract_version}</code>
+          <span className="detail-label">events</span>
+          <strong>{formatCount(eventCount)}</strong>
         </div>
       </div>
 
@@ -228,7 +224,7 @@ export function RunSummaryPanel({ replay, summary, eventCount }: RunSummaryPanel
               </dd>
             </div>
             <div>
-              <dt>digest</dt>
+              <dt>run digest</dt>
               <dd>
                 <code>{summary.digest}</code>
               </dd>

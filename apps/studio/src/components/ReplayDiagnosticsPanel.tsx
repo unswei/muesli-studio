@@ -47,14 +47,14 @@ function formatDurationMs(value: number | null): string {
 
 function replayModeLabel(replayIndexed: boolean, lazyActive: boolean): string {
   if (lazyActive) {
-    return 'lazy indexed';
+    return 'on-demand loading';
   }
 
   if (replayIndexed) {
-    return 'indexed';
+    return 'quick access';
   }
 
-  return 'full scan';
+  return 'standard loading';
 }
 
 function sourceLabel(sourceKind: ReplaySourceKind): string {
@@ -63,23 +63,23 @@ function sourceLabel(sourceKind: ReplaySourceKind): string {
   }
 
   if (sourceKind === 'url') {
-    return 'URL fetch';
+    return 'web link';
   }
 
-  return 'in-memory text';
+  return 'pasted text';
 }
 
 function seekModeLabel(value: ReplaySeekStats['last_mode']): string {
   if (value === 'hydrated') {
-    return 'hydrated';
+    return 'loaded now';
   }
 
   if (value === 'full-scan') {
-    return 'full scan';
+    return 'standard loading';
   }
 
   if (value === 'cached') {
-    return 'cached';
+    return 'already loaded';
   }
 
   return 'awaiting scrub';
@@ -113,7 +113,7 @@ export function ReplayDiagnosticsPanel({
         <div>
           <p className="panel-kicker">replay diagnostics</p>
           <h2>large logs</h2>
-          <p className="panel-copy muted">Check replay mode, seek timing, and rough footprint before assuming a scrub issue is rendering-related.</p>
+          <p className="panel-copy muted">Check loading mode, scrub timing, and rough footprint if a large run feels slow.</p>
         </div>
         <div className="tree-summary-badges">
           <span className={`status-badge ${lazyActive ? 'status-badge--indexed' : 'status-badge--subtle'}`}>{replayMode}</span>
@@ -167,7 +167,7 @@ export function ReplayDiagnosticsPanel({
               <dd>{seekModeLabel(seekStats.last_mode)}</dd>
             </div>
             <div>
-              <dt>ticks hydrated</dt>
+              <dt>ticks loaded now</dt>
               <dd>{seekStats.last_hydrated_ticks.toLocaleString()}</dd>
             </div>
           </dl>
@@ -192,7 +192,7 @@ export function ReplayDiagnosticsPanel({
         </section>
 
         <section className="summary-section">
-          <h3>hydration</h3>
+          <h3>coverage</h3>
           <dl className="summary-definition-list">
             <div>
               <dt>coverage</dt>
@@ -216,10 +216,10 @@ export function ReplayDiagnosticsPanel({
               </div>
               <div className="button-row diagnostics-actions">
                 <button type="button" className="button-ghost" onClick={onHydrateWindow ?? undefined} disabled={!canHydrateMore || pendingTickCount > 0}>
-                  hydrate nearby
+                  load nearby
                 </button>
                 <button type="button" className="button-primary" onClick={onHydrateAll ?? undefined} disabled={!canHydrateMore || pendingTickCount > 0}>
-                  hydrate all
+                  load all
                 </button>
               </div>
             </>
@@ -248,13 +248,11 @@ export function ReplayDiagnosticsPanel({
       <section className="summary-section summary-section--full">
         <div className="summary-section-heading">
           <h3>notes</h3>
-          <p className="panel-empty-copy muted">
-            Rough memory is heuristic only: loaded replay bytes plus a fixed per-event allowance. It is not a browser heap reading.
-          </p>
+          <p className="panel-empty-copy muted">Rough memory is only an estimate. It helps compare loading modes, not measure exact browser memory use.</p>
         </div>
         {lazyActive ? (
           <p className="panel-empty-copy muted">
-            Lazy indexed replays now hydrate in grouped byte ranges rather than one tick slice at a time, and `hydrate nearby` preloads a window around the current tick.
+            Large runs can load nearby parts first. Use `load nearby` or `load all` if you want more of the run ready before scrubbing.
           </p>
         ) : null}
         {loadWarning ? <p className="diagnostics-note diagnostics-note--warning">{loadWarning}</p> : null}

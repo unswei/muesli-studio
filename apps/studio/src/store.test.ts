@@ -156,7 +156,7 @@ describe('studio live store behaviour', () => {
     useStudioStore.getState().loadJsonl(jsonl, null, 10 * 1024 * 1024);
     const state = useStudioStore.getState();
     expect(state.replayIndexed).toBe(false);
-    expect(state.replayLoadWarning).toContain('full-scan fallback');
+    expect(state.replayLoadWarning).toContain('standard loading mode');
   });
 
   it('uses sidecar metadata when a valid sidecar is provided', () => {
@@ -218,7 +218,7 @@ describe('studio live store behaviour', () => {
     const initial = useStudioStore.getState();
     expect(initial.replayIndexed).toBe(true);
     expect(initial.replayMaxTick).toBe(3);
-    expect(initial.replayLoadWarning).toContain('lazy loading');
+    expect(initial.replayLoadWarning).toContain('loads nearby parts as needed');
     expect(initial.selectedTick).toBe(1);
     expect(initial.eventCount).toBe(4);
 
@@ -254,7 +254,7 @@ describe('studio live store behaviour', () => {
 
     await useStudioStore.getState().loadJsonlFromFiles(jsonlFile, sidecarFile);
     const initial = useStudioStore.getState();
-    expect(initial.replayLoadWarning).toContain('lazy loading');
+    expect(initial.replayLoadWarning).toContain('loads nearby parts as needed');
     expect(initial.eventCount).toBe(4);
     expect(initial.replayMaxTick).toBe(3);
     expect(initial.replaySourceKind).toBe('file');
@@ -409,7 +409,7 @@ describe('studio live store behaviour', () => {
 
     const initial = useStudioStore.getState();
     expect(initial.replayIndexed).toBe(true);
-    expect(initial.replayLoadWarning).toContain('lazy loading');
+    expect(initial.replayLoadWarning).toContain('loads nearby parts as needed');
     expect(initial.selectedTick).toBe(1);
     expect(initial.eventCount).toBe(4);
     expect(initial.replaySourceKind).toBe('url');

@@ -43,7 +43,7 @@ Release entry template:
 
 - debugging and navigation release that turns replay into a faster inspection tool rather than a passive viewer
 - deep links, event search and jump flows, keyboard-first navigation, compare mode, and stronger run-summary surfacing all land in the same release line
-- release artefact trust is stronger through detached signatures, signature-aware verification, and refreshed release and publication documentation
+- release artefact trust is stronger through detached signatures, signature-aware verification, refreshed release and publication documentation, and cleaner product-facing UI copy
 
 ### shipped artefacts
 
