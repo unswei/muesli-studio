@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import path from 'node:path';
 
 import { defaultSignaturePath, parseArgs } from './sign-archive.mjs';
 
@@ -19,9 +20,10 @@ test('parseArgs accepts one or more archives and an explicit key id', () => {
   ]);
 
   assert.equal(parsed.keyId, 'ABC123');
+  const expectedRoot = process.cwd();
   assert.deepEqual(parsed.archives, [
-    '/Users/z3550628/Code/2026/muesli-studio/dist/release/muesli-studio-v0.2.0-source.tar.gz',
-    '/Users/z3550628/Code/2026/muesli-studio/dist/release/muesli-studio-v0.2.0-source.zip',
+    path.join(expectedRoot, 'dist', 'release', 'muesli-studio-v0.2.0-source.tar.gz'),
+    path.join(expectedRoot, 'dist', 'release', 'muesli-studio-v0.2.0-source.zip'),
   ]);
   assert.equal(parsed.output, null);
 });
