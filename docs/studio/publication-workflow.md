@@ -23,6 +23,7 @@ Use this workflow when you need:
    - `summary`
    - `node`
    - `diff`
+   - `compare`
    - `dsl`
 4. Studio switches into a low-chrome presentation surface.
 5. Export:
@@ -56,7 +57,7 @@ Deterministic demo capture query parameters:
 - `demo_sidecar=/demo/<fixture>/events.sidecar.tick-index.v1.json`
 - `demo_tick=<n>`
 - `demo_node=<id>`
-- `demo_capture=hero|summary|node|diff|dsl`
+- `demo_capture=hero|summary|node|diff|compare|dsl`
 
 Canonical capture recipe:
 
@@ -78,7 +79,7 @@ This stages `tests/fixtures/studio_demo`, serves Studio locally, and captures th
 
 3. Choose `overview` for the main figure, then export `PNG`.
 
-4. Choose `summary` or `diff` for a supporting panel, then export again.
+4. Choose `summary`, `diff`, or `compare` for a supporting panel, then export again.
 
 5. Use `export bundle` to write a zipped supplement for review.
 
@@ -92,6 +93,7 @@ pnpm docs:screenshots
 
 - `SVG` export is best for panel-style surfaces. Very large graph captures may still be easier to use as `PNG`.
 - bundle export may take longer on large indexed runs because Studio hydrates the full replay first.
+- publication bundle export currently carries overview, summary, diff, and compare screenshots by default so review artefacts keep the high-signal surfaces together.
 - deterministic doc screenshots use the canonical `studio_demo` sidecar and `demo_capture` query parameters; interactive presentation mode remains the user-facing path.
 
 ## see also

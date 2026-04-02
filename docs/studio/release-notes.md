@@ -52,6 +52,7 @@ Release entry template:
 - `muesli-studio-v0.2.0-linux-intel.tar.gz` (prebuilt inspector + studio static assets)
 - `muesli-studio-v0.2.0-macos-arm.tar.gz` (prebuilt inspector + studio static assets)
 - `.sha256` files for all archives
+- detached `.asc` signatures were added after this release line
 
 ### notes
 
@@ -104,7 +105,7 @@ Release entry template:
 ## gotchas
 
 - release notes describe what shipped; they do not replace changelog-level engineering history.
-- release artefact signatures are not yet detached-signed.
+- current tagged releases are intended to publish detached `.asc` signatures alongside `.sha256` checksums, but older tags may predate that addition.
 
 ## see also
 

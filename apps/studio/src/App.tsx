@@ -6,10 +6,14 @@ import JSZip from 'jszip';
 import { buildTickSidecarIndex, summariseRun, type RunEventRecord } from '@muesli/replay';
 
 import { BlackboardDiff } from './components/BlackboardDiff';
+import { ComparePanel } from './components/ComparePanel';
 import { decodeWebSocketData, parseLivePayload } from './live';
+import { buildShareableSearch, parseInspectionStateQuery, parseReplayLinkQuery } from './deep-link';
 import { DslEditor } from './components/DslEditor';
+import { EventExplorer } from './components/EventExplorer';
 import { HeroCapture } from './components/HeroCapture';
 import { NodeInspector } from './components/NodeInspector';
+import { PlannerSchedulerPanel } from './components/PlannerSchedulerPanel';
 import { PresentationPanel } from './components/PresentationPanel';
 import { PresentationToolbar } from './components/PresentationToolbar';
 import { ReplayDiagnosticsPanel } from './components/ReplayDiagnosticsPanel';
@@ -28,8 +32,56 @@ import { saveBlobToDisk } from './save-file';
 import { useStudioStore } from './store';
 
 type CaptureFormat = 'png' | 'svg';
+type KeyboardPanelId =
+  | 'timeline-panel'
+  | 'event-explorer-panel'
+  | 'tree-panel'
+  | 'run-summary-panel'
+  | 'node-inspector-panel'
+  | 'blackboard-diff'
+  | 'dsl-editor-panel'
+  | 'live-connection-panel';
 
-const bundleScreenshotLayouts: readonly PresentationLayout[] = ['hero', 'summary', 'diff'];
+const bundleScreenshotLayouts: readonly PresentationLayout[] = ['hero', 'summary', 'diff', 'compare'];
+const keyboardPanelShortcuts: Readonly<Record<string, KeyboardPanelId>> = {
+  '1': 'timeline-panel',
+  '2': 'event-explorer-panel',
+  '3': 'tree-panel',
+  '4': 'run-summary-panel',
+  '5': 'node-inspector-panel',
+  '6': 'blackboard-diff',
+  '7': 'dsl-editor-panel',
+  '8': 'live-connection-panel',
+};
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  if (target.isContentEditable) {
+    return true;
+  }
+
+  const tagName = target.tagName.toLowerCase();
+  return tagName === 'input' || tagName === 'textarea' || tagName === 'select';
+}
+
+function focusPanelById(panelId: KeyboardPanelId): void {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  const element = document.getElementById(panelId);
+  if (!(element instanceof HTMLElement)) {
+    return;
+  }
+
+  if (typeof element.scrollIntoView === 'function') {
+    element.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+  }
+  element.focus({ preventScroll: true });
+}
 
 function captureTargetId(layout: PresentationLayout): string {
   if (layout === 'hero') {
@@ -46,6 +98,10 @@ function captureTargetId(layout: PresentationLayout): string {
 
   if (layout === 'diff') {
     return 'blackboard-diff';
+  }
+
+  if (layout === 'compare') {
+    return 'compare-panel';
   }
 
   return 'dsl-editor-panel';
@@ -91,6 +147,8 @@ export function App() {
   const replayLoadWarning = useStudioStore((state) => state.replayLoadWarning);
   const replaySourceBytes = useStudioStore((state) => state.replaySourceBytes);
   const replaySourceKind = useStudioStore((state) => state.replaySourceKind);
+  const replaySourceUrl = useStudioStore((state) => state.replaySourceUrl);
+  const replaySidecarUrl = useStudioStore((state) => state.replaySidecarUrl);
   const replayLoadedBytesEstimate = useStudioStore((state) => state.replayLoadedBytesEstimate);
   const replaySeekStats = useStudioStore((state) => state.replaySeekStats);
   const replayMaxTick = useStudioStore((state) => state.replayMaxTick);
@@ -115,6 +173,8 @@ export function App() {
   const setLiveReconnectEnabled = useStudioStore((state) => state.setLiveReconnectEnabled);
   const applyCompiledTree = useStudioStore((state) => state.applyCompiledTree);
   const resetCompiledTree = useStudioStore((state) => state.resetCompiledTree);
+  const hydrateTickWindow = useStudioStore((state) => state.hydrateTickWindow);
+  const hydrateAllLazyTicks = useStudioStore((state) => state.hydrateAllLazyTicks);
   const addLiveHistory = useStudioStore((state) => state.addLiveHistory);
   const clearLiveHistory = useStudioStore((state) => state.clearLiveHistory);
   const addParseError = useStudioStore((state) => state.addParseError);
@@ -128,14 +188,28 @@ export function App() {
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectEnabledRef = useRef(liveReconnectEnabled);
   const manualDisconnectRef = useRef(false);
-  const demoLoadRef = useRef(false);
-  const demoSelectionRef = useRef(false);
+  const initialReplayLoadRef = useRef(false);
+  const initialSelectionRef = useRef(false);
   const demoQuery = useMemo(() => {
     if (typeof window === 'undefined') {
       return null;
     }
 
     return parseDemoFixtureQuery(window.location.search);
+  }, []);
+  const replayLinkQuery = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
+    return parseReplayLinkQuery(window.location.search);
+  }, []);
+  const inspectionStateQuery = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return { selectedTick: null, selectedNodeId: null, view: null };
+    }
+
+    return parseInspectionStateQuery(window.location.search);
   }, []);
   const captureMode = demoQuery?.captureMode ?? null;
 
@@ -198,6 +272,12 @@ export function App() {
     return {
       loadedTickCount: loadedTickIds.size,
       knownTickCount: lazySidecar ? lazySidecar.index.tick_entries.length : loadedTickIds.size,
+      loadedCoveragePercent:
+        lazySidecar && lazySidecar.index.tick_entries.length > 0
+          ? (loadedTickIds.size / lazySidecar.index.tick_entries.length) * 100
+          : loadedTickIds.size > 0
+            ? 100
+            : 0,
       pendingTickCount: lazySidecar?.pendingTicks.size ?? 0,
       highestTick: Math.max(replayMaxTick, replay.maxTick, 0),
       lazyActive: lazySidecar !== null,
@@ -288,6 +368,10 @@ export function App() {
 
     if (layout === 'diff') {
       return <BlackboardDiff replay={replay} tick={selectedTick} />;
+    }
+
+    if (layout === 'compare') {
+      return <ComparePanel replay={replay} selectedTick={selectedTick} initialBaselineTick={Math.max(0, selectedTick - 1)} />;
     }
 
     return <DslEditor replay={replay} onApplyCompiled={applyCompiledTree} onResetCompiled={resetCompiledTree} />;
@@ -493,17 +577,23 @@ export function App() {
   }, [liveReconnectEnabled]);
 
   useEffect(() => {
-    if (demoLoadRef.current || typeof window === 'undefined') {
+    if (initialReplayLoadRef.current || typeof window === 'undefined') {
       return;
     }
 
-    demoLoadRef.current = true;
-    if (!demoQuery) {
+    initialReplayLoadRef.current = true;
+    const replaySource = demoQuery
+      ? { jsonlPath: demoQuery.jsonlPath, sidecarPath: demoQuery.sidecarPath }
+      : replayLinkQuery
+        ? { jsonlPath: replayLinkQuery.jsonlUrl, sidecarPath: replayLinkQuery.sidecarUrl }
+        : null;
+
+    if (!replaySource) {
       return;
     }
 
     let cancelled = false;
-    loadJsonlFromUrl(demoQuery.jsonlPath, demoQuery.sidecarPath).catch((error) => {
+    loadJsonlFromUrl(replaySource.jsonlPath, replaySource.sidecarPath).catch((error) => {
       if (cancelled) {
         return;
       }
@@ -511,31 +601,84 @@ export function App() {
       const message = error instanceof Error ? error.message : String(error);
       addParseError({
         line: 0,
-        message: `demo load failed: ${message}`,
-        raw: demoQuery.jsonlPath,
+        message: `replay load failed: ${message}`,
+        raw: replaySource.jsonlPath,
       });
     });
 
     return () => {
       cancelled = true;
     };
-  }, [addParseError, demoQuery, loadJsonlFromUrl]);
+  }, [addParseError, demoQuery, loadJsonlFromUrl, replayLinkQuery]);
 
   useEffect(() => {
-    if (!demoQuery || !replay || demoSelectionRef.current) {
+    if (!replay || initialSelectionRef.current) {
       return;
     }
 
-    if (demoQuery.selectedTick !== null) {
-      setSelectedTick(demoQuery.selectedTick);
+    const selectedTick = inspectionStateQuery.selectedTick ?? demoQuery?.selectedTick ?? null;
+    const selectedNodeId = inspectionStateQuery.selectedNodeId ?? demoQuery?.selectedNodeId ?? null;
+    const nextView = inspectionStateQuery.view;
+
+    if (selectedTick !== null) {
+      setSelectedTick(selectedTick);
     }
 
-    if (demoQuery.selectedNodeId !== null) {
-      setSelectedNodeId(demoQuery.selectedNodeId);
+    if (selectedNodeId !== null) {
+      setSelectedNodeId(selectedNodeId);
     }
 
-    demoSelectionRef.current = true;
-  }, [demoQuery, replay, setSelectedNodeId, setSelectedTick]);
+    if (nextView !== null) {
+      setPresentationLayout(nextView === 'overview' ? null : nextView);
+    }
+
+    initialSelectionRef.current = true;
+  }, [demoQuery, inspectionStateQuery, replay, setSelectedNodeId, setSelectedTick]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || captureMode !== null || !replay || mode !== 'replay') {
+      return;
+    }
+
+    const source = demoQuery
+      ? {
+          kind: 'demo' as const,
+          jsonlPath: demoQuery.jsonlPath,
+          sidecarPath: demoQuery.sidecarPath,
+        }
+      : replaySourceUrl
+        ? {
+            kind: 'url' as const,
+            jsonlUrl: replaySourceUrl,
+            sidecarUrl: replaySidecarUrl,
+          }
+        : {
+            kind: 'none' as const,
+          };
+
+    const nextSearch = buildShareableSearch(window.location.search, source, {
+      selectedTick,
+      selectedNodeId,
+      view: presentationLayout ?? 'overview',
+    });
+
+    if (nextSearch === window.location.search) {
+      return;
+    }
+
+    const nextUrl = `${window.location.pathname}${nextSearch}${window.location.hash}`;
+    window.history.replaceState(window.history.state, '', nextUrl);
+  }, [
+    captureMode,
+    demoQuery,
+    mode,
+    presentationLayout,
+    replay,
+    replaySidecarUrl,
+    replaySourceUrl,
+    selectedNodeId,
+    selectedTick,
+  ]);
 
   const clearReconnectTimer = useCallback(() => {
     if (!reconnectTimerRef.current) {
@@ -669,6 +812,86 @@ export function App() {
     };
   }, [clearReconnectTimer]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (activePresentationLayout) {
+        return;
+      }
+
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+
+      const editableTarget = isEditableTarget(event.target);
+
+      if (event.key === '/' && replay && !editableTarget) {
+        const searchInput = document.getElementById('event-search-input');
+        if (searchInput instanceof HTMLInputElement) {
+          event.preventDefault();
+          searchInput.focus();
+          searchInput.select();
+        }
+        return;
+      }
+
+      if (editableTarget || !replay) {
+        return;
+      }
+
+      const tickStep = event.shiftKey ? 10 : 1;
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        if (mode === 'live' && liveAutoFollow) {
+          setLiveAutoFollow(false);
+        }
+        setSelectedTick(selectedTick + tickStep);
+        return;
+      }
+
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        if (mode === 'live' && liveAutoFollow) {
+          setLiveAutoFollow(false);
+        }
+        setSelectedTick(selectedTick - tickStep);
+        return;
+      }
+
+      if (event.key === 'Home') {
+        event.preventDefault();
+        if (mode === 'live' && liveAutoFollow) {
+          setLiveAutoFollow(false);
+        }
+        setSelectedTick(0);
+        return;
+      }
+
+      if (event.key === 'End') {
+        event.preventDefault();
+        if (mode === 'live' && liveAutoFollow) {
+          setLiveAutoFollow(false);
+        }
+        setSelectedTick(maxTick);
+        return;
+      }
+
+      const panelId = keyboardPanelShortcuts[event.key];
+      if (panelId) {
+        event.preventDefault();
+        focusPanelById(panelId);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [activePresentationLayout, liveAutoFollow, maxTick, mode, replay, selectedTick, setLiveAutoFollow, setSelectedTick]);
+
   if (activePresentationLayout) {
     const shellClassName = `app-shell app-shell--capture app-shell--capture-${activePresentationLayout}${
       showsPresentationToolbar ? ' app-shell--capture-interactive' : ''
@@ -745,7 +968,7 @@ export function App() {
       <section className="workspace-shell">
         <div className="workspace-main">
           {hasReplay ? (
-            <section className="panel instrument-panel">
+            <section id="timeline-panel" tabIndex={-1} className="panel instrument-panel keyboard-panel-target">
               <div className="panel-heading">
                 <div>
                   <p className="panel-kicker">run</p>
@@ -818,6 +1041,21 @@ export function App() {
                   <span>{maxTick}</span>
                 </div>
               </div>
+
+              <EventExplorer
+                replay={replay}
+                mode={mode}
+                eventCount={eventCount}
+                selectedTick={selectedTick}
+                lazyActive={replayDiagnostics?.lazyActive ?? false}
+                onJumpToTick={(tick) => {
+                  if (mode === 'live' && liveAutoFollow) {
+                    setLiveAutoFollow(false);
+                  }
+                  setSelectedTick(tick);
+                }}
+                onSelectNode={setSelectedNodeId}
+              />
             </section>
           ) : (
             <section className="panel instrument-panel empty-state-panel">
@@ -867,6 +1105,10 @@ export function App() {
 
         <aside className="workspace-sidebar">
           {replay && replaySummary ? <RunSummaryPanel replay={replay} summary={replaySummary} eventCount={eventCount} /> : null}
+          {replay && mode === 'replay' ? (
+            <ComparePanel replay={replay} selectedTick={selectedTick} initialBaselineTick={Math.max(0, selectedTick - 1)} />
+          ) : null}
+          {replay && mode === 'replay' ? <PlannerSchedulerPanel replay={replay} selectedTick={selectedTick} /> : null}
           {replay && mode === 'replay' && replayDiagnostics ? (
             <ReplayDiagnosticsPanel
               eventCount={eventCount}
@@ -878,10 +1120,25 @@ export function App() {
               loadedBytesEstimate={replayLoadedBytesEstimate}
               loadedTickCount={replayDiagnostics.loadedTickCount}
               knownTickCount={replayDiagnostics.knownTickCount}
+              loadedCoveragePercent={replayDiagnostics.loadedCoveragePercent}
               highestTick={replayDiagnostics.highestTick}
               pendingTickCount={replayDiagnostics.pendingTickCount}
               loadWarning={replayLoadWarning}
               seekStats={replaySeekStats}
+              onHydrateWindow={
+                replayDiagnostics.lazyActive
+                  ? () => {
+                      void hydrateTickWindow(selectedTick);
+                    }
+                  : null
+              }
+              onHydrateAll={
+                replayDiagnostics.lazyActive
+                  ? () => {
+                      void hydrateAllLazyTicks();
+                    }
+                  : null
+              }
             />
           ) : null}
           {replay && replaySummary ? (
@@ -952,7 +1209,7 @@ export function App() {
             </section>
           ) : null}
 
-          <section className="panel detail-panel live-panel">
+          <section id="live-connection-panel" tabIndex={-1} className="panel detail-panel live-panel keyboard-panel-target">
             <div className="panel-heading">
               <div>
                 <p className="panel-kicker">live runtime</p>

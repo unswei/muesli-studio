@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { hostReleaseTarget, missingReleaseMetadata, parseArchiveMetadata } from './verify-bundle.mjs';
+import { hostReleaseTarget, missingReleaseMetadata, parseArchiveMetadata, signaturePathForArchive } from './verify-bundle.mjs';
 
 test('parseArchiveMetadata extracts version and target from a binary archive name', () => {
   const metadata = parseArchiveMetadata('/tmp/muesli-studio-v0.2.0-macos-arm.tar.gz');
@@ -13,6 +13,13 @@ test('parseArchiveMetadata extracts version and target from a binary archive nam
 
 test('parseArchiveMetadata rejects unsupported archive names', () => {
   assert.throws(() => parseArchiveMetadata('/tmp/muesli-studio-v0.2.0-source.tar.gz'));
+});
+
+test('signaturePathForArchive resolves the adjacent detached signature path', () => {
+  assert.equal(
+    signaturePathForArchive('/tmp/muesli-studio-v0.2.0-macos-arm.tar.gz'),
+    '/tmp/muesli-studio-v0.2.0-macos-arm.tar.gz.asc',
+  );
 });
 
 test('hostReleaseTarget maps supported local platform and architecture pairs', () => {

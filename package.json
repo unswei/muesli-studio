@@ -15,6 +15,7 @@
     "demo": "bash ./start-studio.sh demo",
     "docs:screenshots": "pnpm exec tsx tools/docs/capture-studio-screenshots.ts",
     "release:package": "pnpm exec tsx tools/release/package-binary.ts",
+    "release:sign-archive": "node tools/release/sign-archive.mjs",
     "release:verify-bundle": "node tools/release/verify-bundle.mjs",
     "bench:sidecar": "pnpm exec tsx tools/bench/benchmark-sidecar.ts",
     "lint": "pnpm --filter @muesli/protocol lint && pnpm --filter @muesli/replay lint && pnpm --filter @muesli/ui lint && pnpm --filter @muesli/studio lint",

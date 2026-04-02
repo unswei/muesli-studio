@@ -26,6 +26,37 @@ jobs:
         run: |
           echo "version=${GITHUB_REF_NAME}" >> "${GITHUB_OUTPUT}"
 
+      - name: import release signing key
+        env:
+          RELEASE_GPG_PRIVATE_KEY: ${{ secrets.RELEASE_GPG_PRIVATE_KEY }}
+        run: |
+          if [ -z "${RELEASE_GPG_PRIVATE_KEY:-}" ]; then
+            echo "RELEASE_GPG_PRIVATE_KEY is required for tagged releases" >&2
+            exit 1
+          fi
+
+          export GNUPGHOME="$(mktemp -d)"
+          echo "GNUPGHOME=${GNUPGHOME}" >> "${GITHUB_ENV}"
+          python3 - <<'PY'
+          import base64
+          import os
+          import pathlib
+
+          key = os.environ["RELEASE_GPG_PRIVATE_KEY"].strip()
+          output = pathlib.Path(os.environ["RUNNER_TEMP"]) / "release-private-key.asc"
+          if "BEGIN PGP PRIVATE KEY BLOCK" in key:
+            output.write_text(key, encoding="utf8")
+          else:
+            output.write_bytes(base64.b64decode(key))
+          PY
+          gpg --batch --import "${RUNNER_TEMP}/release-private-key.asc"
+          key_id="$(gpg --list-secret-keys --with-colons | awk -F: '$1 == "sec" { print $5; exit }')"
+          if [ -z "${key_id}" ]; then
+            echo "failed to resolve imported release signing key id" >&2
+            exit 1
+          fi
+          echo "RELEASE_SIGNING_KEY_ID=${key_id}" >> "${GITHUB_ENV}"
+
       - name: package source archives
         run: |
           version="${{ steps.meta.outputs.version }}"
@@ -38,6 +69,16 @@ jobs:
             sha256sum "${bundle}-source.tar.gz" > "${bundle}-source.tar.gz.sha256"
             sha256sum "${bundle}-source.zip" > "${bundle}-source.zip.sha256"
           )
+
+      - name: sign source archives
+        env:
+          RELEASE_GPG_PASSPHRASE: ${{ secrets.RELEASE_GPG_PASSPHRASE }}
+        run: |
+          version="${{ steps.meta.outputs.version }}"
+          bundle="muesli-studio-${version}"
+          node tools/release/sign-archive.mjs \
+            "dist/release/${bundle}-source.tar.gz" \
+            "dist/release/${bundle}-source.zip"
 
       - name: upload source assets
         uses: actions/upload-artifact@v4
@@ -73,6 +114,37 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - name: import release signing key
+        env:
+          RELEASE_GPG_PRIVATE_KEY: ${{ secrets.RELEASE_GPG_PRIVATE_KEY }}
+        run: |
+          if [ -z "${RELEASE_GPG_PRIVATE_KEY:-}" ]; then
+            echo "RELEASE_GPG_PRIVATE_KEY is required for tagged releases" >&2
+            exit 1
+          fi
+
+          export GNUPGHOME="$(mktemp -d)"
+          echo "GNUPGHOME=${GNUPGHOME}" >> "${GITHUB_ENV}"
+          python3 - <<'PY'
+          import base64
+          import os
+          import pathlib
+
+          key = os.environ["RELEASE_GPG_PRIVATE_KEY"].strip()
+          output = pathlib.Path(os.environ["RUNNER_TEMP"]) / "release-private-key.asc"
+          if "BEGIN PGP PRIVATE KEY BLOCK" in key:
+            output.write_text(key, encoding="utf8")
+          else:
+            output.write_bytes(base64.b64decode(key))
+          PY
+          gpg --batch --import "${RUNNER_TEMP}/release-private-key.asc"
+          key_id="$(gpg --list-secret-keys --with-colons | awk -F: '$1 == "sec" { print $5; exit }')"
+          if [ -z "${key_id}" ]; then
+            echo "failed to resolve imported release signing key id" >&2
+            exit 1
+          fi
+          echo "RELEASE_SIGNING_KEY_ID=${key_id}" >> "${GITHUB_ENV}"
+
       - name: install
         run: pnpm install --frozen-lockfile
 
@@ -91,6 +163,11 @@ jobs:
       - name: package release binary
         run: pnpm release:package -- --target "${{ matrix.target }}" --version "${{ needs.source.outputs.version }}"
 
+      - name: sign packaged bundle
+        env:
+          RELEASE_GPG_PASSPHRASE: ${{ secrets.RELEASE_GPG_PASSPHRASE }}
+        run: pnpm release:sign-archive -- "dist/release/muesli-studio-${{ needs.source.outputs.version }}-${{ matrix.target }}.tar.gz"
+
       - name: verify packaged bundle
         run: pnpm release:verify-bundle -- "dist/release/muesli-studio-${{ needs.source.outputs.version }}-${{ matrix.target }}.tar.gz"
 
@@ -101,6 +178,7 @@ jobs:
           path: |
             dist/release/muesli-studio-${{ needs.source.outputs.version }}-${{ matrix.target }}.tar.gz
             dist/release/muesli-studio-${{ needs.source.outputs.version }}-${{ matrix.target }}.tar.gz.sha256
+            dist/release/muesli-studio-${{ needs.source.outputs.version }}-${{ matrix.target }}.tar.gz.asc
 
   publish:
     runs-on: ubuntu-latest

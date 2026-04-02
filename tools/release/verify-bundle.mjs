@@ -28,6 +28,10 @@ export function parseArchiveMetadata(archivePath) {
   };
 }
 
+export function signaturePathForArchive(archivePath) {
+  return `${archivePath}.asc`;
+}
+
 export function hostReleaseTarget(platform = process.platform, arch = process.arch) {
   if (platform === 'darwin' && arch === 'arm64') {
     return 'macos-arm';
@@ -55,6 +59,7 @@ export function missingReleaseMetadata(releaseText, metadata) {
 function parseArgs(argv) {
   let archivePath = null;
   let checksumPath = null;
+  let signaturePath = null;
   let port = DEFAULT_PORT;
   let timeoutMs = DEFAULT_TIMEOUT_MS;
 
@@ -72,6 +77,12 @@ function parseArgs(argv) {
 
     if (arg === '--checksum') {
       checksumPath = argv[index + 1] ?? null;
+      index += 1;
+      continue;
+    }
+
+    if (arg === '--signature') {
+      signaturePath = argv[index + 1] ?? null;
       index += 1;
       continue;
     }
@@ -114,6 +125,7 @@ function parseArgs(argv) {
   return {
     archivePath: path.resolve(archivePath),
     checksumPath: checksumPath ? path.resolve(checksumPath) : null,
+    signaturePath: signaturePath ? path.resolve(signaturePath) : null,
     port,
     timeoutMs,
   };
@@ -153,6 +165,10 @@ async function verifyChecksum(archivePath, checksumPath) {
   if (actualDigest !== expectedDigest) {
     throw new Error(`checksum mismatch for ${path.basename(archivePath)}`);
   }
+}
+
+async function verifySignature(archivePath, signaturePath) {
+  await run('gpg', ['--verify', signaturePath, archivePath], { stdio: 'pipe' });
 }
 
 async function run(command, args, options = {}) {
@@ -280,16 +296,29 @@ async function smokeLaunch(bundleRoot, metadata, port, timeoutMs) {
 export async function verifyBundleArchive(options) {
   const metadata = parseArchiveMetadata(options.archivePath);
   const checksumPath = options.checksumPath ?? `${options.archivePath}.sha256`;
+  const signaturePath = options.signaturePath ?? signaturePathForArchive(options.archivePath);
+  let signature = { status: 'skipped', reason: 'detached signature not found' };
 
   await assertExists(options.archivePath, 'archive');
   await assertExists(checksumPath, 'checksum file');
   await verifyChecksum(options.archivePath, checksumPath);
+  try {
+    await assertExists(signaturePath, 'signature file');
+    await verifySignature(options.archivePath, signaturePath);
+    signature = { status: 'verified', path: signaturePath };
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('signature file not found:')) {
+      // detached signatures are optional for local ad hoc bundles
+    } else {
+      throw error;
+    }
+  }
 
   const { tempRoot, extractedRoot } = await extractArchive(options.archivePath, metadata.bundleDirName);
   try {
     await verifyBundleStructure(extractedRoot, metadata);
     const smoke = await smokeLaunch(extractedRoot, metadata, options.port, options.timeoutMs);
-    return { metadata, checksumPath, smoke };
+    return { metadata, checksumPath, signature, smoke };
   } finally {
     await rm(tempRoot, { recursive: true, force: true });
   }
@@ -299,6 +328,11 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   const result = await verifyBundleArchive(options);
   console.log(`verified checksum: ${path.basename(options.archivePath)}`);
+  if (result.signature.status === 'verified') {
+    console.log(`verified detached signature: ${path.basename(result.signature.path)}`);
+  } else {
+    console.log(`detached signature skipped: ${result.signature.reason}`);
+  }
   console.log(`verified bundle metadata: ${result.metadata.target} / ${result.metadata.version}`);
   if (result.smoke.status === 'verified') {
     console.log(`verified launch smoke: http://${DEFAULT_HOST}:${options.port}/`);

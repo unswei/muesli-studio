@@ -71,6 +71,7 @@ pnpm docs:screenshots
 - run summary panel screenshot
 - node inspector screenshot
 - blackboard diff screenshot
+- compare panel screenshot
 - DSL editor screenshot
 
 Studio can also re-export the loaded replay as a compact publication bundle. The exported archive includes:
@@ -80,7 +81,7 @@ Studio can also re-export the loaded replay as a compact publication bundle. The
 - `manifest.json`
 - `run_summary.json`
 - `README.md`
-- 3 presentation screenshots
+- 4 presentation screenshots
 
 Large deterministic fixture refresh:
 

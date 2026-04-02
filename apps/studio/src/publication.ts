@@ -1,6 +1,6 @@
 import type { ReplayStore, RunSummary } from '@muesli/replay';
 
-export const presentationLayouts = ['hero', 'summary', 'node', 'diff', 'dsl'] as const;
+export const presentationLayouts = ['hero', 'summary', 'node', 'diff', 'compare', 'dsl'] as const;
 
 export type PresentationLayout = (typeof presentationLayouts)[number];
 
@@ -107,6 +107,10 @@ export function captureFileName(layout: PresentationLayout, selectedTick: number
 
   if (layout === 'diff') {
     return `screenshots/blackboard-diff-tick-${selectedTick}.png`;
+  }
+
+  if (layout === 'compare') {
+    return `screenshots/compare-ticks-${Math.max(0, selectedTick - 1)}-to-${selectedTick}.png`;
   }
 
   return 'screenshots/dsl-editor.png';

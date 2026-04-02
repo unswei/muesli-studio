@@ -10,7 +10,7 @@ Use this page when you need to:
 
 - verify a freshly built binary bundle before publishing it
 - smoke-test the packaged launcher on the host-supported target
-- confirm that checksum and `RELEASE.md` metadata match the archive
+- confirm that checksum, detached signature, and `RELEASE.md` metadata match the archive
 
 ## how it works
 
@@ -19,6 +19,7 @@ Use this page when you need to:
 3. Run `pnpm release:verify-bundle` on the generated archive.
 4. The verifier checks:
    - the adjacent `.sha256` file matches the archive
+   - the adjacent `.asc` detached signature verifies when present
    - the unpacked bundle contains the expected files
    - `RELEASE.md` repeats target, version, compatibility, launch, and verification notes
    - the packaged launcher serves the Studio UI when the bundle target matches the local host
@@ -32,14 +33,16 @@ Package and verify a local macOS Apple Silicon archive:
 pnpm build
 pnpm inspector:build
 pnpm release:package -- --target macos-arm --version v0.2.0-rc1
+pnpm release:sign-archive -- dist/release/muesli-studio-v0.2.0-rc1-macos-arm.tar.gz
 pnpm release:verify-bundle -- dist/release/muesli-studio-v0.2.0-rc1-macos-arm.tar.gz
 ```
 
-Verify an existing archive with a custom smoke port:
+Verify an existing archive with a custom smoke port and explicit signature path:
 
 ```bash
 pnpm release:verify-bundle -- \
   --archive dist/release/muesli-studio-v0.2.0-macos-arm.tar.gz \
+  --signature dist/release/muesli-studio-v0.2.0-macos-arm.tar.gz.asc \
   --port 4417
 ```
 
@@ -55,6 +58,7 @@ pnpm release:verify-bundle -- dist/release/muesli-studio-v0.2.0-local-macos-arm.
 Expected output includes:
 
 - checksum verification success
+- detached signature verification success when the archive has a published `.asc`
 - bundle metadata verification success
 - launcher smoke verification on `http://127.0.0.1:<port>/`
 
@@ -63,6 +67,8 @@ Expected output includes:
 - launcher smoke only runs when the archive target matches the local host target.
 - on a non-matching host, the verifier still checks checksum, archive contents, and `RELEASE.md`, then reports the launch smoke as skipped.
 - `release:package` does not cross-compile. Build and package each target on the correct runner or host.
+- detached signature verification requires `gpg` and the matching public key in the local keyring.
+- ad hoc local bundles may omit `.asc`; in that case the verifier reports signature verification as skipped rather than failed.
 
 ## see also
 

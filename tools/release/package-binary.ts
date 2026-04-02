@@ -168,6 +168,7 @@ async function main(): Promise<void> {
     '',
     'verify:',
     `- compare the published ${path.basename(archivePath)}.sha256 file against ${path.basename(archivePath)} before launching`,
+    `- verify ${path.basename(archivePath)}.asc when a detached release signature is published for the archive`,
   ].join('\n');
   await writeFile(path.join(stagingDir, 'RELEASE.md'), `${releaseNotes}\n`, 'utf8');
 

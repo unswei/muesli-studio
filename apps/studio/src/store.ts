@@ -35,6 +35,10 @@ export interface ReplaySeekStats {
 
 const LARGE_LOG_FALLBACK_THRESHOLD_BYTES = 2 * 1024 * 1024;
 const LARGE_LOG_LAZY_THRESHOLD_BYTES = LARGE_LOG_FALLBACK_THRESHOLD_BYTES;
+const LAZY_HYDRATION_BATCH_TICK_LIMIT = 32;
+const LAZY_HYDRATION_BATCH_BYTE_LIMIT = 256 * 1024;
+const LAZY_HYDRATION_LOOKAHEAD_TICKS = 8;
+const LAZY_HYDRATION_WINDOW_RADIUS = 24;
 
 type LazySidecarSource =
   | {
@@ -64,6 +68,13 @@ interface LazySidecarLoad {
   loadedTicks: Set<number>;
   sourceBytes?: number;
   loadedBytesEstimate: number;
+}
+
+interface LazyHydrationBatch {
+  ticks: number[];
+  byteStart: number;
+  byteEnd: number;
+  lineStart: number;
 }
 
 class RangeFallbackToFullTextError extends Error {
@@ -107,9 +118,23 @@ function mergeParseErrors(existing: JsonlParseError[], incoming: JsonlParseError
 }
 
 function lazyTicksToHydrate(index: TickSidecarIndexV1, loadedTicks: Set<number>, pendingTicks: Set<number>, targetTick: number): number[] {
+  return lazyTicksToHydrateInRange(index, loadedTicks, pendingTicks, 0, targetTick);
+}
+
+function lazyTicksToHydrateInRange(
+  index: TickSidecarIndexV1,
+  loadedTicks: Set<number>,
+  pendingTicks: Set<number>,
+  startTick: number,
+  endTick: number,
+): number[] {
   const ticks: number[] = [];
   for (const entry of index.tick_entries) {
-    if (entry.tick > targetTick) {
+    if (entry.tick < startTick) {
+      continue;
+    }
+
+    if (entry.tick > endTick) {
       break;
     }
 
@@ -119,6 +144,55 @@ function lazyTicksToHydrate(index: TickSidecarIndexV1, loadedTicks: Set<number>,
   }
 
   return ticks;
+}
+
+function buildLazyHydrationBatches(index: TickSidecarIndexV1, ticks: readonly number[]): LazyHydrationBatch[] {
+  if (ticks.length === 0) {
+    return [];
+  }
+
+  const selectedTicks = new Set(ticks);
+  const batches: LazyHydrationBatch[] = [];
+  let current: LazyHydrationBatch | null = null;
+
+  for (const entry of index.tick_entries) {
+    if (!selectedTicks.has(entry.tick)) {
+      continue;
+    }
+
+    if (!current) {
+      current = {
+        ticks: [entry.tick],
+        byteStart: entry.byte_start,
+        byteEnd: entry.byte_end,
+        lineStart: entry.line_start,
+      };
+      continue;
+    }
+
+    const nextByteEnd = entry.byte_end;
+    const exceedsTickLimit = current.ticks.length >= LAZY_HYDRATION_BATCH_TICK_LIMIT;
+    const exceedsByteLimit = nextByteEnd - current.byteStart > LAZY_HYDRATION_BATCH_BYTE_LIMIT;
+    if (exceedsTickLimit || exceedsByteLimit) {
+      batches.push(current);
+      current = {
+        ticks: [entry.tick],
+        byteStart: entry.byte_start,
+        byteEnd: entry.byte_end,
+        lineStart: entry.line_start,
+      };
+      continue;
+    }
+
+    current.ticks.push(entry.tick);
+    current.byteEnd = nextByteEnd;
+  }
+
+  if (current) {
+    batches.push(current);
+  }
+
+  return batches;
 }
 
 function parseHeaderByteCount(value: string | null): number | null {
@@ -436,6 +510,8 @@ interface StudioState {
   replayLoadWarning: string | null;
   replaySourceBytes: number;
   replaySourceKind: ReplaySourceKind;
+  replaySourceUrl: string | null;
+  replaySidecarUrl: string | null;
   replayLoadedBytesEstimate: number;
   replaySeekStats: ReplaySeekStats;
   replayMaxTick: number;
@@ -449,9 +525,18 @@ interface StudioState {
   liveLastError: string | null;
   liveLastEventUnixMs: number | null;
   liveHistory: LiveHistoryEntry[];
-  loadJsonl: (text: string, sidecarText?: string | null, sourceBytes?: number, sourceKind?: ReplaySourceKind) => void;
+  loadJsonl: (
+    text: string,
+    sidecarText?: string | null,
+    sourceBytes?: number,
+    sourceKind?: ReplaySourceKind,
+    sourceUrl?: string | null,
+    sidecarUrl?: string | null,
+  ) => void;
   loadJsonlFromFiles: (jsonlFile: File, sidecarFile?: File | null) => Promise<void>;
   loadJsonlFromUrl: (jsonlUrl: string, sidecarUrl?: string | null) => Promise<void>;
+  hydrateTickWindow: (centreTick: number, radius?: number) => Promise<void>;
+  hydrateAllLazyTicks: () => Promise<void>;
   appendLiveEvents: (events: ValidatedMbtEvent[]) => void;
   applyCompiledTree: (compiled: CompiledBtDefinition) => void;
   resetCompiledTree: () => void;
@@ -467,27 +552,59 @@ interface StudioState {
 }
 
 export const useStudioStore = create<StudioState>((set, get) => {
-  const ensureLazyFileTicksLoadedUpTo = async (targetTick: number): Promise<number> => {
+  const hydrateLazyTextTicks = (ticks: readonly number[]): number => {
+    if (ticks.length === 0) {
+      return 0;
+    }
+
+    const state = get();
+    const lazy = state.lazySidecar;
+    const replay = state.replay;
+    if (!lazy || lazy.source.kind !== 'text' || !replay) {
+      return 0;
+    }
+
+    const loadedTicks = new Set(lazy.loadedTicks);
+    const hydratedTicks = appendTickEventsFromText(replay, lazy.source.eventsText, lazy.index, ticks);
+    for (const tick of hydratedTicks) {
+      loadedTicks.add(tick);
+    }
+
+    set({
+      replay,
+      eventCount: replay.getAllEvents().length,
+      selectedNodeId: state.selectedNodeId ?? replay.getFirstTreeNodeId(),
+      lazySidecar: {
+        ...lazy,
+        loadedTicks,
+      },
+    });
+
+    return hydratedTicks.size;
+  };
+
+  const ensureLazyFileTicksLoaded = async (ticks: readonly number[]): Promise<number> => {
+    if (ticks.length === 0) {
+      return 0;
+    }
+
     const start = get().lazySidecar;
     if (!start || start.source.kind !== 'file') {
       return 0;
     }
 
-    const ticks = lazyTicksToHydrate(start.index, start.loadedTicks, start.pendingTicks, targetTick);
+    const batches = buildLazyHydrationBatches(start.index, ticks);
     let loadedTickCount = 0;
-    for (const tick of ticks) {
+    for (const batch of batches) {
       const beforeLoad = get().lazySidecar;
       if (!beforeLoad || beforeLoad.source.kind !== 'file') {
         return loadedTickCount;
       }
 
-      const entry = beforeLoad.index.tick_entries.find((candidate) => candidate.tick === tick);
-      if (!entry) {
-        continue;
-      }
-
       const pendingTicks = new Set(beforeLoad.pendingTicks);
-      pendingTicks.add(tick);
+      for (const tick of batch.ticks) {
+        pendingTicks.add(tick);
+      }
       set({
         lazySidecar: {
           ...beforeLoad,
@@ -496,11 +613,12 @@ export const useStudioStore = create<StudioState>((set, get) => {
       });
 
       try {
-        const text = await readFileSliceText(beforeLoad.source.file, entry.byte_start, entry.byte_end);
+        const text = await readFileSliceText(beforeLoad.source.file, batch.byteStart, batch.byteEnd);
         const parsed = parseJsonlEvents(text);
-        const tickEvents = parsed.events.filter((event) => event.tick === tick);
-        const shiftedErrors = shiftJsonlParseErrors(parsed.errors, entry.line_start - 1);
-        const loadedBytes = Math.max(0, entry.byte_end - entry.byte_start);
+        const tickSet = new Set(batch.ticks);
+        const tickEvents = parsed.events.filter((event) => typeof event.tick === 'number' && tickSet.has(event.tick));
+        const shiftedErrors = shiftJsonlParseErrors(parsed.errors, batch.lineStart - 1);
+        const loadedBytes = Math.max(0, batch.byteEnd - batch.byteStart);
 
         set((state) => {
           const currentLazy = state.lazySidecar;
@@ -509,9 +627,20 @@ export const useStudioStore = create<StudioState>((set, get) => {
           }
 
           const nextPending = new Set(currentLazy.pendingTicks);
-          nextPending.delete(tick);
+          for (const tick of batch.ticks) {
+            nextPending.delete(tick);
+          }
 
-          if (currentLazy.loadedTicks.has(tick)) {
+          const nextLoaded = new Set(currentLazy.loadedTicks);
+          let newlyLoaded = 0;
+          for (const tick of batch.ticks) {
+            if (!nextLoaded.has(tick)) {
+              nextLoaded.add(tick);
+              newlyLoaded += 1;
+            }
+          }
+
+          if (newlyLoaded === 0) {
             return {
               lazySidecar: {
                 ...currentLazy,
@@ -520,9 +649,6 @@ export const useStudioStore = create<StudioState>((set, get) => {
               parseErrors: mergeParseErrors(state.parseErrors, shiftedErrors),
             };
           }
-
-          const nextLoaded = new Set(currentLazy.loadedTicks);
-          nextLoaded.add(tick);
 
           const replay = state.replay ?? new ReplayStore();
           if (tickEvents.length > 0) {
@@ -542,7 +668,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
             },
           };
         });
-        loadedTickCount += 1;
+        loadedTickCount += batch.ticks.length;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         set((state) => {
@@ -552,7 +678,9 @@ export const useStudioStore = create<StudioState>((set, get) => {
           }
 
           const nextPending = new Set(currentLazy.pendingTicks);
-          nextPending.delete(tick);
+          for (const tick of batch.ticks) {
+            nextPending.delete(tick);
+          }
           return {
             lazySidecar: {
               ...currentLazy,
@@ -560,9 +688,9 @@ export const useStudioStore = create<StudioState>((set, get) => {
             },
             parseErrors: mergeParseErrors(state.parseErrors, [
               {
-                line: entry.line_start,
+                line: batch.lineStart,
                 message: `lazy tick load failed: ${message}`,
-                raw: `tick ${tick}`,
+                raw: `ticks ${batch.ticks[0]}-${batch.ticks[batch.ticks.length - 1]}`,
               },
             ]),
           };
@@ -573,32 +701,52 @@ export const useStudioStore = create<StudioState>((set, get) => {
     return loadedTickCount;
   };
 
-  const ensureLazyUrlTicksLoadedUpTo = async (targetTick: number): Promise<number> => {
+  const ensureLazyFileTicksLoadedUpTo = async (targetTick: number): Promise<number> => {
+    const start = get().lazySidecar;
+    if (!start || start.source.kind !== 'file') {
+      return 0;
+    }
+
+    return ensureLazyFileTicksLoaded(lazyTicksToHydrate(start.index, start.loadedTicks, start.pendingTicks, targetTick));
+  };
+
+  const ensureLazyFileTicksLoadedInRange = async (startTick: number, endTick: number): Promise<number> => {
+    const start = get().lazySidecar;
+    if (!start || start.source.kind !== 'file') {
+      return 0;
+    }
+
+    return ensureLazyFileTicksLoaded(
+      lazyTicksToHydrateInRange(start.index, start.loadedTicks, start.pendingTicks, startTick, endTick),
+    );
+  };
+
+  const ensureLazyUrlTicksLoaded = async (ticks: readonly number[]): Promise<number> => {
+    if (ticks.length === 0) {
+      return 0;
+    }
+
     const start = get().lazySidecar;
     if (!start || start.source.kind !== 'url') {
       return 0;
     }
 
-    const ticks = lazyTicksToHydrate(start.index, start.loadedTicks, start.pendingTicks, targetTick);
+    const batches = buildLazyHydrationBatches(start.index, ticks);
     let loadedTickCount = 0;
-    for (let index = 0; index < ticks.length; index += 1) {
-      const tick = ticks[index];
-      if (tick === undefined) {
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex += 1) {
+      const batch = batches[batchIndex];
+      if (!batch) {
         continue;
       }
-
       const beforeLoad = get().lazySidecar;
       if (!beforeLoad || beforeLoad.source.kind !== 'url') {
         return loadedTickCount;
       }
 
-      const entry = beforeLoad.index.tick_entries.find((candidate) => candidate.tick === tick);
-      if (!entry) {
-        continue;
-      }
-
       const pendingTicks = new Set(beforeLoad.pendingTicks);
-      pendingTicks.add(tick);
+      for (const tick of batch.ticks) {
+        pendingTicks.add(tick);
+      }
       set({
         lazySidecar: {
           ...beforeLoad,
@@ -607,9 +755,9 @@ export const useStudioStore = create<StudioState>((set, get) => {
       });
 
       try {
-        const range = await fetchUrlSliceText(beforeLoad.source.jsonlUrl, entry.byte_start, entry.byte_end);
+        const range = await fetchUrlSliceText(beforeLoad.source.jsonlUrl, batch.byteStart, batch.byteEnd);
         if (!range.partial) {
-          const remainingTicks = ticks.slice(index);
+          const remainingTicks = batches.slice(batchIndex).flatMap((entry) => entry.ticks);
           set((state) => {
             const currentLazy = state.lazySidecar;
             if (!currentLazy || currentLazy.source.kind !== 'url') {
@@ -617,7 +765,9 @@ export const useStudioStore = create<StudioState>((set, get) => {
             }
 
             const nextPending = new Set(currentLazy.pendingTicks);
-            nextPending.delete(tick);
+            for (const tick of remainingTicks) {
+              nextPending.delete(tick);
+            }
 
             const replay = state.replay ?? new ReplayStore();
             const nextLoaded = new Set(currentLazy.loadedTicks);
@@ -648,9 +798,10 @@ export const useStudioStore = create<StudioState>((set, get) => {
         }
 
         const parsed = parseJsonlEvents(range.text);
-        const tickEvents = parsed.events.filter((event) => event.tick === tick);
-        const shiftedErrors = shiftJsonlParseErrors(parsed.errors, entry.line_start - 1);
-        const loadedBytes = Math.max(0, entry.byte_end - entry.byte_start);
+        const tickSet = new Set(batch.ticks);
+        const tickEvents = parsed.events.filter((event) => typeof event.tick === 'number' && tickSet.has(event.tick));
+        const shiftedErrors = shiftJsonlParseErrors(parsed.errors, batch.lineStart - 1);
+        const loadedBytes = Math.max(0, batch.byteEnd - batch.byteStart);
 
         set((state) => {
           const currentLazy = state.lazySidecar;
@@ -659,9 +810,20 @@ export const useStudioStore = create<StudioState>((set, get) => {
           }
 
           const nextPending = new Set(currentLazy.pendingTicks);
-          nextPending.delete(tick);
+          for (const tick of batch.ticks) {
+            nextPending.delete(tick);
+          }
 
-          if (currentLazy.loadedTicks.has(tick)) {
+          const nextLoaded = new Set(currentLazy.loadedTicks);
+          let newlyLoaded = 0;
+          for (const tick of batch.ticks) {
+            if (!nextLoaded.has(tick)) {
+              nextLoaded.add(tick);
+              newlyLoaded += 1;
+            }
+          }
+
+          if (newlyLoaded === 0) {
             return {
               replaySourceBytes: Math.max(state.replaySourceBytes, range.sourceBytes),
               lazySidecar: {
@@ -671,9 +833,6 @@ export const useStudioStore = create<StudioState>((set, get) => {
               parseErrors: mergeParseErrors(state.parseErrors, shiftedErrors),
             };
           }
-
-          const nextLoaded = new Set(currentLazy.loadedTicks);
-          nextLoaded.add(tick);
 
           const replay = state.replay ?? new ReplayStore();
           if (tickEvents.length > 0) {
@@ -694,7 +853,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
             },
           };
         });
-        loadedTickCount += 1;
+        loadedTickCount += batch.ticks.length;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         set((state) => {
@@ -704,7 +863,9 @@ export const useStudioStore = create<StudioState>((set, get) => {
           }
 
           const nextPending = new Set(currentLazy.pendingTicks);
-          nextPending.delete(tick);
+          for (const tick of batch.ticks) {
+            nextPending.delete(tick);
+          }
           return {
             lazySidecar: {
               ...currentLazy,
@@ -712,9 +873,9 @@ export const useStudioStore = create<StudioState>((set, get) => {
             },
             parseErrors: mergeParseErrors(state.parseErrors, [
               {
-                line: entry.line_start,
+                line: batch.lineStart,
                 message: `lazy tick load failed: ${message}`,
-                raw: `tick ${tick}`,
+                raw: `ticks ${batch.ticks[0]}-${batch.ticks[batch.ticks.length - 1]}`,
               },
             ]),
           };
@@ -723,6 +884,26 @@ export const useStudioStore = create<StudioState>((set, get) => {
     }
 
     return loadedTickCount;
+  };
+
+  const ensureLazyUrlTicksLoadedUpTo = async (targetTick: number): Promise<number> => {
+    const start = get().lazySidecar;
+    if (!start || start.source.kind !== 'url') {
+      return 0;
+    }
+
+    return ensureLazyUrlTicksLoaded(lazyTicksToHydrate(start.index, start.loadedTicks, start.pendingTicks, targetTick));
+  };
+
+  const ensureLazyUrlTicksLoadedInRange = async (startTick: number, endTick: number): Promise<number> => {
+    const start = get().lazySidecar;
+    if (!start || start.source.kind !== 'url') {
+      return 0;
+    }
+
+    return ensureLazyUrlTicksLoaded(
+      lazyTicksToHydrateInRange(start.index, start.loadedTicks, start.pendingTicks, startTick, endTick),
+    );
   };
 
   return {
@@ -736,6 +917,8 @@ export const useStudioStore = create<StudioState>((set, get) => {
     replayLoadWarning: null,
     replaySourceBytes: 0,
     replaySourceKind: 'text',
+    replaySourceUrl: null,
+    replaySidecarUrl: null,
     replayLoadedBytesEstimate: 0,
     replaySeekStats: emptyReplaySeekStats(),
     replayMaxTick: 0,
@@ -750,7 +933,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
     liveLastEventUnixMs: null,
     liveHistory: [],
 
-    loadJsonl: (text, sidecarText = null, sourceBytes = 0, sourceKind = 'text') => {
+    loadJsonl: (text, sidecarText = null, sourceBytes = 0, sourceKind = 'text', sourceUrl = null, sidecarUrl = null) => {
       const effectiveSourceBytes = Math.max(sourceBytes, textByteLength(text));
       const hasSidecarText = Boolean(sidecarText && sidecarText.trim().length > 0);
       const prefersLazySidecar = effectiveSourceBytes >= LARGE_LOG_LAZY_THRESHOLD_BYTES && hasSidecarText;
@@ -768,6 +951,8 @@ export const useStudioStore = create<StudioState>((set, get) => {
               replayLoadWarning: 'large log lazy loading is active; sidecar ranges are parsed on tick demand.',
               replaySourceBytes: effectiveSourceBytes,
               replaySourceKind: sourceKind,
+              replaySourceUrl: sourceUrl,
+              replaySidecarUrl: sidecarUrl,
               replayLoadedBytesEstimate: lazy.loadedBytesEstimate,
               replaySeekStats: emptyReplaySeekStats(),
               replayMaxTick: index.max_tick,
@@ -810,6 +995,8 @@ export const useStudioStore = create<StudioState>((set, get) => {
         replayLoadWarning,
         replaySourceBytes: effectiveSourceBytes,
         replaySourceKind: sourceKind,
+        replaySourceUrl: sourceUrl,
+        replaySidecarUrl: sidecarUrl,
         replayLoadedBytesEstimate: effectiveSourceBytes,
         replaySeekStats: emptyReplaySeekStats(),
         replayMaxTick: result.sidecar.index_used ? result.sidecar.max_tick : Math.max(replay.maxTick, 0),
@@ -851,6 +1038,8 @@ export const useStudioStore = create<StudioState>((set, get) => {
               replayLoadWarning: 'large log lazy loading is active; sidecar ranges are parsed on tick demand.',
               replaySourceBytes: jsonlFile.size,
               replaySourceKind: 'file',
+              replaySourceUrl: null,
+              replaySidecarUrl: null,
               replayLoadedBytesEstimate: lazy.loadedBytesEstimate,
               replaySeekStats: emptyReplaySeekStats(),
               replayMaxTick: index.max_tick,
@@ -919,6 +1108,8 @@ export const useStudioStore = create<StudioState>((set, get) => {
                   replayLoadWarning: 'large log lazy loading is active; sidecar ranges are parsed on tick demand.',
                   replaySourceBytes: lazy.sourceBytes ?? estimatedSourceBytes,
                   replaySourceKind: 'url',
+                  replaySourceUrl: jsonlUrl,
+                  replaySidecarUrl: sidecarUrl,
                   replayLoadedBytesEstimate: lazy.loadedBytesEstimate,
                   replaySeekStats: emptyReplaySeekStats(),
                   replayMaxTick: index.max_tick,
@@ -939,7 +1130,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
                 return;
               } catch (error) {
                 if (error instanceof RangeFallbackToFullTextError) {
-                  get().loadJsonl(error.fullText, sidecarText, error.sourceBytes, 'url');
+                  get().loadJsonl(error.fullText, sidecarText, error.sourceBytes, 'url', jsonlUrl, sidecarUrl);
                   return;
                 }
               }
@@ -958,11 +1149,57 @@ export const useStudioStore = create<StudioState>((set, get) => {
         const sourceBytes =
           parseHeaderByteCount(jsonlResponse.headers.get('content-length')) ?? new TextEncoder().encode(text).byteLength;
 
-        get().loadJsonl(text, sidecarText, sourceBytes, 'url');
+        get().loadJsonl(text, sidecarText, sourceBytes, 'url', jsonlUrl, sidecarUrl);
       } catch (error) {
         set({ replayLoadProgress: null });
         throw error;
       }
+    },
+
+    hydrateTickWindow: async (centreTick, radius = LAZY_HYDRATION_WINDOW_RADIUS) => {
+      const state = get();
+      const lazy = state.lazySidecar;
+      if (!lazy) {
+        return;
+      }
+
+      const lower = Math.max(0, centreTick - radius);
+      const upper = Math.min(lazy.index.max_tick, centreTick + radius);
+      if (upper < lower) {
+        return;
+      }
+
+      if (lazy.source.kind === 'text') {
+        hydrateLazyTextTicks(lazyTicksToHydrateInRange(lazy.index, lazy.loadedTicks, lazy.pendingTicks, lower, upper));
+        return;
+      }
+
+      if (lazy.source.kind === 'file') {
+        await ensureLazyFileTicksLoadedInRange(lower, upper);
+        return;
+      }
+
+      await ensureLazyUrlTicksLoadedInRange(lower, upper);
+    },
+
+    hydrateAllLazyTicks: async () => {
+      const state = get();
+      const lazy = state.lazySidecar;
+      if (!lazy) {
+        return;
+      }
+
+      if (lazy.source.kind === 'text') {
+        hydrateLazyTextTicks(lazyTicksToHydrate(lazy.index, lazy.loadedTicks, lazy.pendingTicks, lazy.index.max_tick));
+        return;
+      }
+
+      if (lazy.source.kind === 'file') {
+        await ensureLazyFileTicksLoadedUpTo(lazy.index.max_tick);
+        return;
+      }
+
+      await ensureLazyUrlTicksLoadedUpTo(lazy.index.max_tick);
     },
 
     appendLiveEvents: (events) => {
@@ -1055,37 +1292,27 @@ export const useStudioStore = create<StudioState>((set, get) => {
         return;
       }
 
-      const ticksToHydrate = lazyTicksToHydrate(lazy.index, lazy.loadedTicks, lazy.pendingTicks, bounded);
+      const hydrateTarget = Math.min(lazy.index.max_tick, bounded + LAZY_HYDRATION_LOOKAHEAD_TICKS);
+      const ticksToHydrate = lazyTicksToHydrate(lazy.index, lazy.loadedTicks, lazy.pendingTicks, hydrateTarget);
       if (lazy.source.kind === 'text') {
-        const loadedTicks = new Set(lazy.loadedTicks);
-        const hydratedTicks = appendTickEventsFromText(replay, lazy.source.eventsText, lazy.index, ticksToHydrate);
-        for (const tickValue of hydratedTicks) {
-          loadedTicks.add(tickValue);
-        }
+        const hydratedTickCount = hydrateLazyTextTicks(ticksToHydrate);
 
         set({
-          replay,
-          eventCount: replay.getAllEvents().length,
           selectedTick: bounded,
-          selectedNodeId: state.selectedNodeId ?? replay.getFirstTreeNodeId(),
           replaySeekStats: recordReplaySeek(
             state.replaySeekStats,
             nowMs() - seekStartedAt,
             bounded,
-            hydratedTicks.size > 0 ? 'hydrated' : 'cached',
-            hydratedTicks.size,
+            hydratedTickCount > 0 ? 'hydrated' : 'cached',
+            hydratedTickCount,
           ),
-          lazySidecar: {
-            ...lazy,
-            loadedTicks,
-          },
         });
         return;
       }
 
       set({ selectedTick: bounded });
       if (lazy.source.kind === 'file') {
-        void ensureLazyFileTicksLoadedUpTo(bounded)
+        void ensureLazyFileTicksLoadedUpTo(hydrateTarget)
           .then((hydratedTickCount) => {
             set((current) => ({
               replaySeekStats: recordReplaySeek(
@@ -1105,7 +1332,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
         return;
       }
 
-      void ensureLazyUrlTicksLoadedUpTo(bounded)
+      void ensureLazyUrlTicksLoadedUpTo(hydrateTarget)
         .then((hydratedTickCount) => {
           set((current) => ({
             replaySeekStats: recordReplaySeek(

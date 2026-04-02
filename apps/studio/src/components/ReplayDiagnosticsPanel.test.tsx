@@ -16,6 +16,7 @@ describe('ReplayDiagnosticsPanel', () => {
         loadedBytesEstimate={2 * 1024 * 1024}
         loadedTickCount={64}
         knownTickCount={512}
+        loadedCoveragePercent={12.5}
         highestTick={511}
         pendingTickCount={3}
         loadWarning="large log lazy loading is active; sidecar ranges are parsed on tick demand."
@@ -28,13 +29,18 @@ describe('ReplayDiagnosticsPanel', () => {
           last_mode: 'hydrated',
           last_hydrated_ticks: 2,
         }}
+        onHydrateWindow={() => {}}
+        onHydrateAll={() => {}}
       />,
     );
 
     expect(markup).toContain('replay diagnostics');
     expect(markup).toContain('lazy indexed');
     expect(markup).toContain('local file');
+    expect(markup).toContain('13%');
     expect(markup).toContain('rough memory use');
+    expect(markup).toContain('hydrate nearby');
+    expect(markup).toContain('hydrate all');
     expect(markup).toContain('hydrated');
     expect(markup).toContain('large log lazy loading is active');
   });

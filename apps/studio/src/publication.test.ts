@@ -44,11 +44,13 @@ describe('publication helpers', () => {
     const readme = buildPublicationReadme(replay, summary, 3, '4', [
       'screenshots/studio-overview.png',
       'screenshots/run-summary.png',
+      'screenshots/compare-ticks-2-to-3.png',
     ]);
     expect(readme).toContain('fixture-studio-demo');
     expect(readme).toContain('events.sidecar.tick-index.v1.json');
     expect(readme).toContain('selected tick: 3');
     expect(readme).toContain('screenshots/run-summary.png');
+    expect(readme).toContain('screenshots/compare-ticks-2-to-3.png');
   });
 
   it('serialises replay events and bundle filenames consistently', () => {
@@ -58,5 +60,6 @@ describe('publication helpers', () => {
     expect(publicationBundleName(replay)).toBe('fixture-studio-demo-publication-bundle.zip');
     expect(captureFileName('hero', 3)).toBe('screenshots/studio-overview.png');
     expect(captureFileName('diff', 4)).toBe('screenshots/blackboard-diff-tick-4.png');
+    expect(captureFileName('compare', 3)).toBe('screenshots/compare-ticks-2-to-3.png');
   });
 });

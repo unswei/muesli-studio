@@ -18,6 +18,8 @@ function resetStore(): void {
     replayLoadWarning: null,
     replaySourceBytes: 0,
     replaySourceKind: 'text',
+    replaySourceUrl: null,
+    replaySidecarUrl: null,
     replayLoadedBytesEstimate: 0,
     replaySeekStats: {
       count: 0,
@@ -432,11 +434,109 @@ describe('studio live store behaviour', () => {
     expect(afterHydration.replay?.getTick(2).length).toBeGreaterThan(0);
     expect(afterHydration.replay?.getTick(3).length).toBeGreaterThan(0);
     expect(afterHydration.eventCount).toBe(8);
-    expect(rangeCalls).toHaveLength(4);
+    expect(rangeCalls).toHaveLength(3);
     expect(fullJsonlCalls).toHaveLength(0);
     expect(afterHydration.replayLoadedBytesEstimate).toBeGreaterThan(initial.replayLoadedBytesEstimate);
     expect(afterHydration.replaySeekStats.last_mode).toBe('hydrated');
     expect(afterHydration.replaySeekStats.last_hydrated_ticks).toBeGreaterThan(0);
+  });
+
+  it('hydrates the remaining lazy URL ticks on demand from diagnostics actions', async () => {
+    resetStore();
+
+    const largeDsl = `(bt (seq ${'(act padded) '.repeat(180_000)}))`;
+    const jsonl = [
+      '{"schema":"mbt.evt.v1","type":"run_start","run_id":"run-url-hydrate-all","unix_ms":1,"seq":1,"data":{"git_sha":"fixture","host":{"name":"studio","version":"0.1.0","platform":"test"},"tick_hz":20,"tree_hash":"fnv1a64:1","capabilities":{"reset":true}}}',
+      JSON.stringify({
+        schema: 'mbt.evt.v1',
+        type: 'bt_def',
+        run_id: 'run-url-hydrate-all',
+        unix_ms: 2,
+        seq: 2,
+        data: {
+          dsl: largeDsl,
+          nodes: [
+            { id: 1, kind: 'seq', name: 'root' },
+            { id: 2, kind: 'act', name: 'one' },
+            { id: 3, kind: 'act', name: 'two' },
+            { id: 4, kind: 'act', name: 'three' },
+          ],
+          edges: [
+            { parent: 1, child: 2, index: 0 },
+            { parent: 1, child: 3, index: 1 },
+            { parent: 1, child: 4, index: 2 },
+          ],
+        },
+      }),
+      '{"schema":"mbt.evt.v1","type":"tick_begin","run_id":"run-url-hydrate-all","unix_ms":3,"seq":3,"tick":1,"data":{}}',
+      '{"schema":"mbt.evt.v1","type":"tick_end","run_id":"run-url-hydrate-all","unix_ms":4,"seq":4,"tick":1,"data":{"root_status":"running","tick_ms":1.1}}',
+      '{"schema":"mbt.evt.v1","type":"tick_begin","run_id":"run-url-hydrate-all","unix_ms":5,"seq":5,"tick":2,"data":{}}',
+      '{"schema":"mbt.evt.v1","type":"tick_end","run_id":"run-url-hydrate-all","unix_ms":6,"seq":6,"tick":2,"data":{"root_status":"running","tick_ms":1.2}}',
+      '{"schema":"mbt.evt.v1","type":"tick_begin","run_id":"run-url-hydrate-all","unix_ms":7,"seq":7,"tick":3,"data":{}}',
+      '{"schema":"mbt.evt.v1","type":"tick_end","run_id":"run-url-hydrate-all","unix_ms":8,"seq":8,"tick":3,"data":{"root_status":"success","tick_ms":1.3}}',
+    ].join('\n');
+    const sidecar = buildTickSidecarIndex(jsonl, 'events.jsonl');
+
+    const jsonlUrl = '/demo/hydrate-all/events.jsonl';
+    const sidecarUrl = '/demo/hydrate-all/events.sidecar.tick-index.v1.json';
+    const rangeCalls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url === sidecarUrl) {
+          return new Response(JSON.stringify(sidecar), { status: 200 });
+        }
+
+        if (url !== jsonlUrl) {
+          throw new Error(`unexpected fetch URL: ${url}`);
+        }
+
+        const rangeHeader = new Headers(init?.headers).get('Range');
+        if (!rangeHeader) {
+          return new Response(jsonl, {
+            status: 200,
+            headers: {
+              'content-length': String(new TextEncoder().encode(jsonl).byteLength),
+            },
+          });
+        }
+
+        rangeCalls.push(rangeHeader);
+        const match = /^bytes=(\d+)-(\d+)$/.exec(rangeHeader);
+        if (!match) {
+          throw new Error(`unexpected range header: ${rangeHeader}`);
+        }
+
+        const byteStart = Number(match[1]);
+        const byteEndInclusive = Number(match[2]);
+        const chunk = utf8Slice(jsonl, byteStart, byteEndInclusive + 1);
+        return new Response(chunk, {
+          status: 206,
+          headers: {
+            'content-range': `bytes ${byteStart}-${byteEndInclusive}/${sidecar.tick_entries.at(-1)?.byte_end ?? 0}`,
+            'content-length': String(new TextEncoder().encode(chunk).byteLength),
+          },
+        });
+      }),
+    );
+
+    await useStudioStore.getState().loadJsonlFromUrl(jsonlUrl, sidecarUrl);
+    await useStudioStore.getState().hydrateAllLazyTicks();
+
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      if ((useStudioStore.getState().replay?.getTick(3).length ?? 0) > 0) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+
+    const state = useStudioStore.getState();
+    expect(state.replay?.getTick(2).length).toBeGreaterThan(0);
+    expect(state.replay?.getTick(3).length).toBeGreaterThan(0);
+    expect(state.eventCount).toBe(8);
+    expect(state.lazySidecar?.loadedTicks.size).toBe(3);
+    expect(rangeCalls).toHaveLength(3);
   });
 
   it('clears replay loading progress when demo URL load fails', async () => {

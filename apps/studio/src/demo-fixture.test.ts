@@ -52,6 +52,18 @@ describe('parseDemoFixtureQuery', () => {
     });
   });
 
+  it('accepts the compare capture mode', () => {
+    const parsed = parseDemoFixtureQuery('?demo_fixture=/demo/events.jsonl&demo_capture=compare');
+
+    expect(parsed).toEqual({
+      jsonlPath: '/demo/events.jsonl',
+      sidecarPath: null,
+      selectedTick: null,
+      selectedNodeId: null,
+      captureMode: 'compare',
+    });
+  });
+
   it('ignores invalid capture-state query parameters', () => {
     const parsed = parseDemoFixtureQuery('?demo_fixture=/demo/events.jsonl&demo_tick=-1&demo_node=%20&demo_capture=tree');
     expect(parsed).toEqual({

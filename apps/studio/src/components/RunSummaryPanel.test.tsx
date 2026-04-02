@@ -41,5 +41,8 @@ describe('RunSummaryPanel', () => {
     expect(markup).toContain('planner calls');
     expect(markup).toContain('budget warnings');
     expect(markup).toContain('node status');
+    expect(markup).toContain('attention before scrubbing');
+    expect(markup).toContain('unusual event families');
+    expect(markup).toContain('bb delete');
   });
 });

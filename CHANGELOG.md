@@ -4,7 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-No unreleased changes yet.
+### added
+
+- added URL-stable replay deep links for URL-backed runs and canonical demo sessions, preserving the selected tick, node, and presentation view in the browser query.
+- added a timeline event explorer with text search, event-family filters, and jump-to-tick actions across replay and live sessions.
+- added one-click jump controls for the first failure, timeout, cancellation, planner activity, VLA activity, and blackboard change in the timeline event explorer.
+- added keyboard-first replay inspection shortcuts for tick navigation, panel switching, and event-search jump flows.
+- tightened run-summary surfacing so warning signals and unusual event families are obvious before scrubbing.
+- improved large-run lazy hydration with grouped range loads, scrub lookahead, and diagnostics-panel preload controls.
+- refined planner and scheduler surfacing into a dedicated panel with one shared tick-activity chart language and compact selected-tick summaries.
+- added aligned compare mode with baseline tick selection, divergence surfacing, and compare captures in presentation export.
+- added detached release-artefact signatures plus signature-aware bundle verification for published archives.
+
+### changed
+
+- replay mode now clears stale sharable query state after local file loads so copied URLs only represent reopenable sessions.
+- publication bundle export now includes the compare capture alongside overview, summary, and diff screenshots.
 
 ## [0.2.0] - 2026-03-21
 

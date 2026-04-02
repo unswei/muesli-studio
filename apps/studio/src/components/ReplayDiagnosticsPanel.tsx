@@ -10,10 +10,13 @@ interface ReplayDiagnosticsPanelProps {
   loadedBytesEstimate: number;
   loadedTickCount: number;
   knownTickCount: number;
+  loadedCoveragePercent: number;
   highestTick: number;
   pendingTickCount: number;
   loadWarning: string | null;
   seekStats: ReplaySeekStats;
+  onHydrateWindow: (() => void) | null;
+  onHydrateAll: (() => void) | null;
 }
 
 const ESTIMATED_EVENT_MEMORY_BYTES = 320;
@@ -92,16 +95,20 @@ export function ReplayDiagnosticsPanel({
   loadedBytesEstimate,
   loadedTickCount,
   knownTickCount,
+  loadedCoveragePercent,
   highestTick,
   pendingTickCount,
   loadWarning,
   seekStats,
+  onHydrateWindow,
+  onHydrateAll,
 }: ReplayDiagnosticsPanelProps) {
   const replayMode = replayModeLabel(replayIndexed, lazyActive);
   const roughMemoryBytes = loadedBytesEstimate + eventCount * ESTIMATED_EVENT_MEMORY_BYTES;
+  const canHydrateMore = lazyActive && loadedTickCount < knownTickCount;
 
   return (
-    <section id="replay-diagnostics-panel" className="panel detail-panel replay-diagnostics-panel">
+    <section id="replay-diagnostics-panel" tabIndex={-1} className="panel detail-panel replay-diagnostics-panel keyboard-panel-target">
       <div className="panel-heading">
         <div>
           <p className="panel-kicker">replay diagnostics</p>
@@ -185,6 +192,41 @@ export function ReplayDiagnosticsPanel({
         </section>
 
         <section className="summary-section">
+          <h3>hydration</h3>
+          <dl className="summary-definition-list">
+            <div>
+              <dt>coverage</dt>
+              <dd>{loadedCoveragePercent.toFixed(0)}%</dd>
+            </div>
+            <div>
+              <dt>loaded ticks</dt>
+              <dd>
+                {loadedTickCount.toLocaleString()} / {knownTickCount.toLocaleString()}
+              </dd>
+            </div>
+            <div>
+              <dt>pending work</dt>
+              <dd>{pendingTickCount > 0 ? `${pendingTickCount.toLocaleString()} ticks queued` : 'idle'}</dd>
+            </div>
+          </dl>
+          {lazyActive ? (
+            <>
+              <div className="progress-track" aria-hidden="true">
+                <div className="progress-fill" style={{ width: `${loadedCoveragePercent}%` }} />
+              </div>
+              <div className="button-row diagnostics-actions">
+                <button type="button" className="button-ghost" onClick={onHydrateWindow ?? undefined} disabled={!canHydrateMore || pendingTickCount > 0}>
+                  hydrate nearby
+                </button>
+                <button type="button" className="button-primary" onClick={onHydrateAll ?? undefined} disabled={!canHydrateMore || pendingTickCount > 0}>
+                  hydrate all
+                </button>
+              </div>
+            </>
+          ) : null}
+        </section>
+
+        <section className="summary-section">
           <h3>range state</h3>
           <dl className="summary-definition-list">
             <div>
@@ -210,6 +252,11 @@ export function ReplayDiagnosticsPanel({
             Rough memory is heuristic only: loaded replay bytes plus a fixed per-event allowance. It is not a browser heap reading.
           </p>
         </div>
+        {lazyActive ? (
+          <p className="panel-empty-copy muted">
+            Lazy indexed replays now hydrate in grouped byte ranges rather than one tick slice at a time, and `hydrate nearby` preloads a window around the current tick.
+          </p>
+        ) : null}
         {loadWarning ? <p className="diagnostics-note diagnostics-note--warning">{loadWarning}</p> : null}
       </section>
     </section>

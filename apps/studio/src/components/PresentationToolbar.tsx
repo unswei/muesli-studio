@@ -17,6 +17,7 @@ const layoutLabels: Record<PresentationLayout, string> = {
   summary: 'summary',
   node: 'node',
   diff: 'diff',
+  compare: 'compare',
   dsl: 'dsl',
 };
 

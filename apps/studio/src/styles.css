@@ -282,6 +282,11 @@ code {
   box-shadow: var(--shadow-subtle);
 }
 
+.keyboard-panel-target:focus {
+  outline: 2px solid rgba(15, 108, 136, 0.28);
+  outline-offset: 3px;
+}
+
 .panel-heading {
   display: flex;
   justify-content: space-between;
@@ -414,6 +419,93 @@ code {
   color: var(--subtle);
 }
 
+.event-explorer-panel {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.95rem;
+}
+
+.event-search-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.event-search-field span {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--subtle);
+}
+
+.event-search-field input {
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: #fbfdfe;
+  color: var(--text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.event-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.event-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.event-filter-chip span {
+  font-size: 0.76rem;
+  opacity: 0.85;
+}
+
+.jump-targets-section {
+  gap: 0.8rem;
+}
+
+.jump-target-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.jump-target-button {
+  display: grid;
+  gap: 0.2rem;
+  justify-items: start;
+  min-width: 0;
+  padding: 0.75rem 0.85rem;
+  border-radius: 1rem;
+}
+
+.jump-target-button--empty {
+  opacity: 0.75;
+}
+
+.jump-target-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.jump-target-value {
+  font-size: 0.88rem;
+  color: var(--muted-strong);
+}
+
+.event-match-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
 .tree-panel {
   min-height: 28rem;
 }
@@ -509,6 +601,16 @@ code {
   gap: 1rem;
 }
 
+.planner-scheduler-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.compare-panel {
+  display: grid;
+  gap: 1rem;
+}
+
 .replay-diagnostics-panel {
   display: grid;
   gap: 1rem;
@@ -567,6 +669,81 @@ code {
 .summary-section-heading {
   display: grid;
   gap: 0.35rem;
+}
+
+.summary-alert-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.summary-alert-card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.95rem;
+  border-radius: 1rem;
+  border: 1px solid #e1e8ef;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.summary-alert-card--warning {
+  border-color: rgba(168, 111, 19, 0.25);
+  background: rgba(255, 244, 223, 0.88);
+}
+
+.summary-alert-card--notice {
+  border-color: rgba(15, 108, 136, 0.18);
+  background: rgba(239, 247, 250, 0.88);
+}
+
+.summary-alert-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.summary-alert-heading h4 {
+  margin: 0;
+  font-size: 0.88rem;
+  letter-spacing: -0.01em;
+}
+
+.summary-chip-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.summary-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.5rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid #dde7ef;
+  background: rgba(255, 255, 255, 0.78);
+  font-size: 0.82rem;
+  line-height: 1.25;
+}
+
+.summary-chip strong {
+  font-size: 0.84rem;
+  letter-spacing: -0.01em;
+}
+
+.summary-chip--warning {
+  border-color: rgba(168, 111, 19, 0.25);
+  color: #7f5312;
+}
+
+.summary-chip--notice {
+  border-color: rgba(15, 108, 136, 0.18);
+  color: #0f5d74;
 }
 
 .summary-definition-list {
@@ -634,6 +811,130 @@ code {
 .event-family-pill strong {
   font-size: 0.88rem;
   letter-spacing: -0.01em;
+}
+
+.planner-activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.planner-activity-item {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 1rem;
+  border: 1px solid #e0e7ee;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.planner-activity-tick {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.planner-activity-meters {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.planner-activity-lane {
+  display: grid;
+  grid-template-columns: 4.8rem minmax(0, 1fr);
+  gap: 0.45rem 0.75rem;
+  align-items: center;
+}
+
+.planner-activity-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--subtle);
+}
+
+.planner-activity-track {
+  position: relative;
+  height: 0.52rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #e6edf3;
+}
+
+.planner-activity-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.planner-activity-fill--planner {
+  background: linear-gradient(90deg, #0f6c88, #3d8da4);
+}
+
+.planner-activity-fill--scheduler {
+  background: linear-gradient(90deg, #75889b, #a2b2c2);
+}
+
+.planner-activity-copy {
+  grid-column: 2;
+  font-size: 0.84rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.compare-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.compare-list-item {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 1rem;
+  border: 1px solid #e0e7ee;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.compare-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.compare-list-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.compare-state {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.7rem 0.75rem;
+  border-radius: 0.9rem;
+  border: 1px solid #e0e7ee;
+  background: rgba(247, 250, 252, 0.9);
+}
+
+.compare-state--selected {
+  border-color: rgba(168, 111, 19, 0.24);
+  background: rgba(255, 246, 229, 0.92);
+}
+
+.compare-state-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--subtle);
 }
 
 .split-panel {
@@ -1021,8 +1322,10 @@ button:disabled {
 
   .metric-grid,
   .detail-summary-grid,
+  .summary-alert-grid,
   .summary-section-grid,
   .presentation-layout-grid,
+  .jump-target-grid,
   .event-family-grid,
   .empty-action-grid,
   .workspace-sidebar,

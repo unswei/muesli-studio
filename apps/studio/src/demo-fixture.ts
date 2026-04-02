@@ -6,7 +6,7 @@ export interface DemoFixtureQuery {
   captureMode: DemoCaptureMode | null;
 }
 
-export type DemoCaptureMode = 'overview' | 'hero' | 'summary' | 'node' | 'diff' | 'dsl';
+export type DemoCaptureMode = 'overview' | 'hero' | 'summary' | 'node' | 'diff' | 'compare' | 'dsl';
 
 export const canonicalDemoFixture = Object.freeze({
   fixtureName: 'studio_demo',
@@ -74,6 +74,7 @@ function sanitiseCaptureMode(value: string | null): DemoCaptureMode | null {
     trimmed === 'summary' ||
     trimmed === 'node' ||
     trimmed === 'diff' ||
+    trimmed === 'compare' ||
     trimmed === 'dsl'
   ) {
     return trimmed;

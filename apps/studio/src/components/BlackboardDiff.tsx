@@ -9,7 +9,7 @@ export function BlackboardDiff({ replay, tick }: BlackboardDiffProps) {
   const diff = replay.getBlackboardDiff(tick);
 
   return (
-    <div id="blackboard-diff" className="panel split-panel detail-panel">
+    <div id="blackboard-diff" tabIndex={-1} className="panel split-panel detail-panel keyboard-panel-target">
       <div className="panel-heading">
         <div>
           <p className="panel-kicker">selected tick</p>

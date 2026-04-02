@@ -32,11 +32,11 @@ Open a recorded run, scrub through ticks, and inspect behaviour tree execution o
 
 ### inspect state
 
-See the run summary first, inspect node statuses, examine blackboard diffs, and check exactly what changed at the selected tick.
+See the run summary first, inspect node statuses, examine blackboard diffs, compare one tick against another, and check exactly what changed at the selected tick.
 
 ### capture and share
 
-Switch into presentation mode, export clean PNG or SVG figures, and write a compact publication bundle with replay data, summary metadata, and screenshots.
+Switch into presentation mode, export clean PNG or SVG figures, and write a compact publication bundle with replay data, summary metadata, and overview, summary, diff, and compare screenshots.
 
 ### follow live
 
@@ -74,6 +74,12 @@ Blackboard diff at the selected tick:
 
 *Blackboard diff for the selected tick.*
 
+Compare mode:
+
+![compare panel](docs/images/studio-compare-panel.png)
+
+*Aligned tick comparison for divergence, planner and scheduler deltas, and blackboard changes.*
+
 Refresh the README screenshots with:
 
 ```bash
@@ -87,6 +93,7 @@ Tagged releases matching `v*` publish these artefacts:
 - source (`.tar.gz` and `.zip`)
 - Linux Intel binary bundle
 - macOS Apple Silicon binary bundle
+- detached ASCII-armoured signatures (`.asc`) for every published archive
 
 Latest tagged release: `v0.2.0`.
 
@@ -108,9 +115,11 @@ Verify a downloaded archive before launching it:
 
 ```bash
 shasum -a 256 -c muesli-studio-<version>-<target>.tar.gz.sha256
+gpg --verify muesli-studio-<version>-<target>.tar.gz.asc \
+  muesli-studio-<version>-<target>.tar.gz
 ```
 
-The release bundle also includes `RELEASE.md` with the packaged target, version, compatibility line, and launch reminder.
+The release bundle also includes `RELEASE.md` with the packaged target, version, compatibility line, launch reminder, and verification hints.
 
 ## documentation
 
@@ -179,14 +188,16 @@ Replay mode now includes a first-class run summary panel for versions, tree iden
 
 Replay mode also includes an in-app diagnostics panel for large-log replay mode, recent seek latency, and rough replay memory use.
 
-Replay mode also includes a first-class presentation flow in the right rail. Use it to open clean overview, summary, node, diff, or DSL layouts, then export PNG, SVG, or a zipped publication bundle.
+Replay mode also includes a compare panel for aligned baseline-versus-selected tick review, with divergence, blackboard, and planner/scheduler deltas held in one place.
+
+Replay mode also includes a first-class presentation flow in the right rail. Use it to open clean overview, summary, node, diff, compare, or DSL layouts, then export PNG, SVG, or a zipped publication bundle.
 
 The demo launcher uses URL query auto-load:
 
 - `demo_fixture=/demo/<fixture>/events.jsonl`
 - optional `demo_sidecar=/demo/<fixture>/events.sidecar.tick-index.v1.json`
 - optional `demo_tick=<n>` and `demo_node=<id>` for deterministic screenshot or demo state selection
-- optional `demo_capture=hero|summary|node|diff|dsl` for deterministic README and panel capture views
+- optional `demo_capture=hero|summary|node|diff|compare|dsl` for deterministic README and panel capture views
 
 Canonical repo demo state:
 

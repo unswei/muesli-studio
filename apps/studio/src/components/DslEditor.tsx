@@ -116,7 +116,7 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
   };
 
   return (
-    <div id="dsl-editor-panel" className="panel split-panel detail-panel detail-panel--editor">
+    <div id="dsl-editor-panel" tabIndex={-1} className="panel split-panel detail-panel detail-panel--editor keyboard-panel-target">
       <div className="panel-heading">
         <div>
           <p className="panel-kicker">tree authoring</p>

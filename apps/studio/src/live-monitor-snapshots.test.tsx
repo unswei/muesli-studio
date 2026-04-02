@@ -19,6 +19,8 @@ function resetStoreState(): void {
     replayLoadWarning: null,
     replaySourceBytes: 0,
     replaySourceKind: 'text',
+    replaySourceUrl: null,
+    replaySidecarUrl: null,
     replayLoadedBytesEstimate: 0,
     replaySeekStats: {
       count: 0,

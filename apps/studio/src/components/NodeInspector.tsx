@@ -31,7 +31,7 @@ function nodeLabelFromReplay(replay: ReplayStore, nodeId: string): string {
 export function NodeInspector({ replay, selectedNodeId, tick }: NodeInspectorProps) {
   if (!selectedNodeId) {
     return (
-      <div id="node-inspector-panel" className="panel split-panel detail-panel">
+      <div id="node-inspector-panel" tabIndex={-1} className="panel split-panel detail-panel keyboard-panel-target">
         <div className="panel-heading">
           <div>
             <p className="panel-kicker">selected node</p>
@@ -48,7 +48,7 @@ export function NodeInspector({ replay, selectedNodeId, tick }: NodeInspectorPro
   const nodeLabel = nodeLabelFromReplay(replay, selectedNodeId);
 
   return (
-    <div id="node-inspector-panel" className="panel split-panel detail-panel">
+    <div id="node-inspector-panel" tabIndex={-1} className="panel split-panel detail-panel keyboard-panel-target">
       <div className="panel-heading">
         <div>
           <p className="panel-kicker">selected node</p>

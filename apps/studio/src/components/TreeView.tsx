@@ -183,7 +183,7 @@ export function TreeView({ replay, selectedTick, selectedNodeId, onSelectNode }:
 
   if (!btDef) {
     return (
-      <div className="panel tree-panel tree-panel--empty">
+      <div id="tree-panel" tabIndex={-1} className="panel tree-panel tree-panel--empty keyboard-panel-target">
         <div className="empty-tree-state">
           <p className="panel-kicker">inspection tree</p>
           <h2>behaviour tree</h2>
@@ -194,7 +194,7 @@ export function TreeView({ replay, selectedTick, selectedNodeId, onSelectNode }:
   }
 
   return (
-    <div className="panel tree-panel focal-panel">
+    <div id="tree-panel" tabIndex={-1} className="panel tree-panel focal-panel keyboard-panel-target">
       <div className="panel-heading panel-heading--tree">
         <div>
           <p className="panel-kicker">inspection tree</p>
