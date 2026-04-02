@@ -95,6 +95,8 @@ Tagged releases matching `v*` publish these artefacts:
 - macOS Apple Silicon binary bundle
 - detached ASCII-armoured signatures (`.asc`) for every published archive
 
+Current release branch: `release/v0.3.0`.
+
 Latest tagged release: `v0.2.0`.
 
 See [GitHub releases](https://github.com/unswei/muesli-studio/releases) and [release targets](docs/studio/release-targets.md) for workflow and asset naming.

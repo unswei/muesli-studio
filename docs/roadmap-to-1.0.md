@@ -2,13 +2,13 @@
 
 ## purpose
 
-This document sets a roadmap for `muesli-studio` from the shipped `v0.2.0` baseline onward.
+This document sets a roadmap for `muesli-studio` from the `v0.3.0` release-branch baseline onward.
 
 The goal is not to turn `muesli-studio` into a generic robotics IDE. The goal is to make it the best possible inspector and controlled authoring surface for `muesli-bt` runs.
 
 ## where we are now
 
-As of the `v0.2.0` line, `muesli-studio` already has a serious base:
+As of the `release/v0.3.0` branch, `muesli-studio` already has a serious base:
 
 - replay-first inspection with tree rendering and a tick scrubber
 - blackboard diffs and node inspection
@@ -108,7 +108,9 @@ Minimal. Editing remains present, but this release is not about broadening editi
 
 ---
 
-## v0.3 - debugging and navigation release
+## v0.3 - debugging and navigation release (release branch cut)
+
+Status: release branch cut on 2026-04-03.
 
 ### theme
 
