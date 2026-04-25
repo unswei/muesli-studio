@@ -42,6 +42,7 @@ function resetStoreState(): void {
     liveLastError: null,
     liveLastEventUnixMs: null,
     liveHistory: [],
+    livePinned: null,
   });
 }
 

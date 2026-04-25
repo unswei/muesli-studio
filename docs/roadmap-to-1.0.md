@@ -160,6 +160,8 @@ Broad authoring work stays out.
 
 ## v0.4 - unified live and replay release
 
+Status: shipped on 2026-04-25.
+
 ### theme
 
 Make live monitoring and replay feel like one workflow.
@@ -181,6 +183,10 @@ This is one of the strongest ideas already latent in the stack. `muesli-bt` expo
 - reopen captured sessions with the same panels and navigation model used for files
 - clearer connection status, buffering, dropped-event warnings, and reconnect history
 - better “follow live” versus “inspect at this moment” controls
+
+### shipped result
+
+`v0.4.0` implements pinned live inspection, live capture bundle export, replay-bundle reopening from `open replay`, and a clearer live status panel for follow mode, pinned inspection, buffering, dropped payloads, and reconnect attempts.
 
 ### editing scope in this release
 

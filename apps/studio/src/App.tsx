@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom';
 import { toBlob, toSvg } from 'html-to-image';
 import JSZip from 'jszip';
 
-import { buildTickSidecarIndex, summariseRun, type RunEventRecord } from '@muesli/replay';
+import { buildTickSidecarIndex, ReplayStore, summariseRun, type RunEventRecord } from '@muesli/replay';
 
 import { BlackboardDiff } from './components/BlackboardDiff';
 import { ComparePanel } from './components/ComparePanel';
@@ -21,9 +21,12 @@ import { RunSummaryPanel } from './components/RunSummaryPanel';
 import { TreeView } from './components/TreeView';
 import { canonicalDemoFixture, parseDemoFixtureQuery } from './demo-fixture';
 import {
+  buildLiveCaptureManifest,
+  buildLiveCaptureReadme,
   buildPublicationManifest,
   buildPublicationReadme,
   captureFileName,
+  liveCaptureBundleName,
   publicationBundleName,
   type PresentationLayout,
   serialiseReplayEvents,
@@ -136,6 +139,26 @@ function captureDownloadName(layout: PresentationLayout, selectedTick: number, f
   return format === 'png' ? baseName : baseName.replace(/\.png$/u, '.svg');
 }
 
+export function isReplayBundleFile(file: File): boolean {
+  return file.name.toLowerCase().endsWith('.zip') || file.type === 'application/zip' || file.type === 'application/x-zip-compressed';
+}
+
+export async function readReplayBundle(file: File): Promise<{ eventsText: string; sidecarText: string | null }> {
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
+  const eventsEntry = zip.file('events.jsonl') ?? zip.file(/(^|\/)events\.jsonl$/u)[0] ?? null;
+  if (!eventsEntry) {
+    throw new Error('bundle does not contain events.jsonl');
+  }
+
+  const sidecarEntry =
+    zip.file('events.sidecar.tick-index.v1.json') ?? zip.file(/(^|\/)events\.sidecar\.tick-index\.v1\.json$/u)[0] ?? null;
+
+  return {
+    eventsText: await eventsEntry.async('string'),
+    sidecarText: sidecarEntry ? await sidecarEntry.async('string') : null,
+  };
+}
+
 export function App() {
   const replay = useStudioStore((state) => state.replay);
   const eventCount = useStudioStore((state) => state.eventCount);
@@ -162,6 +185,8 @@ export function App() {
   const liveLastError = useStudioStore((state) => state.liveLastError);
   const liveLastEventUnixMs = useStudioStore((state) => state.liveLastEventUnixMs);
   const liveHistory = useStudioStore((state) => state.liveHistory);
+  const livePinned = useStudioStore((state) => state.livePinned);
+  const loadJsonl = useStudioStore((state) => state.loadJsonl);
   const loadJsonlFromFiles = useStudioStore((state) => state.loadJsonlFromFiles);
   const loadJsonlFromUrl = useStudioStore((state) => state.loadJsonlFromUrl);
   const appendLiveEvents = useStudioStore((state) => state.appendLiveEvents);
@@ -171,6 +196,8 @@ export function App() {
   const setLiveStatus = useStudioStore((state) => state.setLiveStatus);
   const setLiveAutoFollow = useStudioStore((state) => state.setLiveAutoFollow);
   const setLiveReconnectEnabled = useStudioStore((state) => state.setLiveReconnectEnabled);
+  const pinLiveInspection = useStudioStore((state) => state.pinLiveInspection);
+  const resumeLiveInspection = useStudioStore((state) => state.resumeLiveInspection);
   const applyCompiledTree = useStudioStore((state) => state.applyCompiledTree);
   const resetCompiledTree = useStudioStore((state) => state.resetCompiledTree);
   const hydrateTickWindow = useStudioStore((state) => state.hydrateTickWindow);
@@ -183,6 +210,9 @@ export function App() {
   const [presentationBusy, setPresentationBusy] = useState(false);
   const [presentationStatusMessage, setPresentationStatusMessage] = useState<string | null>(null);
   const [presentationErrorMessage, setPresentationErrorMessage] = useState<string | null>(null);
+  const [liveCaptureBusy, setLiveCaptureBusy] = useState(false);
+  const [liveCaptureStatusMessage, setLiveCaptureStatusMessage] = useState<string | null>(null);
+  const [liveCaptureErrorMessage, setLiveCaptureErrorMessage] = useState<string | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -204,6 +234,23 @@ export function App() {
 
     return parseReplayLinkQuery(window.location.search);
   }, []);
+  const livePayloadDropCount = useMemo(
+    () => parseErrors.filter((error) => error.message.startsWith('live payload:')).length,
+    [parseErrors],
+  );
+  const liveReconnectAttempts = useMemo(
+    () => liveHistory.filter((entry) => /^Retry \d+ in \d+ms$/u.test(entry.message)).length,
+    [liveHistory],
+  );
+  const liveUnexpectedCloseCount = useMemo(
+    () => liveHistory.filter((entry) => entry.level === 'warning' && entry.message.startsWith('connection closed:')).length,
+    [liveHistory],
+  );
+  const liveLatestReconnect = useMemo(
+    () => [...liveHistory].reverse().find((entry) => /^Retry \d+ in \d+ms$/u.test(entry.message))?.message ?? null,
+    [liveHistory],
+  );
+  const liveViewModeLabel = livePinned ? 'inspect pinned tick' : liveAutoFollow ? 'follow newest tick' : 'inspect selected tick';
   const inspectionStateQuery = useMemo(() => {
     if (typeof window === 'undefined') {
       return { selectedTick: null, selectedNodeId: null, view: null };
@@ -234,6 +281,7 @@ export function App() {
     return [
       { label: 'run', value: replay.runStart?.run_id ?? 'unknown' },
       { label: 'mode', value: mode === 'live' ? 'live session' : 'replay' },
+      ...(mode === 'live' ? [{ label: 'live view', value: livePinned ? 'pinned' : liveAutoFollow ? 'following' : 'manual' }] : []),
       { label: 'loading', value: replayIndexed ? 'quick access' : 'standard' },
       { label: 'events', value: eventCount.toLocaleString() },
       { label: 'ticks', value: tickCount.toLocaleString() },
@@ -242,7 +290,7 @@ export function App() {
         value: treeSummary ? `${treeSummary.nodeCount} nodes / ${treeSummary.edgeCount} edges` : 'unavailable',
       },
     ];
-  }, [eventCount, mode, replay, replayIndexed, tickCount, treeSummary]);
+  }, [eventCount, liveAutoFollow, livePinned, mode, replay, replayIndexed, tickCount, treeSummary]);
   const replaySummary = useMemo(() => {
     if (!replay) {
       return null;
@@ -558,13 +606,89 @@ export function App() {
     setPresentationLayoutAndWait,
   ]);
 
+  const exportLiveCaptureBundle = useCallback(async () => {
+    if (!replay) {
+      return;
+    }
+
+    setLiveCaptureBusy(true);
+    setLiveCaptureStatusMessage('preparing live capture bundle…');
+    setLiveCaptureErrorMessage(null);
+
+    try {
+      const exportReplay = new ReplayStore();
+      exportReplay.appendMany([...replay.getAllEvents()]);
+      if (livePinned?.bufferedEvents.length) {
+        exportReplay.appendMany(livePinned.bufferedEvents);
+      }
+
+      const exportedAtUtc = new Date().toISOString();
+      const eventsText = serialiseReplayEvents(exportReplay);
+      const sidecarIndex = buildTickSidecarIndex(eventsText, 'events.jsonl');
+      const runStartData = exportReplay.runStart?.data as Record<string, unknown> | undefined;
+      const contractVersion =
+        typeof runStartData?.contract_version === 'string' ? runStartData.contract_version : undefined;
+      const bundleSummary = summariseRun(exportReplay.getAllEvents() as readonly RunEventRecord[], {
+        contractVersion,
+        schemaVersion: exportReplay.runStart?.schema ?? exportReplay.btDef?.schema,
+      });
+      const manifest = buildLiveCaptureManifest(exportReplay, bundleSummary, selectedTick, selectedNodeId, exportedAtUtc);
+      const readmeText = buildLiveCaptureReadme(exportReplay, bundleSummary, selectedTick, selectedNodeId);
+      const bundleName = liveCaptureBundleName(exportReplay);
+
+      const zip = new JSZip();
+      zip.file('events.jsonl', eventsText);
+      zip.file('events.sidecar.tick-index.v1.json', JSON.stringify(sidecarIndex, null, 2));
+      zip.file('manifest.json', JSON.stringify(manifest, null, 2));
+      zip.file('run_summary.json', JSON.stringify(bundleSummary, null, 2));
+      zip.file('README.md', readmeText);
+
+      setLiveCaptureStatusMessage('writing live capture bundle…');
+      const bundleBlob = await zip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 },
+      });
+      const saveMode = await saveBlobToDisk(bundleBlob, {
+        suggestedName: bundleName,
+        description: 'ZIP archive',
+        mimeType: 'application/zip',
+        extensions: ['.zip'],
+      });
+      setLiveCaptureStatusMessage(
+        `live capture saved as ${bundleName}${saveMode === 'download' ? ' via browser download' : ''}.`,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setLiveCaptureStatusMessage(null);
+      setLiveCaptureErrorMessage(message);
+    } finally {
+      setLiveCaptureBusy(false);
+    }
+  }, [livePinned, replay, selectedNodeId, selectedTick]);
+
   const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
       return;
     }
 
-    await loadJsonlFromFiles(file, sidecarFile);
+    try {
+      if (isReplayBundleFile(file)) {
+        const bundle = await readReplayBundle(file);
+        loadJsonl(bundle.eventsText, bundle.sidecarText, file.size, 'file');
+        return;
+      }
+
+      await loadJsonlFromFiles(file, sidecarFile);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      addParseError({
+        line: 0,
+        message: `replay load failed: ${message}`,
+        raw: file.name,
+      });
+    }
   };
 
   const onSidecarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -634,6 +758,17 @@ export function App() {
 
     initialSelectionRef.current = true;
   }, [demoQuery, inspectionStateQuery, replay, setSelectedNodeId, setSelectedTick]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.location.hash.length <= 1) {
+      return;
+    }
+
+    const targetId = window.location.hash.slice(1);
+    requestAnimationFrame(() => {
+      document.getElementById(targetId)?.scrollIntoView({ block: 'start', inline: 'nearest' });
+    });
+  }, [eventCount, replay]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || captureMode !== null || !replay || mode !== 'replay') {
@@ -955,8 +1090,8 @@ export function App() {
         <div className="topbar-actions">
           <label className="file-input">
             <span>open replay</span>
-            <small>choose a run file</small>
-            <input type="file" accept=".jsonl,application/json,text/plain" onChange={onFileChange} />
+            <small>choose JSONL or bundle</small>
+            <input type="file" accept=".jsonl,.zip,application/json,application/zip,text/plain" onChange={onFileChange} />
           </label>
           <label className="file-input">
             <span>open index</span>
@@ -981,7 +1116,7 @@ export function App() {
                     {replayIndexed ? 'quick access' : 'standard loading'}
                   </span>
                   <span className="status-badge status-badge--subtle">
-                    {mode === 'live' ? (liveAutoFollow ? 'live auto-follow' : 'live manual') : 'manual scrub'}
+                    {mode === 'live' ? (livePinned ? 'live pinned' : liveAutoFollow ? 'live auto-follow' : 'live manual') : 'manual scrub'}
                   </span>
                 </div>
               </div>
@@ -998,6 +1133,12 @@ export function App() {
               {isCanonicalDemoReplay ? (
                 <p className="notice-inline notice-inline--info">
                   The sample run opens at a useful moment so you can start inspecting straight away.
+                </p>
+              ) : null}
+              {mode === 'live' && livePinned ? (
+                <p className="notice-inline notice-inline--info">
+                  Live inspection is pinned at tick {livePinned.pinnedAtTick}. {livePinned.bufferedEvents.length.toLocaleString()} buffered event(s)
+                  will join the run when you resume live.
                 </p>
               ) : null}
 
@@ -1244,9 +1385,86 @@ export function App() {
                 </button>
               </div>
 
+              <div className="live-state-grid" aria-label="live session state">
+                <div className="live-state-item">
+                  <span className="live-state-label">view</span>
+                  <strong>{liveViewModeLabel}</strong>
+                </div>
+                <div className="live-state-item">
+                  <span className="live-state-label">buffer</span>
+                  <strong>{livePinned ? livePinned.bufferedEvents.length.toLocaleString() : '0'}</strong>
+                </div>
+                <div className="live-state-item">
+                  <span className="live-state-label">dropped payloads</span>
+                  <strong>{livePayloadDropCount.toLocaleString()}</strong>
+                </div>
+                <div className="live-state-item">
+                  <span className="live-state-label">reconnects</span>
+                  <strong>{liveReconnectAttempts.toLocaleString()}</strong>
+                </div>
+              </div>
+
+              {mode === 'live' && replay ? (
+                <div className="live-control-group">
+                  <div>
+                    <p className="control-label">inspection mode</p>
+                    <p className="panel-copy muted">
+                      {livePinned
+                        ? `Pinned at tick ${livePinned.pinnedAtTick}; incoming events are buffered until live resumes.`
+                        : liveAutoFollow
+                          ? 'Following the newest tick. Moving the scrubber switches to inspect mode.'
+                          : 'Inspecting a selected tick while the live run can continue.'}
+                    </p>
+                  </div>
+                  <div className="button-row">
+                    {livePinned ? (
+                      <button
+                        type="button"
+                        className="button-primary"
+                        onClick={() => {
+                          resumeLiveInspection();
+                          addLiveHistory({
+                            level: 'info',
+                            message: `Resumed live flow with ${livePinned.bufferedEvents.length.toLocaleString()} buffered event(s)`,
+                          });
+                        }}
+                      >
+                        resume live
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="button-ghost"
+                        onClick={() => {
+                          pinLiveInspection();
+                          addLiveHistory({ level: 'info', message: `Pinned live inspection at tick ${selectedTick}` });
+                        }}
+                        disabled={liveStatus !== 'connected'}
+                      >
+                        pin current tick
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+
+              {mode === 'live' && replay ? (
+                <div className="button-row live-export-row">
+                  <button type="button" className="button-ghost" onClick={() => void exportLiveCaptureBundle()} disabled={liveCaptureBusy}>
+                    {liveCaptureBusy ? 'saving…' : 'save capture bundle'}
+                  </button>
+                  <span className="button-row-note muted">Bundles reopen from the replay loader with the same panels and navigation.</span>
+                </div>
+              ) : null}
+
               <div className="toggle-row">
                 <label className="checkbox">
-                  <input type="checkbox" checked={liveAutoFollow} onChange={(event) => setLiveAutoFollow(event.target.checked)} />
+                  <input
+                    type="checkbox"
+                    checked={liveAutoFollow}
+                    disabled={livePinned !== null}
+                    onChange={(event) => setLiveAutoFollow(event.target.checked)}
+                  />
                   auto-follow
                 </label>
                 <label className="checkbox">
@@ -1260,7 +1478,15 @@ export function App() {
               status <code>{liveStatus}</code>
               {liveLastError ? ` · ${liveLastError}` : ''}
               {liveLastEventUnixMs ? ` · last event ${new Date(liveLastEventUnixMs).toLocaleTimeString()}` : ''}
+              {livePinned ? ` · pinned at tick ${livePinned.pinnedAtTick}` : ''}
+              {livePinned && livePinned.bufferedEvents.length > 0
+                ? ` · ${livePinned.bufferedEvents.length.toLocaleString()} buffered event(s)`
+                : ''}
+              {liveUnexpectedCloseCount > 0 ? ` · ${liveUnexpectedCloseCount.toLocaleString()} dropped connection(s)` : ''}
+              {liveLatestReconnect ? ` · ${liveLatestReconnect}` : ''}
             </p>
+            {liveCaptureStatusMessage ? <p className="notice-inline notice-inline--success">{liveCaptureStatusMessage}</p> : null}
+            {liveCaptureErrorMessage ? <p className="notice-inline notice-inline--error">{liveCaptureErrorMessage}</p> : null}
 
             <div className="history-list compact">
               {liveHistory.length === 0 ? (

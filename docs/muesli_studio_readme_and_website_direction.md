@@ -265,7 +265,7 @@ Use plain language. Example:
 ```md
 ## current scope
 
-The current release focuses on replay-first inspection and live monitoring. Editing workflows and deeper authoring support may be added later.
+The current release makes live monitoring and replay feel like one workflow. Editing workflows and deeper authoring support may be added later.
 ```
 
 This is much better than leading with incomplete-future framing.
@@ -729,7 +729,7 @@ Open recorded runs and scrub through them tick by tick.
 See node states and state changes at any point in time.
 
 ### live
-Follow a running system over the same event stream.
+Follow a running system over the same event stream, pin an interesting moment, and save the captured session as a replayable bundle.
 
 ## final note
 
@@ -739,4 +739,3 @@ The main shift required here is simple:
 - start leading with the experience of using the tool
 
 That is the difference between a repository that looks like an internal prototype and one that looks like a serious early tool.
-

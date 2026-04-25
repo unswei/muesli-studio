@@ -2,7 +2,7 @@
 
 **Replay and monitor behaviour trees.**
 
-`muesli-studio` is the inspector for [`muesli-bt`](https://github.com/unswei/muesli-bt). Open a recorded run, scrub ticks, inspect node state, examine state changes, or follow live events over WebSocket.
+`muesli-studio` is the inspector for [`muesli-bt`](https://github.com/unswei/muesli-bt). Open a recorded run, scrub ticks, inspect node state, examine state changes, or follow and capture live events over WebSocket.
 
 Compatibility target: `muesli-bt v0.4.0` release line and the pinned fallback commit in [`apps/inspector/cmake/MuesliBtVersion.cmake`](apps/inspector/cmake/MuesliBtVersion.cmake).
 
@@ -40,16 +40,16 @@ Switch into presentation mode, export clean PNG or SVG figures, and write a comp
 
 ### follow live
 
-Connect to a running system over WebSocket and follow new events as they arrive through the same inspector.
+Connect to a running system over WebSocket, follow new events as they arrive, pin an interesting tick for replay-style inspection, and save the captured session as a replayable bundle.
 
 ## built for [muesli-bt](https://github.com/unswei/muesli-bt)
 
-`muesli-studio` is the visual inspector for [`muesli-bt`](https://github.com/unswei/muesli-bt). Replay and live monitoring use the same canonical event stream, so a recorded run and a live session share the same inspection model.
+`muesli-studio` is the visual inspector for [`muesli-bt`](https://github.com/unswei/muesli-bt). Replay and live monitoring use the same canonical event stream, so a recorded run, a pinned live moment, and a saved live capture share the same inspection model.
 
 ## why this is reliable
 
 - deterministic fixture bundles drive the demo, screenshot capture, and regression checks
-- replay and live monitoring share the same `@muesli/replay` event model
+- replay, live monitoring, and live capture bundles share the same `@muesli/replay` event model
 - schema and contract sync are checked against the resolved [`muesli-bt`](https://github.com/unswei/muesli-bt) source in CI
 - the runtime-backed inspector proves WebSocket and JSONL payload parity in deterministic integration tests
 - tagged releases publish source archives plus prebuilt Linux Intel and macOS Apple Silicon bundles
@@ -80,6 +80,12 @@ Compare mode:
 
 *Aligned tick comparison for divergence, planner and scheduler deltas, and blackboard changes.*
 
+Live connection:
+
+![live connection panel](docs/images/studio-live-panel.png)
+
+*Live follow, pinned inspection, buffering, dropped-payload, and reconnect status in one panel.*
+
 Refresh the README screenshots with:
 
 ```bash
@@ -95,11 +101,7 @@ Tagged releases matching `v*` publish these artefacts:
 - macOS Apple Silicon binary bundle
 - detached ASCII-armoured signatures (`.asc`) for every published archive
 
-Current release branch: `release/v0.3.0`.
-
-Current tag on this branch: `v0.3.0`.
-
-Latest tagged release: `v0.3.0`.
+Latest tagged release: `v0.4.0`.
 
 See [GitHub releases](https://github.com/unswei/muesli-studio/releases) and [release targets](docs/studio/release-targets.md) for workflow and asset naming.
 
@@ -181,8 +183,9 @@ Load either:
 
 - a canonical JSONL fixture (`tools/fixtures/minimal_run.jsonl`)
 - a validated bundle event log (`tests/fixtures/*/events.jsonl`) after running `studio inspect`
+- a replayable `.zip` bundle exported from Studio publication mode or live capture mode
 
-Studio replay load supports the optional sidecar index file `events.sidecar.tick-index.v1.json`. The UI shows load progress, indexed or unindexed state, and warns when large logs fall back to full-scan ingest.
+Studio replay load supports the optional sidecar index file `events.sidecar.tick-index.v1.json`. When a `.zip` bundle contains `events.jsonl` and the sidecar index, Studio reads both through the normal replay loader. The UI shows load progress, indexed or unindexed state, and warns when large logs fall back to full-scan ingest.
 
 Large indexed replays now bootstrap lazily for both local files and URL auto-loads. File loads use `File.slice`; URL loads use HTTP byte ranges when the host supports them.
 
@@ -220,6 +223,8 @@ pnpm inspector:test
 ```
 
 Then connect studio to `ws://localhost:8765/events`.
+
+In live mode, use `pin current tick` to hold the current inspection moment while incoming events are buffered. Use `resume live` to merge the buffer back into the run, or `save capture bundle` to export the captured session as a replayable `.zip` archive. Reopen that archive through `open replay` when you want the normal timeline, summary, diff, planner, and presentation panels.
 
 ## replay package entrypoints
 
@@ -267,6 +272,6 @@ tools/sync_contract.sh # sync contract from resolved muesli-bt source
 
 ## current scope
 
-The current stable release focuses on replay-first inspection and live monitoring. The studio also includes a lightweight DSL editor for swapping rendered tree definitions during inspection, while deeper authoring workflows remain out of scope for now.
+The current release makes live monitoring and replay feel like one workflow. The studio also includes a lightweight DSL editor for swapping rendered tree definitions during inspection, while deeper authoring workflows remain out of scope for now.
 
 The broader release plan is tracked in [docs/roadmap-to-1.0.md](docs/roadmap-to-1.0.md).

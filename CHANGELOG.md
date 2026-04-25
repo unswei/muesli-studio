@@ -2,7 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.4.0] - 2026-04-25
+
+### added
+
+- added pinned live inspection so Studio can freeze the current live moment, buffer incoming events, and then resume the stream into the same replay state when you are ready.
+- added live capture bundle export so a current live session can be saved as a replayable archive with `events.jsonl`, sidecar index, manifest, and run summary.
+- added replay-bundle loading from the main replay opener so captured live sessions reopen with the normal timeline, panels, and navigation model.
+
+### changed
+
+- clarified the live connection panel with explicit follow, inspect, buffer, dropped-payload, and reconnect status summaries.
 
 ## [0.3.0] - 2026-04-03
 

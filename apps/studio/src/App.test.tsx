@@ -4,9 +4,11 @@ import { fileURLToPath } from 'node:url';
 
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import JSZip from 'jszip';
 
-import { parseJsonlEvents, ReplayStore } from '@muesli/replay';
+import { buildTickSidecarIndex, parseJsonlEvents, ReplayStore } from '@muesli/replay';
 
+import { isReplayBundleFile, readReplayBundle } from './App';
 import { TreeView } from './components/TreeView';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -43,5 +45,21 @@ describe('studio replay fixtures', () => {
     expect(tick1Markup).toContain('class="tree-node-kind">seq');
     expect(tick1Markup).toContain('class="tree-node-kind">act');
     expect(tick1Markup).toContain('class="tree-node-status">unknown');
+  });
+
+  it('opens replay bundle archives with events and optional sidecar index', async () => {
+    const raw = readFileSync(path.join(rootDir, 'tools', 'fixtures', 'minimal_run.jsonl'), 'utf8');
+    const sidecar = JSON.stringify(buildTickSidecarIndex(raw, 'events.jsonl'));
+    const zip = new JSZip();
+    zip.file('events.jsonl', raw);
+    zip.file('events.sidecar.tick-index.v1.json', sidecar);
+
+    const archive = await zip.generateAsync({ type: 'arraybuffer' });
+    const file = new File([archive], 'minimal-run-live-capture-bundle.zip', { type: 'application/zip' });
+    const bundle = await readReplayBundle(file);
+
+    expect(isReplayBundleFile(file)).toBe(true);
+    expect(bundle.eventsText).toContain('"run_id":"fixture-minimal"');
+    expect(bundle.sidecarText).toContain('"events.jsonl"');
   });
 });

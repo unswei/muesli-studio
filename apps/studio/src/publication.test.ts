@@ -7,9 +7,12 @@ import { describe, expect, it } from 'vitest';
 import { parseJsonlEvents, ReplayStore, summariseRun } from '@muesli/replay';
 
 import {
+  buildLiveCaptureManifest,
+  buildLiveCaptureReadme,
   buildPublicationManifest,
   buildPublicationReadme,
   captureFileName,
+  liveCaptureBundleName,
   publicationBundleName,
   serialiseReplayEvents,
 } from './publication';
@@ -58,8 +61,28 @@ describe('publication helpers', () => {
 
     expect(serialiseReplayEvents(replay)).toContain('"run_id":"fixture-studio-demo"');
     expect(publicationBundleName(replay)).toBe('fixture-studio-demo-publication-bundle.zip');
+    expect(liveCaptureBundleName(replay)).toBe('fixture-studio-demo-live-capture-bundle.zip');
     expect(captureFileName('hero', 3)).toBe('screenshots/studio-overview.png');
     expect(captureFileName('diff', 4)).toBe('screenshots/blackboard-diff-tick-4.png');
     expect(captureFileName('compare', 3)).toBe('screenshots/compare-ticks-2-to-3.png');
+  });
+
+  it('builds a live capture bundle manifest and readme without screenshot entries', () => {
+    const replay = loadStudioDemoReplay();
+    const summary = summariseRun(replay.getAllEvents(), {
+      contractVersion:
+        typeof replay.runStart?.data.contract_version === 'string' ? replay.runStart.data.contract_version : 'unknown',
+      schemaVersion: replay.runStart?.schema ?? 'mbt.evt.v1',
+    });
+
+    const manifest = buildLiveCaptureManifest(replay, summary, 3, '4', '2026-04-06T00:00:00.000Z');
+    expect(manifest.fixture_name).toBe('fixture-studio-demo-live-capture-bundle');
+    expect(manifest.generator).toBe('muesli-studio live capture export');
+    expect(manifest.provenance_model).toBe('captured-from-live-session');
+
+    const readme = buildLiveCaptureReadme(replay, summary, 3, '4');
+    expect(readme).toContain('live capture bundle');
+    expect(readme).toContain('captured from a live Studio session');
+    expect(readme).not.toContain('screenshots/studio-overview.png');
   });
 });

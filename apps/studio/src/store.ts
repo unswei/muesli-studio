@@ -33,6 +33,11 @@ export interface ReplaySeekStats {
   last_hydrated_ticks: number;
 }
 
+interface LivePinnedState {
+  pinnedAtTick: number;
+  bufferedEvents: ValidatedMbtEvent[];
+}
+
 const LARGE_LOG_FALLBACK_THRESHOLD_BYTES = 2 * 1024 * 1024;
 const LARGE_LOG_LAZY_THRESHOLD_BYTES = LARGE_LOG_FALLBACK_THRESHOLD_BYTES;
 const LAZY_HYDRATION_BATCH_TICK_LIMIT = 32;
@@ -525,6 +530,7 @@ interface StudioState {
   liveLastError: string | null;
   liveLastEventUnixMs: number | null;
   liveHistory: LiveHistoryEntry[];
+  livePinned: LivePinnedState | null;
   loadJsonl: (
     text: string,
     sidecarText?: string | null,
@@ -546,6 +552,8 @@ interface StudioState {
   setLiveStatus: (status: LiveStatus, error?: string | null) => void;
   setLiveAutoFollow: (enabled: boolean) => void;
   setLiveReconnectEnabled: (enabled: boolean) => void;
+  pinLiveInspection: () => void;
+  resumeLiveInspection: () => void;
   addLiveHistory: (entry: Omit<LiveHistoryEntry, 'atUnixMs'> & { atUnixMs?: number }) => void;
   clearLiveHistory: () => void;
   addParseError: (error: JsonlParseError) => void;
@@ -661,7 +669,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
             replayLoadedBytesEstimate: state.replayLoadedBytesEstimate + loadedBytes,
             selectedNodeId: state.selectedNodeId ?? replay.getFirstTreeNodeId(),
             parseErrors: mergeParseErrors(state.parseErrors, shiftedErrors),
-            lazySidecar: {
+              lazySidecar: {
               ...currentLazy,
               loadedTicks: nextLoaded,
               pendingTicks: nextPending,
@@ -932,6 +940,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
     liveLastError: null,
     liveLastEventUnixMs: null,
     liveHistory: [],
+    livePinned: null,
 
     loadJsonl: (text, sidecarText = null, sourceBytes = 0, sourceKind = 'text', sourceUrl = null, sidecarUrl = null) => {
       const effectiveSourceBytes = Math.max(sourceBytes, textByteLength(text));
@@ -959,7 +968,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
               treeRevision: 0,
               selectedTick: lazy.selectedTick,
               selectedNodeId: lazy.replay.getFirstTreeNodeId(),
-              lazySidecar: {
+            lazySidecar: {
                 source: {
                   kind: 'text',
                   eventsText: text,
@@ -969,6 +978,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
                 pendingTicks: new Set<number>(),
               },
               mode: 'replay',
+              livePinned: null,
             });
             return;
           }
@@ -1005,6 +1015,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
         selectedNodeId: replay.getFirstTreeNodeId(),
         lazySidecar: null,
         mode: 'replay',
+        livePinned: null,
       });
     },
 
@@ -1056,6 +1067,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
                 pendingTicks: new Set<number>(),
               },
               mode: 'replay',
+              livePinned: null,
             });
             return;
           }
@@ -1126,6 +1138,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
                     pendingTicks: new Set<number>(),
                   },
                   mode: 'replay',
+                  livePinned: null,
                 });
                 return;
               } catch (error) {
@@ -1208,15 +1221,26 @@ export const useStudioStore = create<StudioState>((set, get) => {
       }
 
       set((state) => {
+        const liveLastEventUnixMs = events.reduce(
+          (latest, event) => Math.max(latest, event.unix_ms),
+          state.liveLastEventUnixMs ?? 0,
+        );
+        if (state.livePinned) {
+          return {
+            liveLastEventUnixMs,
+            livePinned: {
+              ...state.livePinned,
+              bufferedEvents: [...state.livePinned.bufferedEvents, ...events],
+            },
+            mode: 'live',
+          };
+        }
+
         const replay = state.replay ?? new ReplayStore();
         replay.appendMany(events);
 
         const selectedNodeId = state.selectedNodeId ?? replay.getFirstTreeNodeId();
         const maxTick = replay.maxTick >= 0 ? replay.maxTick : 0;
-        const liveLastEventUnixMs = events.reduce(
-          (latest, event) => Math.max(latest, event.unix_ms),
-          state.liveLastEventUnixMs ?? 0,
-        );
 
         return {
           replay,
@@ -1375,6 +1399,7 @@ export const useStudioStore = create<StudioState>((set, get) => {
         const maxTick = current.replay && current.replay.maxTick >= 0 ? current.replay.maxTick : 0;
         return {
           liveAutoFollow: true,
+          livePinned: null,
           selectedTick: maxTick,
         };
       });
@@ -1382,6 +1407,42 @@ export const useStudioStore = create<StudioState>((set, get) => {
 
     setLiveReconnectEnabled: (enabled) => {
       set({ liveReconnectEnabled: enabled });
+    },
+
+    pinLiveInspection: () => {
+      set((current) => {
+        const replay = current.replay;
+        const pinnedAtTick = replay ? Math.max(0, Math.min(current.selectedTick, current.replayMaxTick, replay.maxTick >= 0 ? replay.maxTick : 0)) : 0;
+        return {
+          liveAutoFollow: false,
+          livePinned: {
+            pinnedAtTick,
+            bufferedEvents: current.livePinned?.bufferedEvents ?? [],
+          },
+        };
+      });
+    },
+
+    resumeLiveInspection: () => {
+      set((current) => {
+        const pendingEvents = current.livePinned?.bufferedEvents ?? [];
+        const replay = current.replay ?? (pendingEvents.length > 0 ? new ReplayStore() : current.replay);
+        if (replay && pendingEvents.length > 0) {
+          replay.appendMany(pendingEvents);
+        }
+
+        const maxTick = replay && replay.maxTick >= 0 ? replay.maxTick : 0;
+        return {
+          replay,
+          eventCount: replay ? replay.getAllEvents().length : current.eventCount,
+          selectedNodeId: replay ? current.selectedNodeId ?? replay.getFirstTreeNodeId() : current.selectedNodeId,
+          selectedTick: maxTick,
+          replayMaxTick: maxTick,
+          liveAutoFollow: true,
+          livePinned: null,
+          mode: 'live',
+        };
+      });
     },
 
     addLiveHistory: (entry) => {

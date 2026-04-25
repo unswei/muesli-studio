@@ -37,6 +37,30 @@ Release entry template:
 
 ## example
 
+## v0.4.0 - 2026-04-25
+
+### highlights
+
+- live and replay unification release that makes a live session behave like the same inspection product as a saved run
+- pinned live inspection freezes the selected moment, buffers incoming events, and resumes into the same replay state
+- live capture bundles can be saved, reopened through `open replay`, and inspected with the normal timeline, summary, diff, planner, and presentation panels
+- the live connection panel now separates follow mode, pinned inspection, buffering, dropped payloads, and reconnect attempts
+
+### shipped artefacts
+
+- `muesli-studio-v0.4.0-source.tar.gz`
+- `muesli-studio-v0.4.0-source.zip`
+- `muesli-studio-v0.4.0-linux-intel.tar.gz` (prebuilt inspector + studio static assets)
+- `muesli-studio-v0.4.0-macos-arm.tar.gz` (prebuilt inspector + studio static assets)
+- `.sha256` files for all archives
+- detached `.asc` signatures for all archives
+
+### notes
+
+- release binaries are built on `ubuntu-latest` (Intel) and `macos-14` (Apple Silicon) GitHub runners
+- inspector fallback pin remains on `muesli-bt v0.4.0`
+- local release verification covered the macOS Apple Silicon bundle; the tag workflow publishes both binary targets
+
 ## v0.3.0 - 2026-04-03
 
 ### highlights
