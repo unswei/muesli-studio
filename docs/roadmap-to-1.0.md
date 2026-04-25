@@ -2,13 +2,13 @@
 
 ## purpose
 
-This document sets a roadmap for `muesli-studio` from the `v0.3.0` release-branch baseline onward.
+This document sets a roadmap for `muesli-studio` from the `v0.4.0` release baseline onward.
 
 The goal is not to turn `muesli-studio` into a generic robotics IDE. The goal is to make it the best possible inspector and controlled authoring surface for `muesli-bt` runs.
 
 ## where we are now
 
-As of the `release/v0.3.0` branch, `muesli-studio` already has a serious base:
+As of `v0.4.0`, `muesli-studio` already has a serious base:
 
 - replay-first inspection with tree rendering and a tick scrubber
 - blackboard diffs and node inspection
@@ -17,6 +17,11 @@ As of the `release/v0.3.0` branch, `muesli-studio` already has a serious base:
 - deterministic fixtures, sidecar-backed large-log support, and regression coverage
 - a first DSL editing loop with `apply`, `revert`, and `save`
 - presentation mode and export paths for figures and publication bundles
+- pinned live inspection, live capture bundles, and replay-bundle reopening
+
+The current development compatibility target is `muesli-bt v0.6.0` at commit `654a1e43cdea4bfc2e0a5e4e15e472193ca32f94`. That target keeps the Studio-facing runtime contract at `runtime-contract-v1.0.0` and the event schema at `mbt.evt.v1`. The synced schema and contract copies are byte-identical to the previous Studio copy, so the compatibility change is an additive runtime and documentation baseline rather than a schema migration.
+
+The important new upstream material for the roadmap is the `muesli-bt` host capability bundle boundary. `v0.6.0` documents bundles such as `cap.motion.v1` and `cap.perception.scene.v1`, and includes the minimal `cap.list`, `cap.describe`, and `cap.call` API path with deterministic `cap.echo.v1` coverage. For Studio, this should first appear as provenance, validation, and comparison context. It should not become a broad robot-control interface.
 
 ## strategic thesis
 
@@ -225,18 +230,21 @@ By this point inspection and navigation should be strong enough that editing can
 - explicit staging model such as draft, preview, apply to replay, export patch, save
 - fixture-backed validation for edited trees where feasible
 - better handling of mismatches between current run data and an edited definition
+- capability-aware validation where a tree depends on host capability bundles exposed by the resolved `muesli-bt` target
 
 ### what we will do
 
 - invest in textual or structure-aware BT authoring grounded in the current DSL and tree model
 - use replay as a validation and explanation surface for edits
 - make the editor feel deliberate and trustworthy
+- surface missing or mismatched capability metadata as explicit validation context
 
 ### what we will not do yet
 
 - broad drag-and-drop visual BT programming as the main editing model
 - multi-project workspace complexity
 - general scripting IDE features that are not tied to BT work
+- interactive robot-control UI for invoking arbitrary host capabilities from Studio
 
 ### acceptance criteria
 
@@ -270,6 +278,7 @@ Once the tool supports replay, live capture, and stronger editing, the next step
 - diff warnings, event-family counts, timing distributions, and selected blackboard keys
 - better publication bundle support for before-and-after analyses
 - regression-oriented fixture views and saved comparison reports
+- comparison context for transport, backend, and host capability metadata when it helps explain behavioural differences
 
 ### editing scope in this release
 
@@ -291,7 +300,7 @@ Make the app feel native to the broader `muesli-bt` integration story.
 
 ### why this release matters
 
-`muesli-bt` already defines an integration contract that includes simulator and transport visibility, optional backend targets, and canonical event requirements. `muesli-studio` should start to expose that world more clearly, without becoming backend-fragmented.
+`muesli-bt` already defines an integration contract that includes simulator and transport visibility, optional backend targets, host capability bundles, and canonical event requirements. `muesli-studio` should start to expose that world more clearly, without becoming backend-fragmented.
 
 ### primary outcomes
 
@@ -305,10 +314,12 @@ Make the app feel native to the broader `muesli-bt` integration story.
 - backend-aware labels or views where they help interpretation, without breaking overall UI consistency
 - stronger inspection around planner, scheduler, VLA, and cancellation event families
 - better support for environment metadata and run provenance
+- capability bundle summaries for runs that expose `cap.motion.v1`, `cap.perception.scene.v1`, or later released capability contracts
+- use deterministic capability fixtures such as `cap.echo.v1` as smoke-test inputs, not as product-facing robot-control flows
 
 ### editing scope in this release
 
-Limited. Editing should consume integration metadata only where it improves validation or explanation.
+Limited. Editing should consume integration and capability metadata only where it improves validation or explanation.
 
 ### acceptance criteria
 
