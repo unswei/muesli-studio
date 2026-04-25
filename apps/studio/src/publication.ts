@@ -19,6 +19,8 @@ export interface PublicationManifest {
   selected_node_id: string | null;
 }
 
+type BundleKind = 'publication' | 'live-capture';
+
 function stringFromUnknown(value: unknown): string | null {
   if (typeof value !== 'string') {
     return null;
@@ -53,24 +55,28 @@ export function backendLabel(runStartData: Record<string, unknown> | undefined):
   return stringFromUnknown(host) ?? 'unknown';
 }
 
-export function buildPublicationManifest(
+function buildReplayBundleManifest(
   replay: ReplayStore,
   summary: RunSummary,
   selectedTick: number,
   selectedNodeId: string | null,
   exportedAtUtc: string,
+  kind: BundleKind,
 ): PublicationManifest {
   const runStartData = replay.runStart?.data as Record<string, unknown> | undefined;
   const btDefData = replay.btDef?.data as Record<string, unknown> | undefined;
   const runId = replay.runStart?.run_id ?? 'unknown-run';
+  const fixtureSuffix = kind === 'live-capture' ? 'live-capture-bundle' : 'publication-bundle';
+  const generator = kind === 'live-capture' ? 'muesli-studio live capture export' : 'muesli-studio publication export';
+  const provenanceModel = kind === 'live-capture' ? 'captured-from-live-session' : 'exported-from-studio';
 
   return {
     contract_id: stringFromUnknown(runStartData?.contract_id) ?? 'runtime-contract-v1',
     contract_version: summary.contract_version,
-    fixture_name: `${slugify(runId) || 'studio-run'}-publication-bundle`,
+    fixture_name: `${slugify(runId) || 'studio-run'}-${fixtureSuffix}`,
     schema: summary.schema_version,
-    generator: 'muesli-studio publication export',
-    provenance_model: 'exported-from-studio',
+    generator,
+    provenance_model: provenanceModel,
     exported_at_utc: exportedAtUtc,
     run_id: runId,
     backend: backendLabel(runStartData),
@@ -83,13 +89,42 @@ export function buildPublicationManifest(
   };
 }
 
+export function buildPublicationManifest(
+  replay: ReplayStore,
+  summary: RunSummary,
+  selectedTick: number,
+  selectedNodeId: string | null,
+  exportedAtUtc: string,
+): PublicationManifest {
+  return buildReplayBundleManifest(replay, summary, selectedTick, selectedNodeId, exportedAtUtc, 'publication');
+}
+
+export function buildLiveCaptureManifest(
+  replay: ReplayStore,
+  summary: RunSummary,
+  selectedTick: number,
+  selectedNodeId: string | null,
+  exportedAtUtc: string,
+): PublicationManifest {
+  return buildReplayBundleManifest(replay, summary, selectedTick, selectedNodeId, exportedAtUtc, 'live-capture');
+}
+
 export function serialiseReplayEvents(replay: ReplayStore): string {
   return `${replay.getAllEvents().map((event) => JSON.stringify(event)).join('\n')}\n`;
 }
 
-export function publicationBundleName(replay: ReplayStore): string {
+function replayBundleName(replay: ReplayStore, kind: BundleKind): string {
   const runId = replay.runStart?.run_id ?? 'studio-run';
-  return `${slugify(runId) || 'studio-run'}-publication-bundle.zip`;
+  const suffix = kind === 'live-capture' ? 'live-capture-bundle' : 'publication-bundle';
+  return `${slugify(runId) || 'studio-run'}-${suffix}.zip`;
+}
+
+export function publicationBundleName(replay: ReplayStore): string {
+  return replayBundleName(replay, 'publication');
+}
+
+export function liveCaptureBundleName(replay: ReplayStore): string {
+  return replayBundleName(replay, 'live-capture');
 }
 
 export function captureFileName(layout: PresentationLayout, selectedTick: number): string {
@@ -116,25 +151,36 @@ export function captureFileName(layout: PresentationLayout, selectedTick: number
   return 'screenshots/dsl-editor.png';
 }
 
-export function buildPublicationReadme(
+function buildReplayBundleReadme(
   replay: ReplayStore,
   summary: RunSummary,
   selectedTick: number,
   selectedNodeId: string | null,
   screenshotFiles: readonly string[],
+  kind: BundleKind,
 ): string {
   const runStartData = replay.runStart?.data as Record<string, unknown> | undefined;
   const btDefData = replay.btDef?.data as Record<string, unknown> | undefined;
   const treeName = stringFromUnknown(btDefData?.tree_name) ?? 'behaviour tree';
   const backend = backendLabel(runStartData);
   const runId = replay.runStart?.run_id ?? 'unknown-run';
+  const title = kind === 'live-capture' ? '# muesli-studio live capture bundle' : '# muesli-studio publication bundle';
+  const intro =
+    kind === 'live-capture'
+      ? `This bundle was captured from a live Studio session for run \`${runId}\` on backend \`${backend}\`.`
+      : `This bundle was exported from muesli-studio for run \`${runId}\` on backend \`${backend}\`.`;
+  const screenshotLines = screenshotFiles.map((fileName) => `- \`${fileName}\`: exported presentation screenshot`);
+  const howToUseTail =
+    kind === 'live-capture'
+      ? ['3. Reopen the bundle in Studio replay mode and continue from the same captured run.', '']
+      : ['3. Use the screenshots under `screenshots/` directly in talks, slides, or supplementary material.', ''];
 
   return [
-    '# muesli-studio publication bundle',
+    title,
     '',
     '## what this is',
     '',
-    `This bundle was exported from muesli-studio for run \`${runId}\` on backend \`${backend}\`.`,
+    intro,
     '',
     '## contents',
     '',
@@ -143,7 +189,7 @@ export function buildPublicationReadme(
     '- `manifest.json`: bundle metadata and selection state',
     '- `run_summary.json`: deterministic run summary used by Studio',
     '- `README.md`: short reproduction notes',
-    ...screenshotFiles.map((fileName) => `- \`${fileName}\`: exported presentation screenshot`),
+    ...screenshotLines,
     '',
     '## inspection context',
     '',
@@ -158,7 +204,25 @@ export function buildPublicationReadme(
     '',
     '1. Open `events.jsonl` in muesli-studio replay mode and add `events.sidecar.tick-index.v1.json` for indexed scrubbing.',
     '2. Use `run_summary.json` for the overall run shape before scrubbing.',
-    '3. Use the screenshots under `screenshots/` directly in talks, slides, or supplementary material.',
-    '',
+    ...howToUseTail,
   ].join('\n');
+}
+
+export function buildPublicationReadme(
+  replay: ReplayStore,
+  summary: RunSummary,
+  selectedTick: number,
+  selectedNodeId: string | null,
+  screenshotFiles: readonly string[],
+): string {
+  return buildReplayBundleReadme(replay, summary, selectedTick, selectedNodeId, screenshotFiles, 'publication');
+}
+
+export function buildLiveCaptureReadme(
+  replay: ReplayStore,
+  summary: RunSummary,
+  selectedTick: number,
+  selectedNodeId: string | null,
+): string {
+  return buildReplayBundleReadme(replay, summary, selectedTick, selectedNodeId, [], 'live-capture');
 }

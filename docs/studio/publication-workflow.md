@@ -13,6 +13,7 @@ Use this workflow when you need:
 - screenshots for GitHub, talks, or papers
 - a compact supplementary bundle for review or internal sharing
 - deterministic exports from the canonical demo fixture
+- a replayable archive captured directly from a live session
 
 ## how it works
 
@@ -30,6 +31,7 @@ Use this workflow when you need:
    - `PNG` for slides and raster figures
    - `SVG` for vector-friendly surfaces
    - `bundle` for a zipped supplement with replay data and screenshots
+   - `save capture bundle` in the live connection panel for a replayable archive without screenshots
 
 Bundle export writes:
 
@@ -42,6 +44,14 @@ Bundle export writes:
 
 If the replay is still in lazy indexed mode, Studio hydrates the remaining ticks before writing the bundle so `events.jsonl` is complete.
 
+Live capture export from the connection panel writes:
+
+- `events.jsonl`
+- `events.sidecar.tick-index.v1.json`
+- `manifest.json`
+- `run_summary.json`
+- `README.md`
+
 ## api / syntax
 
 Interactive export path:
@@ -50,6 +60,13 @@ Interactive export path:
 - open `presentation`
 - choose a layout
 - use `export PNG`, `export SVG`, or `export bundle`
+
+Live capture export path:
+
+- connect a live session
+- optionally pin the current moment
+- use `save capture bundle` in the connection panel
+- reopen the saved `.zip` through `open replay`
 
 Deterministic demo capture query parameters:
 
@@ -83,6 +100,10 @@ This stages `tests/fixtures/studio_demo`, serves Studio locally, and captures th
 
 5. Use `export bundle` to write a zipped supplement for review.
 
+6. In live mode, use `save capture bundle` to write the currently captured run as a replayable archive.
+
+7. Reopen that archive through `open replay` when you want normal timeline, summary, diff, planner, and presentation panels.
+
 To recreate the committed README figures exactly:
 
 ```bash
@@ -94,6 +115,8 @@ pnpm docs:screenshots
 - `SVG` export is best for panel-style surfaces. Very large graph captures may still be easier to use as `PNG`.
 - bundle export may take longer on large indexed runs because Studio hydrates the full replay first.
 - publication bundle export currently carries overview, summary, diff, and compare screenshots by default so review artefacts keep the high-signal surfaces together.
+- live capture bundle export does not include screenshots; it is intended to preserve the captured run for replay.
+- live capture bundles reopen from the normal replay loader when the archive contains `events.jsonl`; the sidecar file is optional but keeps scrubbing fast.
 - deterministic doc screenshots use the canonical `studio_demo` sidecar and `demo_capture` query parameters; interactive presentation mode remains the user-facing path.
 
 ## see also

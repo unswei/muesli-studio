@@ -143,6 +143,13 @@ async function captureScreenshots(): Promise<void> {
       url: `${baseUrl}/${buildCanonicalDemoSearch({ selectedTick: 4, selectedNodeId: '4', captureMode: 'compare' })}`,
     },
     {
+      fileName: 'studio-live-panel.png',
+      selector: '#live-connection-panel',
+      viewport: '1180,760',
+      waitMs: 1200,
+      url: `${baseUrl}/${buildCanonicalDemoSearch({ selectedTick: 3, selectedNodeId: '4' })}#live-connection-panel`,
+    },
+    {
       fileName: 'studio-dsl-editor.png',
       selector: '#dsl-editor-panel',
       viewport: '1180,520',

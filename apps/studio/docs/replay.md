@@ -11,6 +11,7 @@ Use replay mode when you need deterministic post-run inspection, debugging, or r
 ## how it works
 
 - file load parses JSONL line-by-line via `@muesli/replay`
+- replay bundle load reads `events.jsonl` from a `.zip` archive and uses `events.sidecar.tick-index.v1.json` when present
 - optional sidecar tick index (`events.sidecar.tick-index.v1.json`) can be loaded with the JSONL file
 - parsed events are appended to a `ReplayStore`
 - tree layout is computed once from `bt_def.nodes/edges` (supports `from/to` and `parent/child` edge variants)
@@ -39,7 +40,7 @@ Use replay mode when you need deterministic post-run inspection, debugging, or r
 
 ## api / syntax
 
-Input: `.jsonl` where each line matches `mbt.evt.v1`.
+Input: `.jsonl` where each line matches `mbt.evt.v1`, or a `.zip` replay bundle containing `events.jsonl`.
 
 Bundle validation input (CLI): directory containing at least `manifest.json` + `events.jsonl`.
 
@@ -117,10 +118,16 @@ Interactive presentation export:
 - choose `overview`, `summary`, `node`, `diff`, `compare`, or `dsl`
 - export `PNG`, `SVG`, or `bundle`
 
+Live capture replay:
+
+- save a live capture bundle from the live connection panel
+- open the saved `.zip` through `open replay`
+- inspect it with the same timeline, summary, diff, planner, compare, and presentation panels used for recorded runs
+
 ## gotchas
 
 - invalid lines are skipped and surfaced as parse warnings
-- replay UI consumes JSONL; bundle-level validation happens in Node tooling (`studio inspect`)
+- replay UI consumes JSONL and Studio-created `.zip` replay bundles; directory bundle validation happens in Node tooling (`studio inspect`)
 - lazy mode for local file input now uses `File.slice` ranges to avoid retaining full JSONL text in memory
 - lazy URL mode depends on HTTP byte-range support from the host serving `events.jsonl`; unsupported hosts fall back to a normal fetch
 - the capture-state query parameters are for deterministic demos and screenshot automation; the right-rail presentation panel is the normal user-facing export path

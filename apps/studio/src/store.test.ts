@@ -41,6 +41,7 @@ function resetStore(): void {
     liveLastError: null,
     liveLastEventUnixMs: null,
     liveHistory: [],
+    livePinned: null,
   });
 }
 
@@ -142,6 +143,57 @@ describe('studio live store behaviour', () => {
 
     useStudioStore.getState().clearLiveHistory();
     expect(useStudioStore.getState().liveHistory).toHaveLength(0);
+  });
+
+  it('buffers incoming live events while inspection is pinned, then flushes them on resume', () => {
+    resetStore();
+
+    const tick0 = parseEvent({
+      schema: 'mbt.evt.v1',
+      type: 'tick_begin',
+      run_id: 'run-live',
+      unix_ms: 1,
+      seq: 1,
+      tick: 0,
+      data: {},
+    });
+    const tick1 = parseEvent({
+      schema: 'mbt.evt.v1',
+      type: 'tick_begin',
+      run_id: 'run-live',
+      unix_ms: 2,
+      seq: 2,
+      tick: 1,
+      data: {},
+    });
+    const tick2 = parseEvent({
+      schema: 'mbt.evt.v1',
+      type: 'tick_begin',
+      run_id: 'run-live',
+      unix_ms: 3,
+      seq: 3,
+      tick: 2,
+      data: {},
+    });
+
+    useStudioStore.getState().appendLiveEvents([tick0, tick1]);
+    useStudioStore.getState().setSelectedTick(0);
+    useStudioStore.getState().pinLiveInspection();
+
+    useStudioStore.getState().appendLiveEvents([tick2]);
+    const pinnedState = useStudioStore.getState();
+    expect(pinnedState.livePinned?.pinnedAtTick).toBe(0);
+    expect(pinnedState.livePinned?.bufferedEvents).toHaveLength(1);
+    expect(pinnedState.replay?.maxTick).toBe(1);
+    expect(pinnedState.selectedTick).toBe(0);
+
+    useStudioStore.getState().resumeLiveInspection();
+    const resumedState = useStudioStore.getState();
+    expect(resumedState.livePinned).toBeNull();
+    expect(resumedState.liveAutoFollow).toBe(true);
+    expect(resumedState.replay?.maxTick).toBe(2);
+    expect(resumedState.selectedTick).toBe(2);
+    expect(resumedState.eventCount).toBe(3);
   });
 
   it('flags large replay fallback when sidecar is missing', () => {

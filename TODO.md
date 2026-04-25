@@ -1,8 +1,7 @@
 # todo
 
-## next up after `v0.3.0`
+## next up after `v0.4.0`
 
-- freeze or pin a live session at a selected moment for deeper inspection
-- save captured live sessions as replayable bundles
-- reopen captured live sessions with the same navigation and panel model used for file-backed runs
-- make live follow versus inspect controls clearer, including dropped-event and reconnect visibility
+- merge the `release/v0.4.0` branch back to `main`
+- start the `v0.5.0` disciplined BT editing scope from the roadmap
+- keep release artefact verification notes in sync if GitHub Actions reports a packaging or signing issue
