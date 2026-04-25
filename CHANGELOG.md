@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### changed
+
+- advanced the inspector fallback pin to `muesli-bt v0.6.0` at commit `654a1e43cdea4bfc2e0a5e4e15e472193ca32f94`; the synced Studio schema and contract copies remain byte-identical on the existing `runtime-contract-v1.0.0` and `mbt.evt.v1` lines.
+- refreshed the roadmap and current compatibility documentation around the `muesli-bt v0.6.0` capability-bundle baseline.
+
 ## [0.4.0] - 2026-04-25
 
 ### added

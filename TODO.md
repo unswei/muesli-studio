@@ -2,6 +2,6 @@
 
 ## next up after `v0.4.0`
 
-- merge the `release/v0.4.0` branch back to `main`
 - start the `v0.5.0` disciplined BT editing scope from the roadmap
-- keep release artefact verification notes in sync if GitHub Actions reports a packaging or signing issue
+- decide how Studio should surface `muesli-bt` host capability bundle metadata without turning capability calls into a broad robot-control UI
+- add capability-aware fixtures or validation cases once Studio consumes capability metadata directly
