@@ -1304,6 +1304,28 @@ button:disabled {
   font: 0.88rem/1.55 "IBM Plex Mono", "SFMono-Regular", "Consolas", monospace;
 }
 
+.dsl-preview {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.dsl-preview-summary,
+.dsl-preview-empty {
+  margin: 0;
+}
+
+.dsl-preview-list {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.dsl-preview code {
+  font: 0.82rem/1.3 "IBM Plex Mono", "SFMono-Regular", "Consolas", monospace;
+  color: inherit;
+}
+
 .notice-inline {
   margin-bottom: 0.6rem;
   padding: 0.7rem 0.8rem;

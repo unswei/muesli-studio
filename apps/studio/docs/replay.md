@@ -19,7 +19,8 @@ Use replay mode when you need deterministic post-run inspection, debugging, or r
 - blackboard diff panel shows `bb_write`/`bb_delete` for selected tick
 - run summary panel shows run identity, versions, timings, planner/scheduler counts, deterministic event digest, and a top-level attention strip for warnings and unusual event families before you scrub
 - `bt_def.dsl` is editable in a dedicated panel:
-  - `apply` compiles the draft DSL and refreshes the rendered tree immediately
+  - `preview` compiles the draft DSL without mutating the replay
+  - `apply preview` applies the last successful preview to the rendered tree
   - `revert` restores the runtime definition from log events
   - `save` writes the draft via browser save picker, or downloads if picker API is unavailable
 - fixture bundle support is validated by `studio inspect` using `@muesli/replay/node`, then the same `events.jsonl` can be opened in replay UI
@@ -86,7 +87,7 @@ pnpm studio inspect tests/fixtures/determinism_replay --schema tests/fixtures/sc
 
 2. Open [`tests/fixtures/determinism_replay/events.jsonl`](../../../tests/fixtures/determinism_replay/events.jsonl) in studio and scrub ticks `1..2`.
 
-3. Edit `bt_def.dsl`, click `apply`, and confirm the tree panel updates.
+3. Edit `bt_def.dsl`, click `preview`, inspect the structural summary, then click `apply preview` and confirm the tree panel updates.
 
 4. For large logs, also open [`tests/fixtures/large_replay/events.sidecar.tick-index.v1.json`](../../../tests/fixtures/large_replay/events.sidecar.tick-index.v1.json) before opening `events.jsonl`.
 
@@ -136,7 +137,7 @@ Live capture replay:
 - global shortcuts are suppressed while focus is inside an input, textarea, select, or content-editable field so typing in forms stays predictable
 - deep links are reopenable only for demo or URL-backed replays; local file selections are intentionally not encoded into the browser URL
 - newer runtime event variants are retained in the stream even when UI panels do not yet render dedicated widgets
-- DSL compile errors are shown inline and do not mutate the currently rendered tree
+- DSL compile errors are shown inline during preview and do not mutate the currently rendered tree
 
 ## see also
 

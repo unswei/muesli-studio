@@ -3,6 +3,12 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ReplayStore } from '@muesli/replay';
 
 import { compileBtDsl, type CompiledBtDefinition } from '../dsl-compiler';
+import {
+  buildStructuralPreview,
+  compiledToPreviewTreeDefinition,
+  toPreviewTreeDefinition,
+  type StructuralPreview,
+} from '../dsl-preview';
 
 interface DslEditorProps {
   replay: ReplayStore;
@@ -65,34 +71,77 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
   const runId = replay.runStart?.run_id ?? 'runtime';
 
   const [draftDsl, setDraftDsl] = useState(sourceDsl);
+  const [previewCompiled, setPreviewCompiled] = useState<CompiledBtDefinition | null>(null);
+  const [previewSource, setPreviewSource] = useState<string | null>(null);
+  const [previewSummary, setPreviewSummary] = useState<StructuralPreview | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setDraftDsl(sourceDsl);
+    setPreviewCompiled(null);
+    setPreviewSource(null);
+    setPreviewSummary(null);
+    setPreviewError(null);
     setStatusMessage(null);
     setErrorMessage(null);
   }, [sourceDsl]);
 
   const isDirty = draftDsl !== sourceDsl;
   const lineCount = useMemo(() => (draftDsl.length === 0 ? 0 : draftDsl.split(/\r?\n/).length), [draftDsl]);
+  const currentDefinition = useMemo(
+    () =>
+      toPreviewTreeDefinition({
+        dsl: sourceDsl,
+        nodes: replay.btDef?.data.nodes,
+        edges: replay.btDef?.data.edges,
+      }),
+    [replay.btDef, sourceDsl],
+  );
+  const canPreview = draftDsl.trim().length > 0 && isDirty && draftDsl !== previewSource;
+  const canApplyPreview = previewCompiled !== null && previewSource === draftDsl;
 
-  const onApply = () => {
+  const clearPreview = () => {
+    setPreviewCompiled(null);
+    setPreviewSource(null);
+    setPreviewSummary(null);
+    setPreviewError(null);
+  };
+
+  const onPreview = () => {
     try {
       const compiled = compileBtDsl(draftDsl);
-      onApplyCompiled(compiled);
-      setStatusMessage(`Applied ${compiled.nodes.length} node(s), ${compiled.edges.length} edge(s).`);
+      const compiledPreview = compiledToPreviewTreeDefinition(compiled);
+      setPreviewCompiled(compiled);
+      setPreviewSource(draftDsl);
+      setPreviewSummary(currentDefinition ? buildStructuralPreview(currentDefinition, compiledPreview) : null);
+      setPreviewError(null);
+      setStatusMessage(null);
       setErrorMessage(null);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'tree source could not be applied';
-      setErrorMessage(message);
+      const message = error instanceof Error ? error.message : 'tree source could not be previewed';
+      clearPreview();
+      setPreviewError(message);
+      setErrorMessage(null);
       setStatusMessage(null);
     }
   };
 
+  const onApplyPreview = () => {
+    if (!previewCompiled || previewSource !== draftDsl) {
+      return;
+    }
+    onApplyCompiled(previewCompiled);
+    setStatusMessage(`Applied preview: ${previewCompiled.nodes.length} node(s), ${previewCompiled.edges.length} edge(s).`);
+    setErrorMessage(null);
+    setPreviewError(null);
+  };
+
   const onRevert = () => {
     setDraftDsl(sourceDsl);
+    clearPreview();
     onResetCompiled();
     setStatusMessage('Reverted to the starting tree.');
     setErrorMessage(null);
@@ -126,15 +175,18 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
         </div>
         <span className="status-badge status-badge--subtle">{runId}</span>
       </div>
-      <p className="panel-copy muted">Apply and revert tree source changes without losing the tree you started from.</p>
+      <p className="panel-copy muted">Preview tree source changes before applying them to this replay.</p>
 
       {sourceDsl.length === 0 ? (
         <p className="panel-empty-copy muted">No editable tree source is available in this run.</p>
       ) : (
         <>
           <div className="dsl-toolbar">
-            <button type="button" onClick={onApply} disabled={!isDirty || draftDsl.trim().length === 0}>
-              apply
+            <button type="button" onClick={onPreview} disabled={!canPreview}>
+              preview
+            </button>
+            <button type="button" onClick={onApplyPreview} disabled={!canApplyPreview}>
+              apply preview
             </button>
             <button type="button" onClick={onRevert} disabled={!isDirty && !hasOverride}>
               revert
@@ -147,13 +199,68 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
             </span>
           </div>
 
+          {previewError ? <p className="dsl-error notice-inline notice-inline--error">{previewError}</p> : null}
           {errorMessage ? <p className="dsl-error notice-inline notice-inline--error">{errorMessage}</p> : null}
           {statusMessage ? <p className="dsl-status notice-inline notice-inline--success">{statusMessage}</p> : null}
+          {previewSummary ? (
+            <div className="dsl-preview notice-inline notice-inline--info">
+              <p className="dsl-preview-summary">
+                preview: {previewSummary.nodeCount} node(s), {previewSummary.edgeCount} edge(s), {previewSummary.changedCount}{' '}
+                changed
+              </p>
+              {previewSummary.changes.length > 0 ? (
+                <ul className="dsl-preview-list">
+                  {previewSummary.changes.map((change, index) => {
+                    const key = `${change.type}-${change.path}-${index}`;
+                    if (change.type === 'added') {
+                      return (
+                        <li key={key}>
+                          added <code>{change.path}</code>: {change.label}
+                        </li>
+                      );
+                    }
+                    if (change.type === 'removed') {
+                      return (
+                        <li key={key}>
+                          removed <code>{change.path}</code>: {change.label}
+                        </li>
+                      );
+                    }
+                    if (change.type === 'reordered') {
+                      return (
+                        <li key={key}>
+                          reordered <code>{change.path}</code>: {change.before}
+                          {' -> '}
+                          {change.after}
+                        </li>
+                      );
+                    }
+                    return (
+                      <li key={key}>
+                        changed <code>{change.path}</code>: {change.before}
+                        {' -> '}
+                        {change.after}
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p className="dsl-preview-empty">No structural changes from the applied tree.</p>
+              )}
+            </div>
+          ) : null}
 
           <textarea
             className="dsl-editor"
             value={draftDsl}
-            onChange={(event) => setDraftDsl(event.target.value)}
+            onChange={(event) => {
+              const nextDraft = event.target.value;
+              setDraftDsl(nextDraft);
+              if (nextDraft !== previewSource) {
+                clearPreview();
+              }
+              setStatusMessage(null);
+            }}
             aria-label="tree source text"
             spellCheck={false}
           />
