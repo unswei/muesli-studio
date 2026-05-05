@@ -137,6 +137,7 @@ The release bundle also includes `RELEASE.md` with the packaged target, version,
 - [release targets and artefacts](docs/studio/release-targets.md)
 - [release verification](docs/studio/release-verification.md)
 - [release notes](docs/studio/release-notes.md)
+- [behaviour tree editing](docs/studio/bt-editing.md)
 - [roadmap to 1.0](docs/roadmap-to-1.0.md)
 - [studio replay mode](apps/studio/docs/replay.md)
 - [studio live monitoring](apps/studio/docs/live.md)

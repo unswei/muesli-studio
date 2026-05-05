@@ -2,7 +2,13 @@ import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
 import type { ReplayStore } from '@muesli/replay';
 
-import { DslCompileError, compileBtDsl, type CompiledBtDefinition, type DslDiagnostic } from '../dsl-compiler';
+import {
+  DslCompileError,
+  compileBtDsl,
+  validateDslCapabilities,
+  type CompiledBtDefinition,
+  type DslDiagnostic,
+} from '../dsl-compiler';
 import {
   buildBtStructureDiff,
   compiledToPreviewTreeDefinition,
@@ -37,6 +43,7 @@ const diagnosticKindLabels: Record<DslDiagnostic['kind'], string> = {
   'unsupported-form': 'unsupported form',
   'unstable-identity': 'unstable identity',
   'run-mismatch': 'run mismatch',
+  capability: 'capability',
 };
 
 type SavePickerWindow = Window & {
@@ -340,7 +347,11 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
       setPreviewCompiled(compiled);
       setPreviewSource(draftDsl);
       setPreviewDiff(diff);
-      setPreviewDiagnostics([...compiled.diagnostics, ...(diff ? buildMismatchDiagnostics(diff, replay) : [])]);
+      setPreviewDiagnostics([
+        ...compiled.diagnostics,
+        ...validateDslCapabilities(),
+        ...(diff ? buildMismatchDiagnostics(diff, replay) : []),
+      ]);
       setStatusMessage(null);
       setErrorMessage(null);
     } catch (error) {

@@ -146,6 +146,61 @@ describe('DslEditor', () => {
     expect(view.container.textContent).toContain('Applied preview: 3 node(s), 2 edge(s).');
   });
 
+  it('keeps the v0.5 editing acceptance flow explicit', async () => {
+    Object.defineProperty(window, 'showSaveFilePicker', {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    });
+    const createObjectUrl = vi.fn().mockReturnValue('blob:acceptance-dsl');
+    const revokeObjectUrl = vi.fn();
+    Object.defineProperty(URL, 'createObjectURL', { value: createObjectUrl, configurable: true, writable: true });
+    Object.defineProperty(URL, 'revokeObjectURL', { value: revokeObjectUrl, configurable: true, writable: true });
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    const onApplyCompiled = vi.fn();
+    const onResetCompiled = vi.fn();
+    const view = renderEditor(onApplyCompiled, onResetCompiled, studioDemoReplay());
+    rendered.push(view);
+
+    const textarea = view.container.querySelector('textarea');
+    const sourceDsl = String(view.replay.btDef?.data.dsl ?? '');
+    const draftDsl = '(bt (seq (cond localisation-ready)))';
+    act(() => {
+      setTextAreaValue(textarea, draftDsl);
+    });
+    expect(onApplyCompiled).not.toHaveBeenCalled();
+    expect(buttonsFor(view.container)[1]?.hasAttribute('disabled')).toBe(true);
+
+    act(() => {
+      buttonsFor(view.container)[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(onApplyCompiled).not.toHaveBeenCalled();
+    expect(view.container.textContent).toContain('preview:');
+    expect(view.container.textContent).toContain('run mismatch');
+    expect(view.container.textContent).toContain('runtime nodes no longer exist in the draft tree');
+    expect(buttonsFor(view.container)[1]?.hasAttribute('disabled')).toBe(false);
+
+    act(() => {
+      buttonsFor(view.container)[1]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(onApplyCompiled).toHaveBeenCalledTimes(1);
+    expect(onApplyCompiled.mock.calls[0]?.[0].dsl).toBe(draftDsl);
+
+    await act(async () => {
+      buttonsFor(view.container)[3]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    const savedBlob = createObjectUrl.mock.calls[0]?.[0] as Blob | undefined;
+    await expect(blobToText(savedBlob as Blob)).resolves.toBe(draftDsl);
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      buttonsFor(view.container)[2]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(onResetCompiled).toHaveBeenCalledTimes(1);
+    expect(textarea?.value).toBe(sourceDsl);
+    expect(view.container.textContent).not.toContain('preview:');
+  });
+
   it('requires a fresh preview after draft changes', () => {
     const onApplyCompiled = vi.fn();
     const view = renderEditor(onApplyCompiled);

@@ -2,5 +2,5 @@
 
 ## next up after `v0.4.0`
 
-- decide how Studio should surface `muesli-bt` host capability bundle metadata without turning capability calls into a broad robot-control UI
+- consume `muesli-bt` host capability bundle metadata as Studio validation context
 - add capability-aware fixtures or validation cases once Studio consumes capability metadata directly

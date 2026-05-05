@@ -152,6 +152,7 @@ Live capture replay:
 - [`schema/mbt.evt.v1.schema.json`](../../../schema/mbt.evt.v1.schema.json)
 - [`packages/replay`](../../../packages/replay)
 - [`docs/studio/contract-consumption.md`](../../../docs/studio/contract-consumption.md)
+- [`docs/studio/bt-editing.md`](../../../docs/studio/bt-editing.md)
 - [`docs/studio/publication-workflow.md`](../../../docs/studio/publication-workflow.md)
 - [`docs/studio/large-logs.md`](../../../docs/studio/large-logs.md)
 - [`live monitoring`](./live.md)

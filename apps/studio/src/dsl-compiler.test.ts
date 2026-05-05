@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { DslCompileError, compileBtDsl } from './dsl-compiler';
+import { DslCompileError, compileBtDsl, validateDslCapabilities } from './dsl-compiler';
 
 function expectCompileError(source: string): DslCompileError {
   try {
@@ -103,5 +103,26 @@ describe('compileBtDsl', () => {
 
     expect(compiled.nodes).toContainEqual({ id: 2, kind: 'act', name: 'choose-step' });
     expect(compiled.diagnostics).toEqual([]);
+  });
+
+  it('keeps the capability validation hook inert without requirements', () => {
+    expect(validateDslCapabilities()).toEqual([]);
+    expect(validateDslCapabilities({ available: ['cap.motion.v1'] })).toEqual([]);
+  });
+
+  it('reports missing capability requirements without blocking compilation', () => {
+    const diagnostics = validateDslCapabilities({
+      required: [{ capability: 'cap.motion.v1', nodeName: 'drive-to-goal' }],
+      available: ['cap.echo.v1'],
+    });
+
+    expect(diagnostics).toContainEqual(
+      expect.objectContaining({
+        kind: 'capability',
+        severity: 'warning',
+        message: 'Required capability `cap.motion.v1` is not present.',
+      }),
+    );
+    expect(validateDslCapabilities({ required: [{ capability: 'cap.motion.v1' }], available: ['cap.motion.v1'] })).toEqual([]);
   });
 });

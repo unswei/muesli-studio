@@ -97,6 +97,16 @@ describe('buildBtStructureDiff', () => {
     );
   });
 
+  it('does not classify pure child reorders as structural node changes', () => {
+    const diff = diffBetween(
+      '(bt (seq (cond ready) (seq (act plan) (act dispatch)) (cond done)))',
+      '(bt (seq (cond ready) (cond done) (seq (act plan) (act dispatch))))',
+    );
+
+    expect(diff.summary.reordered).toBeGreaterThan(0);
+    expect(diff.rows.filter((row) => row.type === 'changed')).toHaveLength(0);
+  });
+
   it('keeps rename and reorder combinations deterministic', () => {
     const diff = diffBetween('(bt (seq (act a) (act b) (act c)))', '(bt (seq (act b) (act renamed-a) (act c)))');
 

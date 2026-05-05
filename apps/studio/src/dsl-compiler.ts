@@ -1,4 +1,4 @@
-export type DslDiagnosticKind = 'syntax' | 'validation' | 'unsupported-form' | 'unstable-identity' | 'run-mismatch';
+export type DslDiagnosticKind = 'syntax' | 'validation' | 'unsupported-form' | 'unstable-identity' | 'run-mismatch' | 'capability';
 export type DslDiagnosticSeverity = 'error' | 'warning';
 
 export interface DslDiagnostic {
@@ -16,6 +16,17 @@ export interface CompiledBtDefinition {
   nodes: Array<{ id: number; kind: string; name: string }>;
   edges: Array<{ parent: number; child: number; index: number }>;
   diagnostics: DslDiagnostic[];
+}
+
+export interface DslCapabilityRequirement {
+  capability: string;
+  nodeName?: string;
+  nodePath?: string;
+}
+
+export interface DslCapabilityValidationInput {
+  required?: DslCapabilityRequirement[];
+  available?: Iterable<string> | Record<string, unknown> | null;
 }
 
 interface Token {
@@ -63,6 +74,44 @@ function diagnostic(input: Omit<DslDiagnostic, 'severity'> & { severity?: DslDia
 
 function throwDiagnostic(input: Omit<DslDiagnostic, 'severity'> & { severity?: DslDiagnosticSeverity }): never {
   throw new DslCompileError([diagnostic(input)]);
+}
+
+function availableCapabilitySet(value: DslCapabilityValidationInput['available']): Set<string> {
+  if (!value) {
+    return new Set();
+  }
+
+  if (typeof value !== 'string' && Symbol.iterator in Object(value)) {
+    return new Set(Array.from(value as Iterable<string>).filter((entry) => typeof entry === 'string' && entry.length > 0));
+  }
+
+  return new Set(
+    Object.entries(value)
+      .filter(([, present]) => present !== false && present !== null && present !== undefined)
+      .map(([capability]) => capability),
+  );
+}
+
+export function validateDslCapabilities(input: DslCapabilityValidationInput = {}): DslDiagnostic[] {
+  const requirements = input.required ?? [];
+  if (requirements.length === 0) {
+    return [];
+  }
+
+  const available = availableCapabilitySet(input.available);
+  return requirements
+    .filter((requirement) => requirement.capability.length > 0 && !available.has(requirement.capability))
+    .map((requirement) =>
+      diagnostic({
+        kind: 'capability',
+        severity: 'warning',
+        message: `Required capability \`${requirement.capability}\` is not present.`,
+        expected: 'Loaded host capability metadata should include each capability required by the draft tree.',
+        hint: requirement.nodeName
+          ? `Check the capability metadata before trusting edits around \`${requirement.nodeName}\`.`
+          : 'Apply is allowed, but later capability-aware validation should make this explicit.',
+      }),
+    );
 }
 
 function locationForIndex(input: string, index: number): { line: number; column: number } {
