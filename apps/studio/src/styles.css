@@ -1304,6 +1304,74 @@ button:disabled {
   font: 0.88rem/1.55 "IBM Plex Mono", "SFMono-Regular", "Consolas", monospace;
 }
 
+.dsl-diagnostics {
+  display: grid;
+  gap: 0.55rem;
+  margin-bottom: 0.65rem;
+}
+
+.dsl-diagnostic {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.85rem;
+  border: 1px solid transparent;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.dsl-diagnostic--error {
+  background: #f9ecef;
+  border-color: #f1d9de;
+  color: #9a4151;
+}
+
+.dsl-diagnostic--warning {
+  background: #fbf3e4;
+  border-color: #f1e0bd;
+  color: #8f6716;
+}
+
+.dsl-diagnostic-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dsl-diagnostic-heading code {
+  font: 0.75rem/1.35 "IBM Plex Mono", "SFMono-Regular", "Consolas", monospace;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.dsl-diagnostic p {
+  margin: 0;
+  font-weight: 650;
+}
+
+.dsl-diagnostic dl {
+  display: grid;
+  grid-template-columns: minmax(4.7rem, max-content) minmax(0, 1fr);
+  gap: 0.2rem 0.6rem;
+  margin: 0;
+}
+
+.dsl-diagnostic dt {
+  color: inherit;
+  opacity: 0.72;
+}
+
+.dsl-diagnostic dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .dsl-preview {
   display: grid;
   gap: 0.45rem;

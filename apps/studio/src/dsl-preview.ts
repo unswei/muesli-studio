@@ -9,6 +9,7 @@ export interface PreviewTreeDefinition {
 export type BtStructureDiffRowType = 'added' | 'removed' | 'renamed' | 'reordered' | 'changed';
 
 export interface NodeSnapshot {
+  id: string;
   path: string;
   kind: string;
   name: string;
@@ -154,6 +155,7 @@ function toPathMap(definition: PreviewTreeDefinition): Map<string, PathNode> {
       .map(labelFor);
 
     pathMap.set(path, {
+      id: node.id,
       path,
       parentPath: parentPathFor(path),
       kind: node.kind,
@@ -198,6 +200,7 @@ function hasLikelyChildReorder(before: PathNode, after: PathNode): boolean {
 
 function snapshotFor(node: PathNode): NodeSnapshot {
   return {
+    id: node.id,
     path: node.path,
     kind: node.kind,
     name: node.name,
@@ -403,7 +406,7 @@ export function buildBtStructureDiff(current: PreviewTreeDefinition, preview: Pr
         beforeChildren: match.before.children,
         afterChildren: match.after.children,
       });
-    } else {
+    } else if (match.before.kind !== match.after.kind || match.before.children.join('\u0000') !== match.after.children.join('\u0000')) {
       rows.push({
         type: 'changed',
         path: match.after.path,

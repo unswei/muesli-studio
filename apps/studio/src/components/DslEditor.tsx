@@ -2,7 +2,7 @@ import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
 import type { ReplayStore } from '@muesli/replay';
 
-import { compileBtDsl, type CompiledBtDefinition } from '../dsl-compiler';
+import { DslCompileError, compileBtDsl, type CompiledBtDefinition, type DslDiagnostic } from '../dsl-compiler';
 import {
   buildBtStructureDiff,
   compiledToPreviewTreeDefinition,
@@ -29,6 +29,14 @@ const diffGroupLabels: Record<BtStructureDiffRowType, string> = {
   renamed: 'renamed',
   reordered: 'reordered',
   changed: 'changed',
+};
+
+const diagnosticKindLabels: Record<DslDiagnostic['kind'], string> = {
+  syntax: 'syntax',
+  validation: 'validation',
+  'unsupported-form': 'unsupported form',
+  'unstable-identity': 'unstable identity',
+  'run-mismatch': 'run mismatch',
 };
 
 type SavePickerWindow = Window & {
@@ -156,6 +164,128 @@ function rowDetail(row: BtStructureDiffRow): ReactNode {
   );
 }
 
+function normaliseNodeId(value: unknown): string | null {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value.trim();
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value);
+  }
+  return null;
+}
+
+function runtimeNodeIdsWithHistory(replay: ReplayStore): Set<string> {
+  const ids = new Set<string>();
+  for (const event of replay.getAllEvents()) {
+    if (event.type !== 'node_status' && event.type !== 'node_enter' && event.type !== 'node_exit') {
+      continue;
+    }
+    const nodeId = normaliseNodeId((event.data as Record<string, unknown>).node_id);
+    if (nodeId) {
+      ids.add(nodeId);
+    }
+  }
+  return ids;
+}
+
+function pluralise(count: number, singular: string, plural: string): string {
+  return count === 1 ? singular : plural;
+}
+
+function buildMismatchDiagnostics(diff: BtStructureDiff, replay: ReplayStore): DslDiagnostic[] {
+  const runtimeIds = runtimeNodeIdsWithHistory(replay);
+  if (runtimeIds.size === 0) {
+    return [];
+  }
+
+  const removed = new Set<string>();
+  const changed = new Set<string>();
+  for (const row of diff.rows) {
+    const beforeId = row.before?.id;
+    if (!beforeId || !runtimeIds.has(beforeId)) {
+      continue;
+    }
+    if (row.type === 'removed') {
+      removed.add(beforeId);
+    }
+    if (row.type === 'changed') {
+      changed.add(beforeId);
+    }
+  }
+
+  const diagnostics: DslDiagnostic[] = [];
+  if (removed.size > 0) {
+    diagnostics.push({
+      kind: 'run-mismatch',
+      severity: 'warning',
+      message: `${removed.size} runtime ${pluralise(removed.size, 'node', 'nodes')} no longer ${pluralise(
+        removed.size,
+        'exists',
+        'exist',
+      )} in the draft tree.`,
+      expected: 'Edited trees should preserve runtime nodes when you want node history to stay aligned.',
+      hint: 'Applying is allowed, but history for removed nodes will no longer map to the rendered tree.',
+    });
+  }
+  if (changed.size > 0) {
+    diagnostics.push({
+      kind: 'run-mismatch',
+      severity: 'warning',
+      message: `${changed.size} runtime ${pluralise(changed.size, 'node', 'nodes')} changed kind or structure.`,
+      expected: 'Edited trees should keep runtime node structure stable when comparing against this run.',
+      hint: 'Applying is allowed, but the changed node history may describe the original runtime behaviour.',
+    });
+  }
+  return diagnostics;
+}
+
+function diagnosticsFromError(error: unknown): DslDiagnostic[] {
+  if (error instanceof DslCompileError) {
+    return error.diagnostics;
+  }
+  return [
+    {
+      kind: 'validation',
+      severity: 'error',
+      message: 'Tree source could not be previewed.',
+      expected: 'A valid Studio-previewable behaviour tree.',
+      hint: error instanceof Error ? error.message : 'Check the draft and try preview again.',
+    },
+  ];
+}
+
+function diagnosticCards(diagnostics: DslDiagnostic[]): ReactNode {
+  if (diagnostics.length === 0) {
+    return null;
+  }
+  return (
+    <div className="dsl-diagnostics">
+      {diagnostics.map((entry, index) => (
+        <article
+          key={`${entry.kind}-${entry.severity}-${entry.line ?? 'n'}-${entry.column ?? 'n'}-${index}`}
+          className={`dsl-diagnostic dsl-diagnostic--${entry.severity}`}
+        >
+          <div className="dsl-diagnostic-heading">
+            <span>{diagnosticKindLabels[entry.kind]}</span>
+            {entry.line && entry.column ? <code>line {entry.line}, column {entry.column}</code> : null}
+          </div>
+          <p>{entry.message}</p>
+          <dl>
+            <dt>expected</dt>
+            <dd>{entry.expected}</dd>
+            {entry.hint ? (
+              <>
+                <dt>next</dt>
+                <dd>{entry.hint}</dd>
+              </>
+            ) : null}
+          </dl>
+        </article>
+      ))}
+    </div>
+  );
+}
+
 export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEditorProps) {
   const rawDsl = replay.btDef?.data.dsl;
   const sourceDsl = typeof rawDsl === 'string' ? rawDsl : '';
@@ -166,7 +296,7 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
   const [previewCompiled, setPreviewCompiled] = useState<CompiledBtDefinition | null>(null);
   const [previewSource, setPreviewSource] = useState<string | null>(null);
   const [previewDiff, setPreviewDiff] = useState<BtStructureDiff | null>(null);
-  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewDiagnostics, setPreviewDiagnostics] = useState<DslDiagnostic[]>([]);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -176,7 +306,7 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
     setPreviewCompiled(null);
     setPreviewSource(null);
     setPreviewDiff(null);
-    setPreviewError(null);
+    setPreviewDiagnostics([]);
     setStatusMessage(null);
     setErrorMessage(null);
   }, [sourceDsl]);
@@ -199,23 +329,24 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
     setPreviewCompiled(null);
     setPreviewSource(null);
     setPreviewDiff(null);
-    setPreviewError(null);
+    setPreviewDiagnostics([]);
   };
 
   const onPreview = () => {
     try {
       const compiled = compileBtDsl(draftDsl);
       const compiledPreview = compiledToPreviewTreeDefinition(compiled);
+      const diff = currentDefinition ? buildBtStructureDiff(currentDefinition, compiledPreview) : null;
       setPreviewCompiled(compiled);
       setPreviewSource(draftDsl);
-      setPreviewDiff(currentDefinition ? buildBtStructureDiff(currentDefinition, compiledPreview) : null);
-      setPreviewError(null);
+      setPreviewDiff(diff);
+      setPreviewDiagnostics([...compiled.diagnostics, ...(diff ? buildMismatchDiagnostics(diff, replay) : [])]);
       setStatusMessage(null);
       setErrorMessage(null);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'tree source could not be previewed';
+      const diagnostics = diagnosticsFromError(error);
       clearPreview();
-      setPreviewError(message);
+      setPreviewDiagnostics(diagnostics);
       setErrorMessage(null);
       setStatusMessage(null);
     }
@@ -228,7 +359,6 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
     onApplyCompiled(previewCompiled);
     setStatusMessage(`Applied preview: ${previewCompiled.nodes.length} node(s), ${previewCompiled.edges.length} edge(s).`);
     setErrorMessage(null);
-    setPreviewError(null);
   };
 
   const onRevert = () => {
@@ -291,7 +421,7 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
             </span>
           </div>
 
-          {previewError ? <p className="dsl-error notice-inline notice-inline--error">{previewError}</p> : null}
+          {diagnosticCards(previewDiagnostics)}
           {errorMessage ? <p className="dsl-error notice-inline notice-inline--error">{errorMessage}</p> : null}
           {statusMessage ? <p className="dsl-status notice-inline notice-inline--success">{statusMessage}</p> : null}
           {previewDiff ? (

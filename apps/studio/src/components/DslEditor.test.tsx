@@ -21,8 +21,8 @@ interface RenderHarness {
   replay: ReplayStore;
 }
 
-function loadReplayFixture(): ReplayStore {
-  const raw = readFileSync(path.join(rootDir, 'tools', 'fixtures', 'minimal_run.jsonl'), 'utf8');
+function loadReplayFixture(fixturePath = path.join(rootDir, 'tools', 'fixtures', 'minimal_run.jsonl')): ReplayStore {
+  const raw = readFileSync(fixturePath, 'utf8');
   const parsed = parseJsonlEvents(raw);
   expect(parsed.errors).toHaveLength(0);
 
@@ -34,11 +34,11 @@ function loadReplayFixture(): ReplayStore {
 function renderEditor(
   onApplyCompiled: Parameters<typeof DslEditor>[0]['onApplyCompiled'] = () => {},
   onResetCompiled: Parameters<typeof DslEditor>[0]['onResetCompiled'] = () => {},
+  replay: ReplayStore = loadReplayFixture(),
 ): RenderHarness {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
-  const replay = loadReplayFixture();
 
   act(() => {
     root.render(<DslEditor replay={replay} onApplyCompiled={onApplyCompiled} onResetCompiled={onResetCompiled} />);
@@ -69,6 +69,10 @@ function blobToText(blob: Blob): Promise<string> {
     reader.addEventListener('error', () => reject(reader.error ?? new Error('blob read failed')));
     reader.readAsText(blob);
   });
+}
+
+function studioDemoReplay(): ReplayStore {
+  return loadReplayFixture(path.join(rootDir, 'tests', 'fixtures', 'studio_demo', 'events.jsonl'));
 }
 
 beforeEach(() => {
@@ -193,10 +197,122 @@ describe('DslEditor', () => {
       buttonsFor(view.container)[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
 
-    expect(view.container.textContent).toContain('missing closing parenthesis');
+    expect(view.container.textContent).toContain('syntax');
+    expect(view.container.textContent).toContain('line 1, column 5');
+    expect(view.container.textContent).toContain('A `)` to close this list.');
+    expect(view.container.textContent).toContain('Add a matching `)` for the list that starts here.');
     expect(view.container.textContent).not.toContain('preview:');
     expect(buttonsFor(view.container)[1]?.hasAttribute('disabled')).toBe(true);
     expect(onApplyCompiled).not.toHaveBeenCalled();
+  });
+
+  it('renders unsupported forms as structured diagnostics', () => {
+    const view = renderEditor();
+    rendered.push(view);
+
+    const textarea = view.container.querySelector('textarea');
+    act(() => {
+      setTextAreaValue(textarea, '(bt (par (act a)))');
+    });
+    act(() => {
+      buttonsFor(view.container)[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(view.container.textContent).toContain('unsupported form');
+    expect(view.container.textContent).toContain('Studio preview does not support `par` yet.');
+    expect(view.container.textContent).toContain('Studio preview supports `seq`, `sel`, `act`, `cond`, and `dec` here.');
+    expect(view.container.textContent).not.toContain('Error:');
+  });
+
+  it('shows unstable identity warnings alongside successful preview', () => {
+    const view = renderEditor();
+    rendered.push(view);
+
+    const textarea = view.container.querySelector('textarea');
+    act(() => {
+      setTextAreaValue(textarea, '(bt (seq (act plan) (act plan)))');
+    });
+    act(() => {
+      buttonsFor(view.container)[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(view.container.textContent).toContain('preview:');
+    expect(view.container.textContent).toContain('unstable identity');
+    expect(view.container.textContent).toContain('Sibling nodes have the same signature.');
+    expect(buttonsFor(view.container)[1]?.hasAttribute('disabled')).toBe(false);
+  });
+
+  it('warns when removed runtime-history nodes no longer exist in the draft tree', () => {
+    const view = renderEditor(vi.fn(), vi.fn(), studioDemoReplay());
+    rendered.push(view);
+
+    const textarea = view.container.querySelector('textarea');
+    act(() => {
+      setTextAreaValue(textarea, '(bt (seq (cond localisation-ready)))');
+    });
+    act(() => {
+      buttonsFor(view.container)[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(view.container.textContent).toContain('runtime nodes no longer exist in the draft tree');
+    expect(buttonsFor(view.container)[1]?.hasAttribute('disabled')).toBe(false);
+  });
+
+  it('warns when changed runtime-history nodes change kind or structure', () => {
+    const view = renderEditor(vi.fn(), vi.fn(), studioDemoReplay());
+    rendered.push(view);
+
+    const textarea = view.container.querySelector('textarea');
+    act(() => {
+      setTextAreaValue(
+        textarea,
+        '(bt (seq (act localisation-ready) (seq (act plan-global-path) (act dispatch-controller-job)) (cond goal-reached)))',
+      );
+    });
+    act(() => {
+      buttonsFor(view.container)[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(view.container.textContent).toContain('1 runtime node changed kind or structure.');
+    expect(buttonsFor(view.container)[1]?.hasAttribute('disabled')).toBe(false);
+  });
+
+  it('does not warn for renamed runtime-history nodes', () => {
+    const view = renderEditor(vi.fn(), vi.fn(), studioDemoReplay());
+    rendered.push(view);
+
+    const textarea = view.container.querySelector('textarea');
+    act(() => {
+      setTextAreaValue(
+        textarea,
+        '(bt (seq (cond localisation-ready) (seq (act plan-route) (act dispatch-controller-job)) (cond goal-reached)))',
+      );
+    });
+    act(() => {
+      buttonsFor(view.container)[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(view.container.textContent).toContain('renamed');
+    expect(view.container.textContent).not.toContain('run mismatch');
+  });
+
+  it('does not warn for reordered runtime-history nodes', () => {
+    const view = renderEditor(vi.fn(), vi.fn(), studioDemoReplay());
+    rendered.push(view);
+
+    const textarea = view.container.querySelector('textarea');
+    act(() => {
+      setTextAreaValue(
+        textarea,
+        '(bt (seq (cond localisation-ready) (cond goal-reached) (seq (act plan-global-path) (act dispatch-controller-job))))',
+      );
+    });
+    act(() => {
+      buttonsFor(view.container)[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(view.container.textContent).toContain('reordered');
+    expect(view.container.textContent).not.toContain('run mismatch');
   });
 
   it('reverts the draft and clears preview state', () => {

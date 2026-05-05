@@ -21,6 +21,8 @@ Use replay mode when you need deterministic post-run inspection, debugging, or r
 - `bt_def.dsl` is editable in a dedicated panel:
   - `preview` compiles the draft DSL without mutating the replay and shows a structure-aware BT diff
   - the diff summarises added, removed, renamed, reordered, and changed nodes first, with row-level details on demand
+  - diagnostics distinguish syntax errors, unsupported DSL forms, unstable sibling identities, and replay mismatch warnings
+  - mismatch warnings are non-blocking and appear when a removed or structurally changed draft node has runtime history in the loaded run
   - `apply preview` applies the last successful preview to the rendered tree
   - `revert` restores the runtime definition from log events
   - `save` writes the draft via browser save picker, or downloads if picker API is unavailable
@@ -88,7 +90,7 @@ pnpm studio inspect tests/fixtures/determinism_replay --schema tests/fixtures/sc
 
 2. Open [`tests/fixtures/determinism_replay/events.jsonl`](../../../tests/fixtures/determinism_replay/events.jsonl) in studio and scrub ticks `1..2`.
 
-3. Edit `bt_def.dsl`, click `preview`, inspect the structure-aware diff summary, expand any changed row that needs detail, then click `apply preview` and confirm the tree panel updates.
+3. Edit `bt_def.dsl`, click `preview`, inspect diagnostics and the structure-aware diff summary, expand any changed row that needs detail, then click `apply preview` and confirm the tree panel updates.
 
 4. For large logs, also open [`tests/fixtures/large_replay/events.sidecar.tick-index.v1.json`](../../../tests/fixtures/large_replay/events.sidecar.tick-index.v1.json) before opening `events.jsonl`.
 
@@ -138,8 +140,12 @@ Live capture replay:
 - global shortcuts are suppressed while focus is inside an input, textarea, select, or content-editable field so typing in forms stays predictable
 - deep links are reopenable only for demo or URL-backed replays; local file selections are intentionally not encoded into the browser URL
 - newer runtime event variants are retained in the stream even when UI panels do not yet render dedicated widgets
-- DSL compile errors are shown inline during preview and do not mutate the currently rendered tree
-- structure-aware BT diffs are based on the loaded tree definition and the compiled draft; they do not add runtime-history mismatch warnings yet
+- DSL diagnostics are shown inline during preview and do not mutate the currently rendered tree
+- syntax and unsupported-form diagnostics block preview until the draft is fixed
+- unstable sibling identities are warnings; duplicate sibling signatures such as two `(act plan)` children under the same parent can make diff matching less precise
+- replay mismatch warnings are non-blocking; applying is still allowed when the warning appears
+- runtime history for mismatch warnings is counted from loaded `node_status`, `node_enter`, and `node_exit` events only
+- structure-aware BT diffs are based on the loaded tree definition and the compiled draft; lazy event ranges that have not been hydrated cannot contribute to mismatch warnings yet
 
 ## see also
 

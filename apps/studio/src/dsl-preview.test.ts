@@ -41,6 +41,13 @@ describe('buildBtStructureDiff', () => {
     );
   });
 
+  it('retains current runtime node ids on before snapshots', () => {
+    const diff = diffBetween('(bt (seq (act a) (act b)))', '(bt (seq (act a)))');
+    const removed = diff.rows.find((row) => row.type === 'removed');
+
+    expect(removed?.before).toMatchObject({ id: '3', path: '0/1', label: 'act b' });
+  });
+
   it('reports renamed nodes at stable paths', () => {
     const diff = diffBetween('(bt (seq (act a)))', '(bt (seq (act b)))');
 
@@ -67,6 +74,13 @@ describe('buildBtStructureDiff', () => {
         after: expect.objectContaining({ kind: 'cond', name: 'a' }),
       }),
     );
+  });
+
+  it('maps changed rows back to current runtime node ids', () => {
+    const diff = diffBetween('(bt (seq (act a)))', '(bt (seq (cond a)))');
+    const changed = diff.rows.find((row) => row.type === 'changed');
+
+    expect(changed?.before).toMatchObject({ id: '2', kind: 'act', name: 'a' });
   });
 
   it('reports reordered children under the same parent without false renames', () => {

@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 
 - added a staged DSL editing preview so tree source changes compile into a structural summary before they can be applied to the replay.
 - added a compact structure-aware BT diff for DSL previews, with summary counts and expandable rows for added, removed, renamed, reordered, and changed nodes.
+- added product-level DSL diagnostics and non-blocking replay mismatch warnings when draft previews remove or structurally change nodes with loaded runtime history.
 
 ### changed
 
