@@ -189,7 +189,7 @@ Studio replay load supports the optional sidecar index file `events.sidecar.tick
 
 Large indexed replays now bootstrap lazily for both local files and URL auto-loads. File loads use `File.slice`; URL loads use HTTP byte ranges when the host supports them.
 
-The replay panel also includes a DSL editor for `bt_def.dsl`. Use `apply` to replace the rendered tree immediately, `revert` to restore the runtime definition, and `save` to export the edited DSL.
+The replay panel also includes a DSL editor for `bt_def.dsl`. Use `preview` to compile draft changes into a structure-aware BT diff, inspect added, removed, renamed, reordered, and changed nodes, then use `apply preview` to replace the rendered tree.
 
 Replay mode now includes a first-class run summary panel for versions, tree identity, timings, warning counts, planner/scheduler activity, and deterministic digests.
 
@@ -272,6 +272,6 @@ tools/sync_contract.sh # sync contract from resolved muesli-bt source
 
 ## current scope
 
-The current release makes live monitoring and replay feel like one workflow. The studio also includes a lightweight DSL editor for swapping rendered tree definitions during inspection, while deeper authoring workflows remain out of scope for now.
+The current development scope is disciplined BT editing. Studio now previews DSL changes as a structure-aware tree diff before applying them to replay, while broader visual authoring remains out of scope for now.
 
 The broader release plan is tracked in [docs/roadmap-to-1.0.md](docs/roadmap-to-1.0.md).

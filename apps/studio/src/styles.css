@@ -1321,7 +1321,84 @@ button:disabled {
   padding-left: 1rem;
 }
 
-.dsl-preview code {
+.dsl-diff-groups {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.dsl-diff-group {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.dsl-diff-group-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dsl-diff-group-title span {
+  color: var(--muted);
+}
+
+.dsl-diff-rows {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.dsl-diff-row {
+  border-top: 1px solid rgba(45, 96, 125, 0.16);
+  padding-top: 0.35rem;
+}
+
+.dsl-diff-row summary {
+  display: grid;
+  grid-template-columns: minmax(3.4rem, max-content) minmax(0, 1fr);
+  gap: 0.65rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.dsl-diff-row summary::-webkit-details-marker {
+  display: none;
+}
+
+.dsl-diff-row-path {
+  font: 0.8rem/1.35 "IBM Plex Mono", "SFMono-Regular", "Consolas", monospace;
+  color: var(--muted-strong);
+}
+
+.dsl-diff-row-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dsl-diff-detail {
+  display: grid;
+  grid-template-columns: minmax(5.5rem, max-content) minmax(0, 1fr);
+  gap: 0.25rem 0.65rem;
+  margin: 0.5rem 0 0;
+  padding-left: 4.05rem;
+}
+
+.dsl-diff-detail dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.dsl-diff-detail dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dsl-preview code,
+.dsl-diff-detail code {
   font: 0.82rem/1.3 "IBM Plex Mono", "SFMono-Regular", "Consolas", monospace;
   color: inherit;
 }

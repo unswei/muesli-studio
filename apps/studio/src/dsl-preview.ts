@@ -6,23 +6,35 @@ export interface PreviewTreeDefinition {
   edges: Array<{ parent: string; child: string; index: number }>;
 }
 
-export type StructuralPreviewChange =
-  | { type: 'added'; path: string; label: string }
-  | { type: 'removed'; path: string; label: string }
-  | { type: 'changed'; path: string; before: string; after: string }
-  | { type: 'reordered'; path: string; before: string; after: string };
+export type BtStructureDiffRowType = 'added' | 'removed' | 'renamed' | 'reordered' | 'changed';
 
-export interface StructuralPreview {
-  nodeCount: number;
-  edgeCount: number;
-  changedCount: number;
-  changes: StructuralPreviewChange[];
+export interface NodeSnapshot {
+  path: string;
+  kind: string;
+  name: string;
+  label: string;
 }
 
-interface PathNode {
+export interface BtStructureDiffRow {
+  type: BtStructureDiffRowType;
   path: string;
-  label: string;
-  childSignature: string;
+  before?: NodeSnapshot;
+  after?: NodeSnapshot;
+  parentPath?: string;
+  beforeChildren?: string[];
+  afterChildren?: string[];
+}
+
+export interface BtStructureDiff {
+  nodeCount: number;
+  edgeCount: number;
+  summary: Record<BtStructureDiffRowType, number> & { total: number };
+  rows: BtStructureDiffRow[];
+}
+
+interface PathNode extends NodeSnapshot {
+  parentPath?: string;
+  children: string[];
 }
 
 function normaliseId(value: unknown): string | null {
@@ -100,6 +112,11 @@ function labelFor(node: { kind: string; name: string }): string {
   return `${node.kind} ${node.name}`;
 }
 
+function parentPathFor(path: string): string | undefined {
+  const lastSeparator = path.lastIndexOf('/');
+  return lastSeparator === -1 ? undefined : path.slice(0, lastSeparator);
+}
+
 function toPathMap(definition: PreviewTreeDefinition): Map<string, PathNode> {
   const nodesById = new Map(definition.nodes.map((node) => [node.id, node]));
   const childIds = new Set(definition.edges.map((edge) => edge.child));
@@ -131,21 +148,22 @@ function toPathMap(definition: PreviewTreeDefinition): Map<string, PathNode> {
       return;
     }
 
-    const children = childrenByParent.get(nodeId) ?? [];
-    const childSignature = children
-      .map((edge) => {
-        const child = nodesById.get(edge.child);
-        return child ? labelFor(child) : edge.child;
-      })
-      .join(' > ');
+    const children = (childrenByParent.get(nodeId) ?? [])
+      .map((edge) => nodesById.get(edge.child))
+      .filter((child): child is { id: string; kind: string; name: string } => child !== undefined)
+      .map(labelFor);
 
     pathMap.set(path, {
       path,
+      parentPath: parentPathFor(path),
+      kind: node.kind,
+      name: node.name,
       label: labelFor(node),
-      childSignature,
+      children,
     });
 
-    children.forEach((edge, index) => {
+    const childEdges = childrenByParent.get(nodeId) ?? [];
+    childEdges.forEach((edge, index) => {
       visit(edge.child, `${path}/${index}`);
     });
   }
@@ -164,52 +182,271 @@ function sameSet(left: string[], right: string[]): boolean {
   return left.slice().sort().join('\u0000') === right.slice().sort().join('\u0000');
 }
 
-export function buildStructuralPreview(current: PreviewTreeDefinition, preview: PreviewTreeDefinition): StructuralPreview {
+function hasSameChildrenInDifferentOrder(before: PathNode, after: PathNode): boolean {
+  return before.children.length > 1 && before.children.join('\u0000') !== after.children.join('\u0000') && sameSet(before.children, after.children);
+}
+
+function hasLikelyChildReorder(before: PathNode, after: PathNode): boolean {
+  if (hasSameChildrenInDifferentOrder(before, after)) {
+    return true;
+  }
+  if (before.children.length !== after.children.length || before.children.length < 2) {
+    return false;
+  }
+  return before.children.some((label, index) => after.children.includes(label) && after.children[index] !== label);
+}
+
+function snapshotFor(node: PathNode): NodeSnapshot {
+  return {
+    path: node.path,
+    kind: node.kind,
+    name: node.name,
+    label: node.label,
+  };
+}
+
+function rowForSamePath(before: PathNode, after: PathNode): BtStructureDiffRow[] {
+  const rows: BtStructureDiffRow[] = [];
+  if (before.kind === after.kind && before.name !== after.name) {
+    rows.push({
+      type: 'renamed',
+      path: after.path,
+      before: snapshotFor(before),
+      after: snapshotFor(after),
+      parentPath: after.parentPath,
+      beforeChildren: before.children,
+      afterChildren: after.children,
+    });
+  }
+
+  if (before.kind !== after.kind) {
+    rows.push({
+      type: 'changed',
+      path: after.path,
+      before: snapshotFor(before),
+      after: snapshotFor(after),
+      parentPath: after.parentPath,
+      beforeChildren: before.children,
+      afterChildren: after.children,
+    });
+  }
+
+  if (hasLikelyChildReorder(before, after)) {
+    rows.push({
+      type: 'reordered',
+      path: after.path,
+      before: snapshotFor(before),
+      after: snapshotFor(after),
+      parentPath: after.parentPath,
+      beforeChildren: before.children,
+      afterChildren: after.children,
+    });
+  }
+
+  return rows;
+}
+
+function similarityScore(before: PathNode, after: PathNode): number {
+  let score = 0;
+  if (before.kind === after.kind) {
+    score += 4;
+  }
+  if (before.name === after.name) {
+    score += 3;
+  }
+  if (before.parentPath === after.parentPath) {
+    score += 2;
+  }
+  if (sameSet(before.children, after.children)) {
+    score += 2;
+  }
+  return score;
+}
+
+function matchUnpairedNodes(beforeNodes: PathNode[], afterNodes: PathNode[]): Array<{ before: PathNode; after: PathNode }> {
+  const pairs: Array<{ before: PathNode; after: PathNode; score: number }> = [];
+  for (const before of beforeNodes) {
+    for (const after of afterNodes) {
+      const score = similarityScore(before, after);
+      if (score >= 6) {
+        pairs.push({ before, after, score });
+      }
+    }
+  }
+
+  pairs.sort(
+    (a, b) =>
+      b.score - a.score ||
+      a.before.path.localeCompare(b.before.path, undefined, { numeric: true }) ||
+      a.after.path.localeCompare(b.after.path, undefined, { numeric: true }),
+  );
+
+  const usedBefore = new Set<string>();
+  const usedAfter = new Set<string>();
+  const matches: Array<{ before: PathNode; after: PathNode }> = [];
+
+  for (const pair of pairs) {
+    if (usedBefore.has(pair.before.path) || usedAfter.has(pair.after.path)) {
+      continue;
+    }
+    usedBefore.add(pair.before.path);
+    usedAfter.add(pair.after.path);
+    matches.push({ before: pair.before, after: pair.after });
+  }
+
+  return matches;
+}
+
+function childNodesForParent(paths: Map<string, PathNode>, parentPath: string): PathNode[] {
+  return Array.from(paths.values())
+    .filter((node) => node.parentPath === parentPath)
+    .sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true }));
+}
+
+function createSummary(rows: BtStructureDiffRow[]): BtStructureDiff['summary'] {
+  const summary = {
+    added: 0,
+    removed: 0,
+    renamed: 0,
+    reordered: 0,
+    changed: 0,
+    total: rows.length,
+  };
+
+  for (const row of rows) {
+    summary[row.type] += 1;
+  }
+
+  return summary;
+}
+
+function sortRows(rows: BtStructureDiffRow[]): BtStructureDiffRow[] {
+  const order: Record<BtStructureDiffRowType, number> = {
+    added: 0,
+    removed: 1,
+    renamed: 2,
+    reordered: 3,
+    changed: 4,
+  };
+  return rows.slice().sort((a, b) => order[a.type] - order[b.type] || a.path.localeCompare(b.path, undefined, { numeric: true }));
+}
+
+export function buildBtStructureDiff(current: PreviewTreeDefinition, preview: PreviewTreeDefinition): BtStructureDiff {
   const currentPaths = toPathMap(current);
   const previewPaths = toPathMap(preview);
-  const allPaths = Array.from(new Set([...currentPaths.keys(), ...previewPaths.keys()])).sort((a, b) =>
-    a.localeCompare(b, undefined, { numeric: true }),
-  );
-  const changes: StructuralPreviewChange[] = [];
+  const rows: BtStructureDiffRow[] = [];
+  const pairedBefore = new Set<string>();
+  const pairedAfter = new Set<string>();
 
-  for (const path of allPaths) {
+  const samePaths = Array.from(currentPaths.keys())
+    .filter((path) => previewPaths.has(path))
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+  const reorderedParents = new Set<string>();
+  for (const path of samePaths) {
     const before = currentPaths.get(path);
     const after = previewPaths.get(path);
-    if (!before && after) {
-      changes.push({ type: 'added', path, label: after.label });
-      continue;
+    if (before && after && hasSameChildrenInDifferentOrder(before, after)) {
+      reorderedParents.add(path);
+    } else if (before && after && hasLikelyChildReorder(before, after)) {
+      reorderedParents.add(path);
     }
-    if (before && !after) {
-      changes.push({ type: 'removed', path, label: before.label });
-      continue;
-    }
+  }
+
+  for (const path of samePaths) {
+    const before = currentPaths.get(path);
+    const after = previewPaths.get(path);
     if (!before || !after) {
       continue;
     }
-    if (before.label !== after.label) {
-      changes.push({ type: 'changed', path, before: before.label, after: after.label });
+    pairedBefore.add(path);
+    pairedAfter.add(path);
+    if (before.parentPath && reorderedParents.has(before.parentPath) && before.label !== after.label) {
+      continue;
     }
+    rows.push(...rowForSamePath(before, after));
+  }
 
-    const beforeChildren = before.childSignature.length > 0 ? before.childSignature.split(' > ') : [];
-    const afterChildren = after.childSignature.length > 0 ? after.childSignature.split(' > ') : [];
-    if (
-      before.childSignature !== after.childSignature &&
-      beforeChildren.length > 1 &&
-      sameSet(beforeChildren, afterChildren)
-    ) {
-      changes.push({
-        type: 'reordered',
-        path,
-        before: before.childSignature,
-        after: after.childSignature,
+  for (const parentPath of reorderedParents) {
+    const beforeChildren = childNodesForParent(currentPaths, parentPath);
+    const afterChildren = childNodesForParent(previewPaths, parentPath);
+    for (const match of matchUnpairedNodes(beforeChildren, afterChildren)) {
+      if (match.before.name === match.after.name && match.before.kind === match.after.kind) {
+        continue;
+      }
+      rows.push({
+        type: match.before.kind === match.after.kind ? 'renamed' : 'changed',
+        path: match.after.path,
+        before: snapshotFor(match.before),
+        after: snapshotFor(match.after),
+        parentPath: match.after.parentPath,
+        beforeChildren: match.before.children,
+        afterChildren: match.after.children,
       });
     }
   }
 
+  const unpairedBefore = Array.from(currentPaths.values()).filter((node) => !pairedBefore.has(node.path));
+  const unpairedAfter = Array.from(previewPaths.values()).filter((node) => !pairedAfter.has(node.path));
+  const matchedUnpaired = matchUnpairedNodes(unpairedBefore, unpairedAfter);
+
+  for (const match of matchedUnpaired) {
+    pairedBefore.add(match.before.path);
+    pairedAfter.add(match.after.path);
+    if (match.before.kind === match.after.kind && match.before.name !== match.after.name) {
+      rows.push({
+        type: 'renamed',
+        path: match.after.path,
+        before: snapshotFor(match.before),
+        after: snapshotFor(match.after),
+        parentPath: match.after.parentPath,
+        beforeChildren: match.before.children,
+        afterChildren: match.after.children,
+      });
+    } else {
+      rows.push({
+        type: 'changed',
+        path: match.after.path,
+        before: snapshotFor(match.before),
+        after: snapshotFor(match.after),
+        parentPath: match.after.parentPath,
+        beforeChildren: match.before.children,
+        afterChildren: match.after.children,
+      });
+    }
+  }
+
+  for (const before of currentPaths.values()) {
+    if (pairedBefore.has(before.path)) {
+      continue;
+    }
+    rows.push({
+      type: 'removed',
+      path: before.path,
+      before: snapshotFor(before),
+      parentPath: before.parentPath,
+      beforeChildren: before.children,
+    });
+  }
+
+  for (const after of previewPaths.values()) {
+    if (pairedAfter.has(after.path)) {
+      continue;
+    }
+    rows.push({
+      type: 'added',
+      path: after.path,
+      after: snapshotFor(after),
+      parentPath: after.parentPath,
+      afterChildren: after.children,
+    });
+  }
+
+  const sortedRows = sortRows(rows);
   return {
     nodeCount: preview.nodes.length,
     edgeCount: preview.edges.length,
-    changedCount: changes.length,
-    changes,
+    summary: createSummary(sortedRows),
+    rows: sortedRows,
   };
 }

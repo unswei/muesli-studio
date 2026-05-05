@@ -116,10 +116,23 @@ describe('DslEditor', () => {
       previewButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
     expect(onApplyCompiled).not.toHaveBeenCalled();
-    expect(view.container.textContent).toContain('preview: 3 node(s), 2 edge(s),');
+    expect(view.container.textContent).toContain('preview: 3 node(s), 2 edge(s); 3 change(s)');
+    expect(view.container.textContent).toContain('renamed 1');
+    expect(view.container.textContent).toContain('changed 2');
+    const diffRows = Array.from(view.container.querySelectorAll('details.dsl-diff-row'));
+    expect(diffRows).toHaveLength(3);
+    expect(diffRows.every((row) => !row.hasAttribute('open'))).toBe(true);
 
     buttons = buttonsFor(view.container);
     expect(buttons[1]?.hasAttribute('disabled')).toBe(false);
+
+    const firstSummary = diffRows[0]?.querySelector('summary');
+    act(() => {
+      firstSummary?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(diffRows[0]?.hasAttribute('open')).toBe(true);
+    expect(diffRows[0]?.textContent).toContain('before path');
+    expect(diffRows[0]?.textContent).toContain('after path');
 
     act(() => {
       buttons[1]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -143,6 +156,7 @@ describe('DslEditor', () => {
       buttonsFor(view.container)[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
     expect(buttonsFor(view.container)[1]?.hasAttribute('disabled')).toBe(false);
+    expect(view.container.querySelectorAll('details.dsl-diff-row')).toHaveLength(3);
 
     act(() => {
       setTextAreaValue(textarea, '(bt (sel (act recover) (act fallback) (act finalise)))');
@@ -150,6 +164,7 @@ describe('DslEditor', () => {
 
     expect(buttonsFor(view.container)[1]?.hasAttribute('disabled')).toBe(true);
     expect(view.container.textContent).not.toContain('preview:');
+    expect(view.container.querySelectorAll('details.dsl-diff-row')).toHaveLength(0);
 
     act(() => {
       buttonsFor(view.container)[1]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));

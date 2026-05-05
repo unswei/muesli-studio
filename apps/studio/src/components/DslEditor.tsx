@@ -1,13 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
 import type { ReplayStore } from '@muesli/replay';
 
 import { compileBtDsl, type CompiledBtDefinition } from '../dsl-compiler';
 import {
-  buildStructuralPreview,
+  buildBtStructureDiff,
   compiledToPreviewTreeDefinition,
   toPreviewTreeDefinition,
-  type StructuralPreview,
+  type BtStructureDiff,
+  type BtStructureDiffRow,
+  type BtStructureDiffRowType,
+  type NodeSnapshot,
 } from '../dsl-preview';
 
 interface DslEditorProps {
@@ -17,6 +20,16 @@ interface DslEditorProps {
 }
 
 type SaveMode = 'picker' | 'download';
+
+const diffGroupOrder: BtStructureDiffRowType[] = ['added', 'removed', 'renamed', 'reordered', 'changed'];
+
+const diffGroupLabels: Record<BtStructureDiffRowType, string> = {
+  added: 'added',
+  removed: 'removed',
+  renamed: 'renamed',
+  reordered: 'reordered',
+  changed: 'changed',
+};
 
 type SavePickerWindow = Window & {
   showSaveFilePicker?: (options?: {
@@ -64,6 +77,85 @@ async function saveDslToDisk(dsl: string, runId: string): Promise<SaveMode> {
   return 'download';
 }
 
+function formatSummary(diff: BtStructureDiff): string {
+  const counts = diffGroupOrder
+    .filter((type) => diff.summary[type] > 0)
+    .map((type) => `${diff.summary[type]} ${diffGroupLabels[type]}`)
+    .join(', ');
+
+  return `preview: ${diff.nodeCount} node(s), ${diff.edgeCount} edge(s); ${diff.summary.total} change(s)${
+    counts.length > 0 ? ` (${counts})` : ''
+  }`;
+}
+
+function rowTitle(row: BtStructureDiffRow): string {
+  const current = row.after ?? row.before;
+  const label = current?.label ?? 'node';
+  if (row.type === 'renamed' && row.before && row.after) {
+    return `${row.before.name} -> ${row.after.name}`;
+  }
+  if (row.type === 'reordered') {
+    return current ? `${current.label} children` : 'children';
+  }
+  if (row.type === 'changed' && row.before && row.after) {
+    return `${row.before.label} -> ${row.after.label}`;
+  }
+  return label;
+}
+
+function snapshotDetail(label: string, snapshot: NodeSnapshot | undefined): ReactNode {
+  if (!snapshot) {
+    return null;
+  }
+  return (
+    <>
+      <dt>{label} path</dt>
+      <dd>
+        <code>{snapshot.path}</code>
+      </dd>
+      <dt>{label} kind</dt>
+      <dd>{snapshot.kind}</dd>
+      <dt>{label} name</dt>
+      <dd>{snapshot.name}</dd>
+    </>
+  );
+}
+
+function childrenDetail(label: string, children: string[] | undefined): ReactNode {
+  if (!children || children.length === 0) {
+    return null;
+  }
+  return (
+    <>
+      <dt>{label} children</dt>
+      <dd>{children.join(' -> ')}</dd>
+    </>
+  );
+}
+
+function rowDetail(row: BtStructureDiffRow): ReactNode {
+  return (
+    <dl className="dsl-diff-detail">
+      <dt>path</dt>
+      <dd>
+        <code>{row.path}</code>
+      </dd>
+      {row.parentPath ? (
+        <>
+          <dt>parent path</dt>
+          <dd>
+            <code>{row.parentPath}</code>
+          </dd>
+        </>
+      ) : null}
+      {snapshotDetail('before', row.before)}
+      {snapshotDetail('after', row.after)}
+      {childrenDetail('before', row.beforeChildren)}
+      {childrenDetail('after', row.afterChildren)}
+    </dl>
+  );
+}
+
 export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEditorProps) {
   const rawDsl = replay.btDef?.data.dsl;
   const sourceDsl = typeof rawDsl === 'string' ? rawDsl : '';
@@ -73,7 +165,7 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
   const [draftDsl, setDraftDsl] = useState(sourceDsl);
   const [previewCompiled, setPreviewCompiled] = useState<CompiledBtDefinition | null>(null);
   const [previewSource, setPreviewSource] = useState<string | null>(null);
-  const [previewSummary, setPreviewSummary] = useState<StructuralPreview | null>(null);
+  const [previewDiff, setPreviewDiff] = useState<BtStructureDiff | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -83,7 +175,7 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
     setDraftDsl(sourceDsl);
     setPreviewCompiled(null);
     setPreviewSource(null);
-    setPreviewSummary(null);
+    setPreviewDiff(null);
     setPreviewError(null);
     setStatusMessage(null);
     setErrorMessage(null);
@@ -106,7 +198,7 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
   const clearPreview = () => {
     setPreviewCompiled(null);
     setPreviewSource(null);
-    setPreviewSummary(null);
+    setPreviewDiff(null);
     setPreviewError(null);
   };
 
@@ -116,7 +208,7 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
       const compiledPreview = compiledToPreviewTreeDefinition(compiled);
       setPreviewCompiled(compiled);
       setPreviewSource(draftDsl);
-      setPreviewSummary(currentDefinition ? buildStructuralPreview(currentDefinition, compiledPreview) : null);
+      setPreviewDiff(currentDefinition ? buildBtStructureDiff(currentDefinition, compiledPreview) : null);
       setPreviewError(null);
       setStatusMessage(null);
       setErrorMessage(null);
@@ -202,48 +294,36 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
           {previewError ? <p className="dsl-error notice-inline notice-inline--error">{previewError}</p> : null}
           {errorMessage ? <p className="dsl-error notice-inline notice-inline--error">{errorMessage}</p> : null}
           {statusMessage ? <p className="dsl-status notice-inline notice-inline--success">{statusMessage}</p> : null}
-          {previewSummary ? (
+          {previewDiff ? (
             <div className="dsl-preview notice-inline notice-inline--info">
-              <p className="dsl-preview-summary">
-                preview: {previewSummary.nodeCount} node(s), {previewSummary.edgeCount} edge(s), {previewSummary.changedCount}{' '}
-                changed
-              </p>
-              {previewSummary.changes.length > 0 ? (
-                <ul className="dsl-preview-list">
-                  {previewSummary.changes.map((change, index) => {
-                    const key = `${change.type}-${change.path}-${index}`;
-                    if (change.type === 'added') {
-                      return (
-                        <li key={key}>
-                          added <code>{change.path}</code>: {change.label}
-                        </li>
-                      );
-                    }
-                    if (change.type === 'removed') {
-                      return (
-                        <li key={key}>
-                          removed <code>{change.path}</code>: {change.label}
-                        </li>
-                      );
-                    }
-                    if (change.type === 'reordered') {
-                      return (
-                        <li key={key}>
-                          reordered <code>{change.path}</code>: {change.before}
-                          {' -> '}
-                          {change.after}
-                        </li>
-                      );
+              <p className="dsl-preview-summary">{formatSummary(previewDiff)}</p>
+              {previewDiff.rows.length > 0 ? (
+                <div className="dsl-diff-groups">
+                  {diffGroupOrder.map((type) => {
+                    const rows = previewDiff.rows.filter((row) => row.type === type);
+                    if (rows.length === 0) {
+                      return null;
                     }
                     return (
-                      <li key={key}>
-                        changed <code>{change.path}</code>: {change.before}
-                        {' -> '}
-                        {change.after}
-                      </li>
+                      <section key={type} className="dsl-diff-group" aria-label={`${diffGroupLabels[type]} changes`}>
+                        <p className="dsl-diff-group-title">
+                          {diffGroupLabels[type]} <span>{rows.length}</span>
+                        </p>
+                        <div className="dsl-diff-rows">
+                          {rows.map((row, index) => (
+                            <details key={`${row.type}-${row.path}-${index}`} className="dsl-diff-row">
+                              <summary>
+                                <span className="dsl-diff-row-path">{row.path}</span>
+                                <span className="dsl-diff-row-title">{rowTitle(row)}</span>
+                              </summary>
+                              {rowDetail(row)}
+                            </details>
+                          ))}
+                        </div>
+                      </section>
                     );
                   })}
-                </ul>
+                </div>
               ) : (
                 <p className="dsl-preview-empty">No structural changes from the applied tree.</p>
               )}
