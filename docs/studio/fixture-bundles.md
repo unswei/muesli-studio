@@ -11,8 +11,8 @@ Use this flow when you:
 - import fixture cases from `muesli-bt`
 - verify contract/schema compatibility in CI
 - generate deterministic `run_summary.json` outputs
-- generate deterministic GitHub or publication screenshots from one canonical demo bundle
-- export a small publication bundle directly from Studio for review or supplements
+- generate deterministic GitHub or evidence screenshots from one canonical demo bundle
+- export a small evidence bundle directly from Studio for review or supplements
 
 ## how it works
 
@@ -74,7 +74,7 @@ pnpm docs:screenshots
 - compare panel screenshot
 - DSL editor screenshot
 
-Studio can also re-export the loaded replay as a compact publication bundle. The exported archive includes:
+Studio can also re-export the loaded replay as a compact evidence bundle. The exported archive includes:
 
 - `events.jsonl`
 - `events.sidecar.tick-index.v1.json`
@@ -107,4 +107,4 @@ pnpm bench:sidecar
 - `tests/fixtures/`
 - `packages/replay/src/bundle/load-bundle.ts`
 - `tools/validate_log.py`
-- `docs/studio/publication-workflow.md`
+- `docs/studio/evidence-bundles.md`

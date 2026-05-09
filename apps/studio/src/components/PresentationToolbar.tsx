@@ -1,4 +1,4 @@
-import { presentationLayouts, type PresentationLayout } from '../publication';
+import { presentationLayouts, type PresentationLayout } from '../evidence';
 
 interface PresentationToolbarProps {
   currentLayout: PresentationLayout;

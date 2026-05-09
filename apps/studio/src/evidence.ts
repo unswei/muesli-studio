@@ -4,7 +4,7 @@ export const presentationLayouts = ['hero', 'summary', 'node', 'diff', 'compare'
 
 export type PresentationLayout = (typeof presentationLayouts)[number];
 
-export interface PublicationManifest {
+export interface EvidenceManifest {
   contract_id: string;
   contract_version: string;
   fixture_name: string;
@@ -19,7 +19,7 @@ export interface PublicationManifest {
   selected_node_id: string | null;
 }
 
-type BundleKind = 'publication' | 'live-capture';
+type BundleKind = 'evidence' | 'live-capture';
 
 function stringFromUnknown(value: unknown): string | null {
   if (typeof value !== 'string') {
@@ -62,12 +62,12 @@ function buildReplayBundleManifest(
   selectedNodeId: string | null,
   exportedAtUtc: string,
   kind: BundleKind,
-): PublicationManifest {
+): EvidenceManifest {
   const runStartData = replay.runStart?.data as Record<string, unknown> | undefined;
   const btDefData = replay.btDef?.data as Record<string, unknown> | undefined;
   const runId = replay.runStart?.run_id ?? 'unknown-run';
-  const fixtureSuffix = kind === 'live-capture' ? 'live-capture-bundle' : 'publication-bundle';
-  const generator = kind === 'live-capture' ? 'muesli-studio live capture export' : 'muesli-studio publication export';
+  const fixtureSuffix = kind === 'live-capture' ? 'live-capture-bundle' : 'evidence-bundle';
+  const generator = kind === 'live-capture' ? 'muesli-studio live capture export' : 'muesli-studio evidence export';
   const provenanceModel = kind === 'live-capture' ? 'captured-from-live-session' : 'exported-from-studio';
 
   return {
@@ -89,14 +89,14 @@ function buildReplayBundleManifest(
   };
 }
 
-export function buildPublicationManifest(
+export function buildEvidenceManifest(
   replay: ReplayStore,
   summary: RunSummary,
   selectedTick: number,
   selectedNodeId: string | null,
   exportedAtUtc: string,
-): PublicationManifest {
-  return buildReplayBundleManifest(replay, summary, selectedTick, selectedNodeId, exportedAtUtc, 'publication');
+): EvidenceManifest {
+  return buildReplayBundleManifest(replay, summary, selectedTick, selectedNodeId, exportedAtUtc, 'evidence');
 }
 
 export function buildLiveCaptureManifest(
@@ -105,7 +105,7 @@ export function buildLiveCaptureManifest(
   selectedTick: number,
   selectedNodeId: string | null,
   exportedAtUtc: string,
-): PublicationManifest {
+): EvidenceManifest {
   return buildReplayBundleManifest(replay, summary, selectedTick, selectedNodeId, exportedAtUtc, 'live-capture');
 }
 
@@ -115,12 +115,12 @@ export function serialiseReplayEvents(replay: ReplayStore): string {
 
 function replayBundleName(replay: ReplayStore, kind: BundleKind): string {
   const runId = replay.runStart?.run_id ?? 'studio-run';
-  const suffix = kind === 'live-capture' ? 'live-capture-bundle' : 'publication-bundle';
+  const suffix = kind === 'live-capture' ? 'live-capture-bundle' : 'evidence-bundle';
   return `${slugify(runId) || 'studio-run'}-${suffix}.zip`;
 }
 
-export function publicationBundleName(replay: ReplayStore): string {
-  return replayBundleName(replay, 'publication');
+export function evidenceBundleName(replay: ReplayStore): string {
+  return replayBundleName(replay, 'evidence');
 }
 
 export function liveCaptureBundleName(replay: ReplayStore): string {
@@ -164,7 +164,7 @@ function buildReplayBundleReadme(
   const treeName = stringFromUnknown(btDefData?.tree_name) ?? 'behaviour tree';
   const backend = backendLabel(runStartData);
   const runId = replay.runStart?.run_id ?? 'unknown-run';
-  const title = kind === 'live-capture' ? '# muesli-studio live capture bundle' : '# muesli-studio publication bundle';
+  const title = kind === 'live-capture' ? '# muesli-studio live capture bundle' : '# muesli-studio evidence bundle';
   const intro =
     kind === 'live-capture'
       ? `This bundle was captured from a live Studio session for run \`${runId}\` on backend \`${backend}\`.`
@@ -173,7 +173,7 @@ function buildReplayBundleReadme(
   const howToUseTail =
     kind === 'live-capture'
       ? ['3. Reopen the bundle in Studio replay mode and continue from the same captured run.', '']
-      : ['3. Use the screenshots under `screenshots/` directly in talks, slides, or supplementary material.', ''];
+      : ['3. Use the screenshots under `screenshots/` directly in talks, slides, reviews, or supplementary material.', ''];
 
   return [
     title,
@@ -208,14 +208,14 @@ function buildReplayBundleReadme(
   ].join('\n');
 }
 
-export function buildPublicationReadme(
+export function buildEvidenceReadme(
   replay: ReplayStore,
   summary: RunSummary,
   selectedTick: number,
   selectedNodeId: string | null,
   screenshotFiles: readonly string[],
 ): string {
-  return buildReplayBundleReadme(replay, summary, selectedTick, selectedNodeId, screenshotFiles, 'publication');
+  return buildReplayBundleReadme(replay, summary, selectedTick, selectedNodeId, screenshotFiles, 'evidence');
 }
 
 export function buildLiveCaptureReadme(

@@ -22,7 +22,7 @@ describe('PresentationPanel', () => {
     expect(markup).toContain('overview');
     expect(markup).toContain('tick 3');
     expect(markup).toContain('node 4');
-    expect(markup).toContain('export publication bundle');
+    expect(markup).toContain('export evidence bundle');
     expect(markup).toContain('bundle ready');
   });
 });

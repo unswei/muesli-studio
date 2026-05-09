@@ -67,7 +67,7 @@ Release entry template:
 
 - debugging and navigation release that turns replay into a faster inspection tool rather than a passive viewer
 - deep links, event search and jump flows, keyboard-first navigation, compare mode, and stronger run-summary surfacing all land in the same release line
-- release artefact trust is stronger through detached signatures, signature-aware verification, refreshed release and publication documentation, and cleaner product-facing UI copy
+- release artefact trust is stronger through detached signatures, signature-aware verification, refreshed release and export documentation, and cleaner product-facing UI copy
 
 ### shipped artefacts
 
@@ -82,7 +82,7 @@ Release entry template:
 
 - release binaries are built on `ubuntu-latest` (Intel) and `macos-14` (Apple Silicon) GitHub runners
 - inspector fallback pin remains on `muesli-bt v0.4.0`
-- this release line includes the compare capture in publication bundles and refreshed README screenshots from the canonical demo fixture
+- this release line includes the compare capture in exported bundles and refreshed README screenshots from the canonical demo fixture
 
 ## v0.2.0 - 2026-03-21
 

@@ -1,4 +1,4 @@
-import type { PresentationLayout } from './publication';
+import type { PresentationLayout } from './evidence';
 
 export type StudioDeepLinkView = 'overview' | PresentationLayout;
 

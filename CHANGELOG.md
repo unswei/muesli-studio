@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ### added
 
+- added the `docs/studio/v1.0-product-plan.md` source-of-truth plan for the Studio path to `v1.0`.
+- added `docs/studio/evidence-bundles.md` to document the product-facing replay export workflow.
 - added a staged DSL editing preview so tree source changes compile into a structural summary before they can be applied to the replay.
 - added a compact structure-aware BT diff for DSL previews, with summary counts and expandable rows for added, removed, renamed, reordered, and changed nodes.
 - added product-level DSL diagnostics and non-blocking replay mismatch warnings when draft previews remove or structurally change nodes with loaded runtime history.
@@ -13,6 +15,7 @@ All notable changes to this project will be documented in this file.
 
 ### changed
 
+- reframed the roadmap, README links, TODO, export docs, bundle names, bundle README text, and presentation UI around evidence bundles instead of publication-specific wording.
 - advanced the inspector fallback pin to `muesli-bt v0.6.0` at commit `654a1e43cdea4bfc2e0a5e4e15e472193ca32f94`; the synced Studio schema and contract copies remain byte-identical on the existing `runtime-contract-v1.0.0` and `mbt.evt.v1` lines.
 - refreshed the roadmap and current compatibility documentation around the `muesli-bt v0.6.0` capability-bundle baseline.
 - documented the v0.5.0 editing workflow as a controlled replay validation loop rather than a general BT IDE.

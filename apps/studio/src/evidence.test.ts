@@ -9,13 +9,13 @@ import { parseJsonlEvents, ReplayStore, summariseRun } from '@muesli/replay';
 import {
   buildLiveCaptureManifest,
   buildLiveCaptureReadme,
-  buildPublicationManifest,
-  buildPublicationReadme,
+  buildEvidenceManifest,
+  buildEvidenceReadme,
   captureFileName,
+  evidenceBundleName,
   liveCaptureBundleName,
-  publicationBundleName,
   serialiseReplayEvents,
-} from './publication';
+} from './evidence';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..', '..', '..');
@@ -30,7 +30,7 @@ function loadStudioDemoReplay(): ReplayStore {
   return replay;
 }
 
-describe('publication helpers', () => {
+describe('evidence helpers', () => {
   it('builds a deterministic manifest and readme for the current replay selection', () => {
     const replay = loadStudioDemoReplay();
     const summary = summariseRun(replay.getAllEvents(), {
@@ -39,12 +39,12 @@ describe('publication helpers', () => {
       schemaVersion: replay.runStart?.schema ?? 'mbt.evt.v1',
     });
 
-    const manifest = buildPublicationManifest(replay, summary, 3, '4', '2026-03-14T00:00:00.000Z');
-    expect(manifest.fixture_name).toBe('fixture-studio-demo-publication-bundle');
+    const manifest = buildEvidenceManifest(replay, summary, 3, '4', '2026-03-14T00:00:00.000Z');
+    expect(manifest.fixture_name).toBe('fixture-studio-demo-evidence-bundle');
     expect(manifest.backend).toBe('webots');
     expect(manifest.tree_hash).toBe('fnv1a64:dddddddddddddddd');
 
-    const readme = buildPublicationReadme(replay, summary, 3, '4', [
+    const readme = buildEvidenceReadme(replay, summary, 3, '4', [
       'screenshots/studio-overview.png',
       'screenshots/run-summary.png',
       'screenshots/compare-ticks-2-to-3.png',
@@ -60,7 +60,7 @@ describe('publication helpers', () => {
     const replay = loadStudioDemoReplay();
 
     expect(serialiseReplayEvents(replay)).toContain('"run_id":"fixture-studio-demo"');
-    expect(publicationBundleName(replay)).toBe('fixture-studio-demo-publication-bundle.zip');
+    expect(evidenceBundleName(replay)).toBe('fixture-studio-demo-evidence-bundle.zip');
     expect(liveCaptureBundleName(replay)).toBe('fixture-studio-demo-live-capture-bundle.zip');
     expect(captureFileName('hero', 3)).toBe('screenshots/studio-overview.png');
     expect(captureFileName('diff', 4)).toBe('screenshots/blackboard-diff-tick-4.png');

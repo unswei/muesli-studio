@@ -1,4 +1,4 @@
-import { presentationLayouts, type PresentationLayout } from '../publication';
+import { presentationLayouts, type PresentationLayout } from '../evidence';
 
 interface PresentationPanelProps {
   currentLayout: PresentationLayout | null;
@@ -36,7 +36,7 @@ export function PresentationPanel({
         <div>
           <p className="panel-kicker">exports</p>
           <h2>capture and bundle</h2>
-          <p className="panel-copy muted">Open a clean capture layout or export a publication bundle from the current inspection state.</p>
+          <p className="panel-copy muted">Open a clean capture layout or export an evidence bundle from the current inspection state.</p>
         </div>
         {currentLayout ? <span className="status-badge status-badge--subtle">{layoutLabels[currentLayout]}</span> : null}
       </div>
@@ -61,7 +61,7 @@ export function PresentationPanel({
       </p>
 
       <button type="button" className="button-primary presentation-bundle-button" onClick={onExportBundle} disabled={busy}>
-        {busy ? 'exporting…' : 'export publication bundle'}
+        {busy ? 'exporting…' : 'export evidence bundle'}
       </button>
 
       {statusMessage ? <p className="notice-inline notice-inline--success">{statusMessage}</p> : null}

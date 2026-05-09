@@ -36,7 +36,7 @@ See the run summary first, inspect node statuses, examine blackboard diffs, comp
 
 ### capture and share
 
-Switch into presentation mode, export clean PNG or SVG figures, and write a compact publication bundle with replay data, summary metadata, and overview, summary, diff, and compare screenshots.
+Switch into presentation mode, export clean PNG or SVG figures, and write a compact evidence bundle with replay data, summary metadata, and overview, summary, diff, and compare screenshots.
 
 ### follow live
 
@@ -131,7 +131,8 @@ The release bundle also includes `RELEASE.md` with the packaged target, version,
 
 - [consumer contract checklist](docs/studio/contract-consumption.md)
 - [fixture bundle workflow and CLI](docs/studio/fixture-bundles.md)
-- [publication workflow](docs/studio/publication-workflow.md)
+- [v1.0 product plan](docs/studio/v1.0-product-plan.md)
+- [evidence bundle workflow](docs/studio/evidence-bundles.md)
 - [large log workflow](docs/studio/large-logs.md)
 - [sidecar tick-index format and usage](docs/studio/sidecar-index.md)
 - [release targets and artefacts](docs/studio/release-targets.md)
@@ -184,7 +185,7 @@ Load either:
 
 - a canonical JSONL fixture (`tools/fixtures/minimal_run.jsonl`)
 - a validated bundle event log (`tests/fixtures/*/events.jsonl`) after running `studio inspect`
-- a replayable `.zip` bundle exported from Studio publication mode or live capture mode
+- a replayable `.zip` bundle exported from Studio presentation mode or live capture mode
 
 Studio replay load supports the optional sidecar index file `events.sidecar.tick-index.v1.json`. When a `.zip` bundle contains `events.jsonl` and the sidecar index, Studio reads both through the normal replay loader. The UI shows load progress, indexed or unindexed state, and warns when large logs fall back to full-scan ingest.
 
@@ -198,7 +199,7 @@ Replay mode also includes an in-app diagnostics panel for large-log replay mode,
 
 Replay mode also includes a compare panel for aligned baseline-versus-selected tick review, with divergence, blackboard, and planner/scheduler deltas held in one place.
 
-Replay mode also includes a first-class presentation flow in the right rail. Use it to open clean overview, summary, node, diff, compare, or DSL layouts, then export PNG, SVG, or a zipped publication bundle.
+Replay mode also includes a first-class presentation flow in the right rail. Use it to open clean overview, summary, node, diff, compare, or DSL layouts, then export PNG, SVG, or a zipped evidence bundle.
 
 The demo launcher uses URL query auto-load:
 
@@ -275,4 +276,4 @@ tools/sync_contract.sh # sync contract from resolved muesli-bt source
 
 The current development scope is disciplined BT editing. Studio now previews DSL changes as a structure-aware tree diff and shows product-level diagnostics and replay mismatch warnings before applying them to replay, while broader visual authoring remains out of scope for now.
 
-The broader release plan is tracked in [docs/roadmap-to-1.0.md](docs/roadmap-to-1.0.md).
+The broader release plan is tracked in [docs/roadmap-to-1.0.md](docs/roadmap-to-1.0.md), with product intent captured in [docs/studio/v1.0-product-plan.md](docs/studio/v1.0-product-plan.md).

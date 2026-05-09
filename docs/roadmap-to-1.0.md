@@ -6,6 +6,8 @@ This document sets a roadmap for `muesli-studio` from the `v0.4.0` release basel
 
 The goal is not to turn `muesli-studio` into a generic robotics IDE. The goal is to make it the best possible inspector and controlled authoring surface for `muesli-bt` runs.
 
+The release milestones below are governed by the [`v1.0 product plan`](studio/v1.0-product-plan.md). Planning is release-based, not calendar-based.
+
 ## where we are now
 
 As of `v0.4.0`, `muesli-studio` already has a serious base:
@@ -16,7 +18,7 @@ As of `v0.4.0`, `muesli-studio` already has a serious base:
 - one canonical replay model across file and live transport
 - deterministic fixtures, sidecar-backed large-log support, and regression coverage
 - a first DSL editing loop with `apply`, `revert`, and `save`
-- presentation mode and export paths for figures and publication bundles
+- presentation mode and export paths for figures and evidence bundles
 - pinned live inspection, live capture bundles, and replay-bundle reopening
 
 The current development compatibility target is `muesli-bt v0.6.0` at commit `654a1e43cdea4bfc2e0a5e4e15e472193ca32f94`. That target keeps the Studio-facing runtime contract at `runtime-contract-v1.0.0` and the event schema at `mbt.evt.v1`. The synced schema and contract copies are byte-identical to the previous Studio copy, so the compatibility change is an additive runtime and documentation baseline rather than a schema migration.
@@ -46,7 +48,7 @@ A live session and a recorded run should feel like the same product, not two adj
 
 We will improve BT editing, but we will not rush into a sprawling visual programming environment. Editing should stay grounded in the `muesli-bt` contract, deterministic fixtures, and replay-backed validation.
 
-### 4. publication and communication are not side concerns
+### 4. evidence and communication are not side concerns
 
 `muesli-studio` is part of a research stack. Good exports, figures, summaries, and reproducible bundles are first-class features.
 
@@ -74,7 +76,7 @@ The right question for each release is not “what can we add?” but “what si
 
 ## v0.2 - polished inspection release (shipped)
 
-Status: shipped on 2026-03-21.
+Status: shipped.
 
 ### theme
 
@@ -107,7 +109,7 @@ Minimal. Editing remains present, but this release is not about broadening editi
 ### acceptance criteria
 
 - a new user can run the demo and understand the main inspection flow without reading internal docs first
-- screenshots and exported figures are good enough for papers, talks, and homepage use
+- screenshots and exported figures are good enough for talks, reviews, papers, and homepage use
 - release bundles are straightforward to launch and verify
 - the app feels like a deliberate tool, not an internal UI shell
 
@@ -115,7 +117,7 @@ Minimal. Editing remains present, but this release is not about broadening editi
 
 ## v0.3 - debugging and navigation release (shipped)
 
-Status: shipped on 2026-04-03.
+Status: shipped.
 
 ### theme
 
@@ -165,7 +167,7 @@ Broad authoring work stays out.
 
 ## v0.4 - unified live and replay release
 
-Status: shipped on 2026-04-25.
+Status: shipped.
 
 ### theme
 
@@ -269,14 +271,14 @@ Once the tool supports replay, live capture, and stronger editing, the next step
 
 - first-class run-to-run comparison
 - useful support for regression analysis
-- stronger publication and review workflows
+- stronger evidence and review workflows
 
 ### feature focus
 
 - compare two runs side by side at summary level and selected tick ranges
 - compare tree structure across versions or edited definitions
 - diff warnings, event-family counts, timing distributions, and selected blackboard keys
-- better publication bundle support for before-and-after analyses
+- better evidence bundle support for before-and-after analyses
 - regression-oriented fixture views and saved comparison reports
 - comparison context for transport, backend, and host capability metadata when it helps explain behavioural differences
 
@@ -287,7 +289,7 @@ Editing benefits indirectly. The key win is that edited trees can now be compare
 ### acceptance criteria
 
 - the app can support a credible “before and after” workflow for tree changes or runtime changes
-- regressions are visible in a form useful for development and papers
+- regressions are visible in a form useful for development, review, and reproducible evidence
 - comparison does not require awkward external tooling for ordinary cases
 
 ---
@@ -329,15 +331,15 @@ Limited. Editing should consume integration and capability metadata only where i
 
 ---
 
-## v0.8 - presentation and publication release
+## v0.8 - evidence bundle and presentation release
 
 ### theme
 
-Make `muesli-studio` excellent for papers, talks, reviews, and reproducible evidence.
+Make `muesli-studio` excellent for talks, reviews, papers, and reproducible evidence.
 
 ### why this matters
 
-This is a research tool. It should help produce not just insight, but communication. Publication support already exists in early form. This release turns that into a polished strength.
+This is a research tool. It should help produce not just insight, but communication. Evidence export support already exists in early form. This release turns that into a polished strength.
 
 ### primary outcomes
 
@@ -348,9 +350,9 @@ This is a research tool. It should help produce not just insight, but communicat
 ### feature focus
 
 - stronger figure export control and layout presets
-- export themes that remain clean and publication-ready
-- improved publication bundle contents and reproduction notes
-- saved views for talks, papers, and review appendices
+- export themes that remain clean and evidence-ready
+- improved evidence bundle contents and reproduction notes
+- saved views for talks, reviews, papers, and appendices
 - easier generation of overview plus supporting-detail figure sets from one run
 
 ### editing scope in this release
@@ -359,8 +361,8 @@ Secondary. The main focus is on representing results clearly, including edited-t
 
 ### acceptance criteria
 
-- exported figures are consistently good enough for paper drafts and slides
-- publication bundles support a credible reproducibility story
+- exported figures are consistently good enough for drafts and slides
+- evidence bundles support a credible reproducibility story
 - presentation mode feels intentional, not bolted on
 
 ---
@@ -414,7 +416,7 @@ Declare the product complete enough in identity, workflow, and trust to be treat
 - replay inspection is strong and trustworthy
 - live monitoring is genuinely integrated with replay
 - BT editing is useful, bounded, and reliable
-- comparison and publication workflows are good enough to support serious use
+- comparison and evidence workflows are good enough to support serious use
 - the app has a clear and stable identity within the `muesli-bt` ecosystem
 
 ### v1.0 statement
@@ -453,7 +455,7 @@ If compressed into a single sentence per release, the roadmap is:
 - `v0.5`: make BT editing serious and disciplined
 - `v0.6`: add comparison and regression workflows
 - `v0.7`: deepen simulator and integration workflows
-- `v0.8`: make publication and presentation excellent
+- `v0.8`: make evidence bundles and presentation excellent
 - `v0.9`: harden the whole product surface
 - `v1.0`: declare a stable identity as the inspector and disciplined authoring tool for `muesli-bt`
 
@@ -463,6 +465,6 @@ The opinionated part of this roadmap is simple:
 
 `muesli-studio` should resist the temptation to become everything.
 
-Its strength is that it sits close to the runtime, understands the event model, and can connect inspection, replay, live behaviour, controlled editing, and publication in one coherent tool.
+Its strength is that it sits close to the runtime, understands the event model, and can connect inspection, replay, live behaviour, controlled editing, and evidence export in one coherent tool.
 
 If we keep that discipline, the app will become much more than a viewer without turning into a bloated IDE.

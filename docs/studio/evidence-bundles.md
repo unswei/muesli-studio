@@ -1,17 +1,17 @@
-# publication workflow
+# evidence bundle workflow
 
 ## what this is
 
 This page describes the screenshot and bundle export path in `muesli-studio`.
 
-The workflow turns an inspected run into clean figures and a small replay bundle that another person can open directly.
+The workflow turns an inspected run into clean figures and a replayable evidence bundle that another person can open directly.
 
 ## when to use it
 
 Use this workflow when you need:
 
-- screenshots for GitHub, talks, or papers
-- a compact supplementary bundle for review or internal sharing
+- screenshots for GitHub, talks, reviews, or papers
+- a compact evidence bundle for review or internal sharing
 - deterministic exports from the canonical demo fixture
 - a replayable archive captured directly from a live session
 
@@ -30,10 +30,10 @@ Use this workflow when you need:
 5. Export:
    - `PNG` for slides and raster figures
    - `SVG` for vector-friendly surfaces
-   - `bundle` for a zipped supplement with replay data and screenshots
+   - `bundle` for a zipped evidence bundle with replay data and screenshots
    - `save capture bundle` in the live connection panel for a replayable archive without screenshots
 
-Bundle export writes:
+Evidence bundle export writes:
 
 - `events.jsonl`
 - `events.sidecar.tick-index.v1.json`
@@ -98,7 +98,7 @@ This stages `tests/fixtures/studio_demo`, serves Studio locally, and captures th
 
 4. Choose `summary`, `diff`, or `compare` for a supporting panel, then export again.
 
-5. Use `export bundle` to write a zipped supplement for review.
+5. Use `export bundle` to write a zipped evidence bundle for review.
 
 6. In live mode, use `save capture bundle` to write the currently captured run as a replayable archive.
 
@@ -114,7 +114,7 @@ pnpm docs:screenshots
 
 - `SVG` export is best for panel-style surfaces. Very large graph captures may still be easier to use as `PNG`.
 - bundle export may take longer on large indexed runs because Studio hydrates the full replay first.
-- publication bundle export currently carries overview, summary, diff, and compare screenshots by default so review artefacts keep the high-signal surfaces together.
+- evidence bundle export currently carries overview, summary, diff, and compare screenshots by default so review artefacts keep the high-signal surfaces together.
 - live capture bundle export does not include screenshots; it is intended to preserve the captured run for replay.
 - live capture bundles reopen from the normal replay loader when the archive contains `events.jsonl`; the sidecar file is optional but keeps scrubbing fast.
 - deterministic doc screenshots use the canonical `studio_demo` sidecar and `demo_capture` query parameters; interactive presentation mode remains the user-facing path.

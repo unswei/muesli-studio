@@ -23,14 +23,14 @@ import { canonicalDemoFixture, parseDemoFixtureQuery } from './demo-fixture';
 import {
   buildLiveCaptureManifest,
   buildLiveCaptureReadme,
-  buildPublicationManifest,
-  buildPublicationReadme,
+  buildEvidenceManifest,
+  buildEvidenceReadme,
   captureFileName,
+  evidenceBundleName,
   liveCaptureBundleName,
-  publicationBundleName,
   type PresentationLayout,
   serialiseReplayEvents,
-} from './publication';
+} from './evidence';
 import { saveBlobToDisk } from './save-file';
 import { useStudioStore } from './store';
 
@@ -499,7 +499,7 @@ export function App() {
     [activePresentationLayout, captureRenderedLayoutBlob, selectedTick],
   );
 
-  const exportPublicationBundle = useCallback(async () => {
+  const exportEvidenceBundle = useCallback(async () => {
     if (!replay || !replaySummary) {
       return;
     }
@@ -508,7 +508,7 @@ export function App() {
     const previousTick = useStudioStore.getState().selectedTick;
     setPresentationBusy(true);
     setPresentationErrorMessage(null);
-    setPresentationStatusMessage('exporting publication bundle…');
+    setPresentationStatusMessage('exporting evidence bundle…');
 
     try {
       const initialLazyState = useStudioStore.getState().lazySidecar;
@@ -538,7 +538,7 @@ export function App() {
         }
       }
 
-      setPresentationStatusMessage('capturing publication screenshots…');
+      setPresentationStatusMessage('capturing evidence screenshots…');
       const screenshotFiles: string[] = [];
       const screenshotBlobs: Array<{ path: string; blob: Blob }> = [];
       for (const layout of bundleScreenshotLayouts) {
@@ -559,9 +559,9 @@ export function App() {
         contractVersion,
         schemaVersion: replay.runStart?.schema ?? replay.btDef?.schema,
       });
-      const manifest = buildPublicationManifest(replay, bundleSummary, selectedTick, selectedNodeId, exportedAtUtc);
-      const readmeText = buildPublicationReadme(replay, bundleSummary, selectedTick, selectedNodeId, screenshotFiles);
-      const bundleName = publicationBundleName(replay);
+      const manifest = buildEvidenceManifest(replay, bundleSummary, selectedTick, selectedNodeId, exportedAtUtc);
+      const readmeText = buildEvidenceReadme(replay, bundleSummary, selectedTick, selectedNodeId, screenshotFiles);
+      const bundleName = evidenceBundleName(replay);
 
       const zip = new JSZip();
       zip.file('events.jsonl', eventsText);
@@ -573,7 +573,7 @@ export function App() {
         zip.file(screenshot.path, screenshot.blob);
       }
 
-      setPresentationStatusMessage('writing publication bundle…');
+      setPresentationStatusMessage('writing evidence bundle…');
       const bundleBlob = await zip.generateAsync({
         type: 'blob',
         compression: 'DEFLATE',
@@ -1052,7 +1052,7 @@ export function App() {
               void exportCurrentCapture('svg');
             }}
             onExportBundle={() => {
-              void exportPublicationBundle();
+              void exportEvidenceBundle();
             }}
             onClose={() => {
               setPresentationStatusMessage(null);
@@ -1293,7 +1293,7 @@ export function App() {
                 setPresentationLayout(layout);
               }}
               onExportBundle={() => {
-                void exportPublicationBundle();
+                void exportEvidenceBundle();
               }}
             />
           ) : null}
