@@ -33,6 +33,26 @@ Preview diagnostics use product-level categories:
 
 Capability diagnostics are a validation hook only. Studio does not show a capability-control UI, call host capabilities, or require capability-aware fixtures in this release.
 
+Leaf forms can declare capability requirements as extra arguments with `cap.*` names. Studio treats these as validation context for preview only:
+
+```lisp
+(bt
+  (seq
+    (act drive-to-goal cap.motion.v1)
+    (cond scene-ready :cap cap.perception.scene.v1)))
+```
+
+If the loaded run metadata does not expose the required capability, preview shows a non-blocking `capability` diagnostic. If the metadata exposes the capability, the diagnostic is cleared.
+
+The deterministic `tools/fixtures/capability_run.jsonl` fixture covers this validation path.
+
+When a preview exists, evidence bundle export includes:
+
+- `edit/tree-edit.json` with the draft source, compiled tree summary, structural diff, diagnostics, and whether the preview was applied
+- `edit/bt_def.dsl` with the draft tree source
+
+Studio does not export plain unpreviewed text changes as repair evidence.
+
 ## api / syntax
 
 Studio preview supports:
@@ -92,6 +112,7 @@ Expected preview result:
 - Unstable identity and run mismatch diagnostics do not block apply.
 - Applying a preview changes Studio's rendered tree override, not the original replay event log.
 - Capability metadata is deferred to validation context. It must not become a general host-control surface.
+- Evidence bundles include edit artefacts only for current or applied previews.
 
 ## see also
 

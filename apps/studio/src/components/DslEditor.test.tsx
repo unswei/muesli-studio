@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parseJsonlEvents, ReplayStore } from '@muesli/replay';
 
 import { DslEditor } from './DslEditor';
+import type { EditEvidenceArtifact } from '../evidence';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..', '..', '..', '..');
@@ -75,6 +76,18 @@ function studioDemoReplay(): ReplayStore {
   return loadReplayFixture(path.join(rootDir, 'tests', 'fixtures', 'studio_demo', 'events.jsonl'));
 }
 
+function studioDemoReplayWithCapabilities(capabilities: Record<string, unknown>): ReplayStore {
+  const replay = studioDemoReplay();
+  if (replay.runStart) {
+    (replay.runStart.data as Record<string, unknown>).capabilities = capabilities;
+  }
+  return replay;
+}
+
+function capabilityRunReplay(): ReplayStore {
+  return loadReplayFixture(path.join(rootDir, 'tools', 'fixtures', 'capability_run.jsonl'));
+}
+
 beforeEach(() => {
   rendered = [];
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -95,7 +108,24 @@ describe('DslEditor', () => {
   it('previews changes before applying them to replay', () => {
     const onApplyCompiled = vi.fn();
     const onResetCompiled = vi.fn();
-    const view = renderEditor(onApplyCompiled, onResetCompiled);
+    const onEditEvidenceChange = vi.fn<(artifact: EditEvidenceArtifact | null) => void>();
+    const replay = loadReplayFixture();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    act(() => {
+      root.render(
+        <DslEditor
+          replay={replay}
+          onApplyCompiled={onApplyCompiled}
+          onResetCompiled={onResetCompiled}
+          onEditEvidenceChange={onEditEvidenceChange}
+        />,
+      );
+    });
+
+    const view = { root, container, replay };
     rendered.push(view);
 
     const textarea = view.container.querySelector('textarea');
@@ -121,6 +151,13 @@ describe('DslEditor', () => {
     });
     expect(onApplyCompiled).not.toHaveBeenCalled();
     expect(view.container.textContent).toContain('preview: 3 node(s), 2 edge(s); 3 change(s)');
+    expect(onEditEvidenceChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        schema: 'muesli-studio.edit-evidence.v1',
+        draft_source: '(bt (sel (act recover) (act fallback)))',
+        applied_preview: false,
+      }),
+    );
     expect(view.container.textContent).toContain('renamed 1');
     expect(view.container.textContent).toContain('changed 2');
     const diffRows = Array.from(view.container.querySelectorAll('details.dsl-diff-row'));
@@ -143,6 +180,12 @@ describe('DslEditor', () => {
     });
     expect(onApplyCompiled).toHaveBeenCalledTimes(1);
     expect(onApplyCompiled.mock.calls[0]?.[0].dsl).toBe('(bt (sel (act recover) (act fallback)))');
+    expect(onEditEvidenceChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        draft_source: '(bt (sel (act recover) (act fallback)))',
+        applied_preview: true,
+      }),
+    );
     expect(view.container.textContent).toContain('Applied preview: 3 node(s), 2 edge(s).');
   });
 
@@ -330,6 +373,39 @@ describe('DslEditor', () => {
 
     expect(view.container.textContent).toContain('1 runtime node changed kind or structure.');
     expect(buttonsFor(view.container)[1]?.hasAttribute('disabled')).toBe(false);
+  });
+
+  it('shows missing capability diagnostics from loaded run metadata', () => {
+    const view = renderEditor(vi.fn(), vi.fn(), studioDemoReplayWithCapabilities({ reset: true }));
+    rendered.push(view);
+
+    const textarea = view.container.querySelector('textarea');
+    act(() => {
+      setTextAreaValue(textarea, '(bt (seq (act drive-to-goal cap.motion.v1)))');
+    });
+    act(() => {
+      buttonsFor(view.container)[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(view.container.textContent).toContain('capability');
+    expect(view.container.textContent).toContain('Required capability `cap.motion.v1` is not present.');
+    expect(buttonsFor(view.container)[1]?.hasAttribute('disabled')).toBe(false);
+  });
+
+  it('clears capability diagnostics when run metadata contains the required capability', () => {
+    const view = renderEditor(vi.fn(), vi.fn(), capabilityRunReplay());
+    rendered.push(view);
+
+    const textarea = view.container.querySelector('textarea');
+    act(() => {
+      setTextAreaValue(textarea, '(bt (seq (act drive-to-goal cap.motion.v1) (act settle)))');
+    });
+    act(() => {
+      buttonsFor(view.container)[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(view.container.textContent).toContain('preview:');
+    expect(view.container.textContent).not.toContain('Required capability `cap.motion.v1` is not present.');
   });
 
   it('does not warn for renamed runtime-history nodes', () => {

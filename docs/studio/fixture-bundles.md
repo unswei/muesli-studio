@@ -39,6 +39,8 @@ Optional bundle files:
 - `expected_summary.json` (used for regression tests)
 - `events.sidecar.tick-index.v1.json` (optional tick-byte index for large logs)
 
+Tooling fixtures under `tools/fixtures/` also include `capability_run.jsonl`, a small capability-context replay used to test DSL capability diagnostics.
+
 CLI:
 
 ```bash

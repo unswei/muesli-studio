@@ -41,6 +41,8 @@ Evidence bundle export writes:
 - `run_summary.json`
 - `README.md`
 - `screenshots/`
+- `edit/tree-edit.json` when a tree edit preview is active or applied
+- `edit/bt_def.dsl` when a tree edit preview is active or applied
 
 If the replay is still in lazy indexed mode, Studio hydrates the remaining ticks before writing the bundle so `events.jsonl` is complete.
 
@@ -115,6 +117,8 @@ pnpm docs:screenshots
 - `SVG` export is best for panel-style surfaces. Very large graph captures may still be easier to use as `PNG`.
 - bundle export may take longer on large indexed runs because Studio hydrates the full replay first.
 - evidence bundle export currently carries overview, summary, diff, and compare screenshots by default so review artefacts keep the high-signal surfaces together.
+- edit artefacts are included only when the tree editor has a current preview or an applied preview. Plain unsaved text changes are not exported as trusted repair evidence.
+- `manifest.json` lists edit artefact paths, redaction notes, and the evidence schema version so downstream tooling can detect optional export contents.
 - live capture bundle export does not include screenshots; it is intended to preserve the captured run for replay.
 - live capture bundles reopen from the normal replay loader when the archive contains `events.jsonl`; the sidecar file is optional but keeps scrubbing fast.
 - deterministic doc screenshots use the canonical `studio_demo` sidecar and `demo_capture` query parameters; interactive presentation mode remains the user-facing path.

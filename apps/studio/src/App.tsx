@@ -25,9 +25,12 @@ import {
   buildLiveCaptureReadme,
   buildEvidenceManifest,
   buildEvidenceReadme,
+  editEvidenceArtifactJsonPath,
+  editEvidenceDraftPath,
   captureFileName,
   evidenceBundleName,
   liveCaptureBundleName,
+  type EditEvidenceArtifact,
   type PresentationLayout,
   serialiseReplayEvents,
 } from './evidence';
@@ -213,6 +216,7 @@ export function App() {
   const [liveCaptureBusy, setLiveCaptureBusy] = useState(false);
   const [liveCaptureStatusMessage, setLiveCaptureStatusMessage] = useState<string | null>(null);
   const [liveCaptureErrorMessage, setLiveCaptureErrorMessage] = useState<string | null>(null);
+  const [editEvidenceArtifact, setEditEvidenceArtifact] = useState<EditEvidenceArtifact | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -425,6 +429,10 @@ export function App() {
     return <DslEditor replay={replay} onApplyCompiled={applyCompiledTree} onResetCompiled={resetCompiledTree} />;
   };
 
+  useEffect(() => {
+    setEditEvidenceArtifact(null);
+  }, [replay?.runStart?.run_id]);
+
   const setPresentationLayoutAndWait = useCallback(async (layout: PresentationLayout | null) => {
     if (typeof window === 'undefined') {
       return;
@@ -559,8 +567,15 @@ export function App() {
         contractVersion,
         schemaVersion: replay.runStart?.schema ?? replay.btDef?.schema,
       });
-      const manifest = buildEvidenceManifest(replay, bundleSummary, selectedTick, selectedNodeId, exportedAtUtc);
-      const readmeText = buildEvidenceReadme(replay, bundleSummary, selectedTick, selectedNodeId, screenshotFiles);
+      const manifest = buildEvidenceManifest(replay, bundleSummary, selectedTick, selectedNodeId, exportedAtUtc, editEvidenceArtifact);
+      const readmeText = buildEvidenceReadme(
+        replay,
+        bundleSummary,
+        selectedTick,
+        selectedNodeId,
+        screenshotFiles,
+        editEvidenceArtifact,
+      );
       const bundleName = evidenceBundleName(replay);
 
       const zip = new JSZip();
@@ -569,6 +584,10 @@ export function App() {
       zip.file('manifest.json', JSON.stringify(manifest, null, 2));
       zip.file('run_summary.json', JSON.stringify(bundleSummary, null, 2));
       zip.file('README.md', readmeText);
+      if (editEvidenceArtifact) {
+        zip.file(editEvidenceArtifactJsonPath, JSON.stringify(editEvidenceArtifact, null, 2));
+        zip.file(editEvidenceDraftPath, editEvidenceArtifact.draft_source);
+      }
       for (const screenshot of screenshotBlobs) {
         zip.file(screenshot.path, screenshot.blob);
       }
@@ -598,6 +617,7 @@ export function App() {
     }
   }, [
     captureRenderedLayoutBlob,
+    editEvidenceArtifact,
     presentationLayout,
     replay,
     replaySummary,
@@ -1514,7 +1534,12 @@ export function App() {
             <>
               <NodeInspector replay={replay} selectedNodeId={selectedNodeId} tick={selectedTick} />
               <BlackboardDiff replay={replay} tick={selectedTick} />
-              <DslEditor replay={replay} onApplyCompiled={applyCompiledTree} onResetCompiled={resetCompiledTree} />
+              <DslEditor
+                replay={replay}
+                onApplyCompiled={applyCompiledTree}
+                onResetCompiled={resetCompiledTree}
+                onEditEvidenceChange={setEditEvidenceArtifact}
+              />
             </>
           ) : (
             <section className="panel detail-panel">

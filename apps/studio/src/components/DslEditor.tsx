@@ -9,6 +9,7 @@ import {
   type CompiledBtDefinition,
   type DslDiagnostic,
 } from '../dsl-compiler';
+import { buildEditEvidenceArtifact, type EditEvidenceArtifact } from '../evidence';
 import {
   buildBtStructureDiff,
   compiledToPreviewTreeDefinition,
@@ -23,6 +24,7 @@ interface DslEditorProps {
   replay: ReplayStore;
   onApplyCompiled: (compiled: CompiledBtDefinition) => void;
   onResetCompiled: () => void;
+  onEditEvidenceChange?: (artifact: EditEvidenceArtifact | null) => void;
 }
 
 type SaveMode = 'picker' | 'download';
@@ -246,6 +248,15 @@ function buildMismatchDiagnostics(diff: BtStructureDiff, replay: ReplayStore): D
   return diagnostics;
 }
 
+function availableCapabilitiesFromReplay(replay: ReplayStore): Iterable<string> | Record<string, unknown> | null {
+  const data = replay.runStart?.data as Record<string, unknown> | undefined;
+  const capabilities = data?.capabilities;
+  if (!capabilities || typeof capabilities !== 'object') {
+    return null;
+  }
+  return capabilities as Record<string, unknown>;
+}
+
 function diagnosticsFromError(error: unknown): DslDiagnostic[] {
   if (error instanceof DslCompileError) {
     return error.diagnostics;
@@ -293,7 +304,7 @@ function diagnosticCards(diagnostics: DslDiagnostic[]): ReactNode {
   );
 }
 
-export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEditorProps) {
+export function DslEditor({ replay, onApplyCompiled, onResetCompiled, onEditEvidenceChange }: DslEditorProps) {
   const rawDsl = replay.btDef?.data.dsl;
   const sourceDsl = typeof rawDsl === 'string' ? rawDsl : '';
   const hasOverride = replay.hasBtDefOverride;
@@ -316,6 +327,7 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
     setPreviewDiagnostics([]);
     setStatusMessage(null);
     setErrorMessage(null);
+    onEditEvidenceChange?.(null);
   }, [sourceDsl]);
 
   const isDirty = draftDsl !== sourceDsl;
@@ -344,20 +356,26 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
       const compiled = compileBtDsl(draftDsl);
       const compiledPreview = compiledToPreviewTreeDefinition(compiled);
       const diff = currentDefinition ? buildBtStructureDiff(currentDefinition, compiledPreview) : null;
+      const diagnostics = [
+        ...compiled.diagnostics,
+        ...validateDslCapabilities({
+          required: compiled.capabilityRequirements,
+          available: availableCapabilitiesFromReplay(replay),
+        }),
+        ...(diff ? buildMismatchDiagnostics(diff, replay) : []),
+      ];
       setPreviewCompiled(compiled);
       setPreviewSource(draftDsl);
       setPreviewDiff(diff);
-      setPreviewDiagnostics([
-        ...compiled.diagnostics,
-        ...validateDslCapabilities(),
-        ...(diff ? buildMismatchDiagnostics(diff, replay) : []),
-      ]);
+      setPreviewDiagnostics(diagnostics);
+      onEditEvidenceChange?.(diff ? buildEditEvidenceArtifact({ compiled, diff, diagnostics, appliedPreview: false }) : null);
       setStatusMessage(null);
       setErrorMessage(null);
     } catch (error) {
       const diagnostics = diagnosticsFromError(error);
       clearPreview();
       setPreviewDiagnostics(diagnostics);
+      onEditEvidenceChange?.(null);
       setErrorMessage(null);
       setStatusMessage(null);
     }
@@ -368,6 +386,16 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
       return;
     }
     onApplyCompiled(previewCompiled);
+    if (previewDiff) {
+      onEditEvidenceChange?.(
+        buildEditEvidenceArtifact({
+          compiled: previewCompiled,
+          diff: previewDiff,
+          diagnostics: previewDiagnostics,
+          appliedPreview: true,
+        }),
+      );
+    }
     setStatusMessage(`Applied preview: ${previewCompiled.nodes.length} node(s), ${previewCompiled.edges.length} edge(s).`);
     setErrorMessage(null);
   };
@@ -376,6 +404,7 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
     setDraftDsl(sourceDsl);
     clearPreview();
     onResetCompiled();
+    onEditEvidenceChange?.(null);
     setStatusMessage('Reverted to the starting tree.');
     setErrorMessage(null);
   };
@@ -479,6 +508,7 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled }: DslEdito
               setDraftDsl(nextDraft);
               if (nextDraft !== previewSource) {
                 clearPreview();
+                onEditEvidenceChange?.(null);
               }
               setStatusMessage(null);
             }}

@@ -1,16 +1,25 @@
 import type { ReplayStore, RunSummary } from '@muesli/replay';
 
+import type { CompiledBtDefinition, DslDiagnostic } from './dsl-compiler';
+import type { BtStructureDiff } from './dsl-preview';
+
 export const presentationLayouts = ['hero', 'summary', 'node', 'diff', 'compare', 'dsl'] as const;
 
 export type PresentationLayout = (typeof presentationLayouts)[number];
 
 export interface EvidenceManifest {
+  evidence_schema_version: string;
   contract_id: string;
   contract_version: string;
   fixture_name: string;
   schema: string;
   generator: string;
   provenance_model: string;
+  redaction: {
+    policy: string;
+    notes: string[];
+  };
+  edit_artifact_paths: string[];
   exported_at_utc: string;
   run_id: string;
   backend: string;
@@ -18,6 +27,23 @@ export interface EvidenceManifest {
   selected_tick: number;
   selected_node_id: string | null;
 }
+
+export interface EditEvidenceArtifact {
+  schema: 'muesli-studio.edit-evidence.v1';
+  draft_source: string;
+  applied_preview: boolean;
+  compiled_tree: {
+    node_count: number;
+    edge_count: number;
+    nodes: CompiledBtDefinition['nodes'];
+    edges: CompiledBtDefinition['edges'];
+  };
+  structural_diff: BtStructureDiff;
+  diagnostics: DslDiagnostic[];
+}
+
+export const editEvidenceArtifactJsonPath = 'edit/tree-edit.json';
+export const editEvidenceDraftPath = 'edit/bt_def.dsl';
 
 type BundleKind = 'evidence' | 'live-capture';
 
@@ -62,6 +88,7 @@ function buildReplayBundleManifest(
   selectedNodeId: string | null,
   exportedAtUtc: string,
   kind: BundleKind,
+  editArtifact: EditEvidenceArtifact | null = null,
 ): EvidenceManifest {
   const runStartData = replay.runStart?.data as Record<string, unknown> | undefined;
   const btDefData = replay.btDef?.data as Record<string, unknown> | undefined;
@@ -71,12 +98,18 @@ function buildReplayBundleManifest(
   const provenanceModel = kind === 'live-capture' ? 'captured-from-live-session' : 'exported-from-studio';
 
   return {
+    evidence_schema_version: 'muesli-studio.evidence.v1',
     contract_id: stringFromUnknown(runStartData?.contract_id) ?? 'runtime-contract-v1',
     contract_version: summary.contract_version,
     fixture_name: `${slugify(runId) || 'studio-run'}-${fixtureSuffix}`,
     schema: summary.schema_version,
     generator,
     provenance_model: provenanceModel,
+    redaction: {
+      policy: 'none',
+      notes: [],
+    },
+    edit_artifact_paths: editArtifact ? [editEvidenceArtifactJsonPath, editEvidenceDraftPath] : [],
     exported_at_utc: exportedAtUtc,
     run_id: runId,
     backend: backendLabel(runStartData),
@@ -95,8 +128,9 @@ export function buildEvidenceManifest(
   selectedTick: number,
   selectedNodeId: string | null,
   exportedAtUtc: string,
+  editArtifact: EditEvidenceArtifact | null = null,
 ): EvidenceManifest {
-  return buildReplayBundleManifest(replay, summary, selectedTick, selectedNodeId, exportedAtUtc, 'evidence');
+  return buildReplayBundleManifest(replay, summary, selectedTick, selectedNodeId, exportedAtUtc, 'evidence', editArtifact);
 }
 
 export function buildLiveCaptureManifest(
@@ -158,6 +192,7 @@ function buildReplayBundleReadme(
   selectedNodeId: string | null,
   screenshotFiles: readonly string[],
   kind: BundleKind,
+  editArtifact: EditEvidenceArtifact | null = null,
 ): string {
   const runStartData = replay.runStart?.data as Record<string, unknown> | undefined;
   const btDefData = replay.btDef?.data as Record<string, unknown> | undefined;
@@ -170,6 +205,12 @@ function buildReplayBundleReadme(
       ? `This bundle was captured from a live Studio session for run \`${runId}\` on backend \`${backend}\`.`
       : `This bundle was exported from muesli-studio for run \`${runId}\` on backend \`${backend}\`.`;
   const screenshotLines = screenshotFiles.map((fileName) => `- \`${fileName}\`: exported presentation screenshot`);
+  const editArtifactLines = editArtifact
+    ? [
+        `- \`${editEvidenceArtifactJsonPath}\`: tree edit preview, structural diff, diagnostics, and applied state`,
+        `- \`${editEvidenceDraftPath}\`: draft behaviour tree source`,
+      ]
+    : [];
   const howToUseTail =
     kind === 'live-capture'
       ? ['3. Reopen the bundle in Studio replay mode and continue from the same captured run.', '']
@@ -190,6 +231,7 @@ function buildReplayBundleReadme(
     '- `run_summary.json`: deterministic run summary used by Studio',
     '- `README.md`: short reproduction notes',
     ...screenshotLines,
+    ...editArtifactLines,
     '',
     '## inspection context',
     '',
@@ -199,6 +241,7 @@ function buildReplayBundleReadme(
     `- schema: ${summary.schema_version}`,
     `- contract: ${summary.contract_version}`,
     `- digest: ${summary.digest}`,
+    `- edit artefact: ${editArtifact ? (editArtifact.applied_preview ? 'applied preview' : 'preview only') : 'none'}`,
     '',
     '## how to use it',
     '',
@@ -214,8 +257,9 @@ export function buildEvidenceReadme(
   selectedTick: number,
   selectedNodeId: string | null,
   screenshotFiles: readonly string[],
+  editArtifact: EditEvidenceArtifact | null = null,
 ): string {
-  return buildReplayBundleReadme(replay, summary, selectedTick, selectedNodeId, screenshotFiles, 'evidence');
+  return buildReplayBundleReadme(replay, summary, selectedTick, selectedNodeId, screenshotFiles, 'evidence', editArtifact);
 }
 
 export function buildLiveCaptureReadme(
@@ -225,4 +269,25 @@ export function buildLiveCaptureReadme(
   selectedNodeId: string | null,
 ): string {
   return buildReplayBundleReadme(replay, summary, selectedTick, selectedNodeId, [], 'live-capture');
+}
+
+export function buildEditEvidenceArtifact(input: {
+  compiled: CompiledBtDefinition;
+  diff: BtStructureDiff;
+  diagnostics: DslDiagnostic[];
+  appliedPreview: boolean;
+}): EditEvidenceArtifact {
+  return {
+    schema: 'muesli-studio.edit-evidence.v1',
+    draft_source: input.compiled.dsl,
+    applied_preview: input.appliedPreview,
+    compiled_tree: {
+      node_count: input.compiled.nodes.length,
+      edge_count: input.compiled.edges.length,
+      nodes: input.compiled.nodes,
+      edges: input.compiled.edges,
+    },
+    structural_diff: input.diff,
+    diagnostics: input.diagnostics,
+  };
 }

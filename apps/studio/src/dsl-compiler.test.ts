@@ -103,6 +103,16 @@ describe('compileBtDsl', () => {
 
     expect(compiled.nodes).toContainEqual({ id: 2, kind: 'act', name: 'choose-step' });
     expect(compiled.diagnostics).toEqual([]);
+    expect(compiled.capabilityRequirements).toEqual([]);
+  });
+
+  it('extracts capability requirements from leaf callback arguments', () => {
+    const compiled = compileBtDsl('(bt (seq (act drive-to-goal :cap cap.motion.v1) (cond scene-ready cap.perception.scene.v1)))');
+
+    expect(compiled.capabilityRequirements).toEqual([
+      { capability: 'cap.motion.v1', nodeName: 'drive-to-goal' },
+      { capability: 'cap.perception.scene.v1', nodeName: 'scene-ready' },
+    ]);
   });
 
   it('keeps the capability validation hook inert without requirements', () => {

@@ -16,6 +16,7 @@ export interface CompiledBtDefinition {
   nodes: Array<{ id: number; kind: string; name: string }>;
   edges: Array<{ parent: number; child: number; index: number }>;
   diagnostics: DslDiagnostic[];
+  capabilityRequirements: DslCapabilityRequirement[];
 }
 
 export interface DslCapabilityRequirement {
@@ -388,6 +389,44 @@ function isAtomicNode(kind: string): boolean {
   return supportedLeaves.has(kind);
 }
 
+function capabilityRequirementsForNode(kind: string, name: string, expr: ListExpr): DslCapabilityRequirement[] {
+  if (!isAtomicNode(kind)) {
+    return [];
+  }
+
+  const requirements: DslCapabilityRequirement[] = [];
+  const seen = new Set<string>();
+  const addRequirement = (capability: string) => {
+    if (seen.has(capability)) {
+      return;
+    }
+    seen.add(capability);
+    requirements.push({ capability, nodeName: name });
+  };
+
+  for (let index = 2; index < expr.items.length; index += 1) {
+    const item = expr.items[index];
+    const symbol = item ? asSymbol(item) : null;
+    if (!symbol) {
+      continue;
+    }
+
+    if (symbol.startsWith('cap.')) {
+      addRequirement(symbol);
+    }
+
+    if ((symbol === ':cap' || symbol === ':capability') && index + 1 < expr.items.length) {
+      const next = expr.items[index + 1];
+      const capability = next ? asSymbol(next) : null;
+      if (capability?.startsWith('cap.')) {
+        addRequirement(capability);
+      }
+    }
+  }
+
+  return requirements;
+}
+
 function childSignature(expr: SExpr): string | null {
   if (expr.type !== 'list' || expr.items.length === 0) {
     return null;
@@ -446,6 +485,7 @@ export function compileBtDsl(dsl: string): CompiledBtDefinition {
 
   const nodes: Array<{ id: number; kind: string; name: string }> = [];
   const edges: Array<{ parent: number; child: number; index: number }> = [];
+  const capabilityRequirements: DslCapabilityRequirement[] = [];
   let nextId = 1;
 
   const visit = (expr: SExpr, parentId: number | null, childIndex: number): number => {
@@ -520,6 +560,7 @@ export function compileBtDsl(dsl: string): CompiledBtDefinition {
 
     const second = expr.items[1];
     const displayName = isAtomicNode(kind) && second !== undefined ? (asSymbol(second) ?? kind) : kind;
+    capabilityRequirements.push(...capabilityRequirementsForNode(kind, displayName, expr));
 
     nodes.push({
       id,
@@ -556,5 +597,6 @@ export function compileBtDsl(dsl: string): CompiledBtDefinition {
     nodes,
     edges,
     diagnostics,
+    capabilityRequirements,
   };
 }

@@ -11,6 +11,7 @@ const rootDir = path.resolve(__dirname, '..', '..');
 
 const schemaPath = path.join(rootDir, 'schema', 'mbt.evt.v1.schema.json');
 const fixtureFiles = [
+  'tools/fixtures/capability_run.jsonl',
   'tools/fixtures/minimal_run.jsonl',
   'tools/fixtures/planner_run.jsonl',
   'tools/fixtures/scheduler_run.jsonl',
