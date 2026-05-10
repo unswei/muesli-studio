@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+No unreleased changes.
+
+## [0.5.0] - 2026-05-10
+
 ### added
 
 - added the `docs/studio/v1.0-product-plan.md` source-of-truth plan for the Studio path to `v1.0`.

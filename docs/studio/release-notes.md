@@ -37,6 +37,33 @@ Release entry template:
 
 ## example
 
+## v0.5.0 - 2026-05-10
+
+### highlights
+
+- controlled repair release that makes BT edits previewable, diagnosable, and exportable before they affect the inspected replay
+- capability-aware DSL diagnostics now use loaded run metadata as validation context without turning Studio into a robot-control UI
+- evidence bundles can include edit artefacts, draft source, structural diffs, diagnostics, applied-preview state, provenance, and redaction metadata
+- Studio now targets `muesli-bt v0.8.0`, including the expanded `mbt.evt.v1` model-service, capability, outcome, tick-audit, and GC lifecycle surface
+- Event Explorer and run summaries now group planner, model/capability, async/VLA, outcome, warning, and blackboard events more deliberately
+- right-rail panels can be minimised so replay, editing, compare, summary, and export tools stay visually balanced during inspection
+
+### shipped artefacts
+
+- `muesli-studio-v0.5.0-source.tar.gz`
+- `muesli-studio-v0.5.0-source.zip`
+- `muesli-studio-v0.5.0-linux-intel.tar.gz` (prebuilt inspector + studio static assets)
+- `muesli-studio-v0.5.0-macos-arm.tar.gz` (prebuilt inspector + studio static assets)
+- `.sha256` files for all archives
+- detached `.asc` signatures for all archives
+
+### notes
+
+- release binaries are built on `ubuntu-latest` (Intel) and `macos-14` (Apple Silicon) GitHub runners
+- inspector fallback pin tracks `muesli-bt v0.8.0` at commit `ff4dc9d7e160b2037ad66cac23e9536c48faaa5e`
+- Studio still consumes `runtime-contract-v1.0.0` and `mbt.evt.v1`; the v0.8.0 compatibility work is additive within that schema family
+- release verification should include `pnpm test`, `pnpm build`, `pnpm check:fixtures`, and the inspector configure/build/smoke path before tagging
+
 ## v0.4.0 - 2026-04-25
 
 ### highlights

@@ -1,6 +1,6 @@
 # todo
 
-## next up for `v0.5`
+## post-`v0.5.0`
 
-- design the next saved comparison report shape for v0.6 run-to-run comparison
-- keep docs, roadmap, TODO, release notes, and README wording aligned with the v1.0 product plan
+- design and implement the saved comparison report shape for v0.6 run-to-run comparison
+- keep public docs, roadmap, TODO, release notes, and README wording aligned as v0.6 work starts
