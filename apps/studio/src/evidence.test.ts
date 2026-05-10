@@ -82,6 +82,11 @@ describe('evidence helpers', () => {
       compiled,
       diff,
       diagnostics: [],
+      capabilityContext: {
+        requiredCapabilities: [],
+        availableCapabilities: ['cap.motion.v1'],
+        missingCapabilities: [],
+      },
       appliedPreview: true,
     });
 
@@ -100,6 +105,10 @@ describe('evidence helpers', () => {
         node_count: 2,
         edge_count: 1,
       },
+      capability_context: {
+        availableCapabilities: ['cap.motion.v1'],
+      },
+      diagnostic_counts: {},
     });
   });
 

@@ -27,7 +27,13 @@ export interface DslCapabilityRequirement {
 
 export interface DslCapabilityValidationInput {
   required?: DslCapabilityRequirement[];
-  available?: Iterable<string> | Record<string, unknown> | null;
+  available?: unknown;
+}
+
+export interface DslCapabilityContext {
+  requiredCapabilities: string[];
+  availableCapabilities: string[];
+  missingCapabilities: string[];
 }
 
 interface Token {
@@ -77,20 +83,91 @@ function throwDiagnostic(input: Omit<DslDiagnostic, 'severity'> & { severity?: D
   throw new DslCompileError([diagnostic(input)]);
 }
 
+function capabilityNameFromObject(value: Record<string, unknown>): string | null {
+  for (const key of ['capability', 'id', 'name']) {
+    const candidate = value[key];
+    if (typeof candidate === 'string' && candidate.startsWith('cap.')) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+export function normaliseCapabilityMetadata(value: unknown): string[] {
+  const found = new Set<string>();
+  const visit = (candidate: unknown) => {
+    if (!candidate) {
+      return;
+    }
+
+    if (typeof candidate === 'string') {
+      if (candidate.startsWith('cap.')) {
+        found.add(candidate);
+      }
+      return;
+    }
+
+    if (Array.isArray(candidate)) {
+      for (const entry of candidate) {
+        visit(entry);
+      }
+      return;
+    }
+
+    if (typeof candidate !== 'object') {
+      return;
+    }
+
+    if (Symbol.iterator in candidate) {
+      for (const entry of candidate as Iterable<unknown>) {
+        visit(entry);
+      }
+      return;
+    }
+
+    const record = candidate as Record<string, unknown>;
+    const namedCapability = capabilityNameFromObject(record);
+    if (namedCapability) {
+      found.add(namedCapability);
+    }
+
+    for (const [key, entry] of Object.entries(record)) {
+      if (key.startsWith('cap.') && entry !== false && entry !== null && entry !== undefined) {
+        found.add(key);
+      }
+
+      if (key === 'capabilities' || key === 'bundles' || key === 'provided' || key === 'available' || key === 'items') {
+        visit(entry);
+      }
+    }
+  };
+
+  visit(value);
+  return Array.from(found).sort();
+}
+
+function requiredCapabilitySet(requirements: DslCapabilityRequirement[]): Set<string> {
+  return new Set(requirements.map((requirement) => requirement.capability).filter((capability) => capability.length > 0));
+}
+
+export function buildDslCapabilityContext(input: DslCapabilityValidationInput = {}): DslCapabilityContext {
+  const required = requiredCapabilitySet(input.required ?? []);
+  const available = new Set(normaliseCapabilityMetadata(input.available));
+  const missing = Array.from(required).filter((capability) => !available.has(capability)).sort();
+
+  return {
+    requiredCapabilities: Array.from(required).sort(),
+    availableCapabilities: Array.from(available).sort(),
+    missingCapabilities: missing,
+  };
+}
+
 function availableCapabilitySet(value: DslCapabilityValidationInput['available']): Set<string> {
   if (!value) {
     return new Set();
   }
 
-  if (typeof value !== 'string' && Symbol.iterator in Object(value)) {
-    return new Set(Array.from(value as Iterable<string>).filter((entry) => typeof entry === 'string' && entry.length > 0));
-  }
-
-  return new Set(
-    Object.entries(value)
-      .filter(([, present]) => present !== false && present !== null && present !== undefined)
-      .map(([capability]) => capability),
-  );
+  return new Set(normaliseCapabilityMetadata(value));
 }
 
 export function validateDslCapabilities(input: DslCapabilityValidationInput = {}): DslDiagnostic[] {

@@ -118,6 +118,7 @@ pnpm docs:screenshots
 - bundle export may take longer on large indexed runs because Studio hydrates the full replay first.
 - evidence bundle export currently carries overview, summary, diff, and compare screenshots by default so review artefacts keep the high-signal surfaces together.
 - edit artefacts are included only when the tree editor has a current preview or an applied preview. Plain unsaved text changes are not exported as trusted repair evidence.
+- edit artefacts record capability validation context, including required, available, and missing capabilities.
 - `manifest.json` lists edit artefact paths, redaction notes, and the evidence schema version so downstream tooling can detect optional export contents.
 - live capture bundle export does not include screenshots; it is intended to preserve the captured run for replay.
 - live capture bundles reopen from the normal replay loader when the archive contains `events.jsonl`; the sidecar file is optional but keeps scrubbing fast.

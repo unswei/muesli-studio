@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { toBlob, toSvg } from 'html-to-image';
 import JSZip from 'jszip';
@@ -47,6 +47,16 @@ type KeyboardPanelId =
   | 'blackboard-diff'
   | 'dsl-editor-panel'
   | 'live-connection-panel';
+type SidebarPanelId =
+  | 'run-summary'
+  | 'compare'
+  | 'planner-scheduler'
+  | 'replay-diagnostics'
+  | 'presentation'
+  | 'live-connection'
+  | 'node-inspector'
+  | 'blackboard-diff'
+  | 'dsl-editor';
 
 const bundleScreenshotLayouts: readonly PresentationLayout[] = ['hero', 'summary', 'diff', 'compare'];
 const keyboardPanelShortcuts: Readonly<Record<string, KeyboardPanelId>> = {
@@ -59,6 +69,13 @@ const keyboardPanelShortcuts: Readonly<Record<string, KeyboardPanelId>> = {
   '7': 'dsl-editor-panel',
   '8': 'live-connection-panel',
 };
+const initiallyMinimisedSidebarPanels = new Set<SidebarPanelId>([
+  'compare',
+  'planner-scheduler',
+  'replay-diagnostics',
+  'presentation',
+  'dsl-editor',
+]);
 
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
@@ -217,6 +234,9 @@ export function App() {
   const [liveCaptureStatusMessage, setLiveCaptureStatusMessage] = useState<string | null>(null);
   const [liveCaptureErrorMessage, setLiveCaptureErrorMessage] = useState<string | null>(null);
   const [editEvidenceArtifact, setEditEvidenceArtifact] = useState<EditEvidenceArtifact | null>(null);
+  const [minimisedSidebarPanels, setMinimisedSidebarPanels] = useState<ReadonlySet<SidebarPanelId>>(
+    () => new Set(initiallyMinimisedSidebarPanels),
+  );
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1047,6 +1067,70 @@ export function App() {
     };
   }, [activePresentationLayout, liveAutoFollow, maxTick, mode, replay, selectedTick, setLiveAutoFollow, setSelectedTick]);
 
+  const setSidebarPanelMinimised = useCallback((panelId: SidebarPanelId, minimised: boolean) => {
+    setMinimisedSidebarPanels((current) => {
+      const next = new Set(current);
+      if (minimised) {
+        next.add(panelId);
+      } else {
+        next.delete(panelId);
+      }
+      return next;
+    });
+  }, []);
+
+  const renderSidebarPanel = useCallback(
+    (panelId: SidebarPanelId, label: string, targetId: KeyboardPanelId | string, children: ReactNode) => {
+      const minimised = minimisedSidebarPanels.has(panelId);
+
+      if (minimised) {
+        return (
+          <section
+            id={targetId}
+            tabIndex={-1}
+            className="panel minimised-panel keyboard-panel-target"
+            data-panel-id={panelId}
+            data-panel-state="minimised"
+          >
+            <div className="minimised-panel-row">
+              <div>
+                <p className="panel-kicker">minimised</p>
+                <h2>{label}</h2>
+              </div>
+              <button
+                type="button"
+                className="panel-icon-button"
+                aria-label={`expand ${label} panel`}
+                aria-expanded={false}
+                title={`expand ${label}`}
+                onClick={() => setSidebarPanelMinimised(panelId, false)}
+              >
+                +
+              </button>
+            </div>
+          </section>
+        );
+      }
+
+      return (
+        <div className="minimisable-panel" data-panel-id={panelId} data-panel-state="open">
+          <button
+            type="button"
+            className="panel-icon-button panel-icon-button--float"
+            aria-label={`minimise ${label} panel`}
+            aria-expanded={true}
+            title={`minimise ${label}`}
+            onClick={() => setSidebarPanelMinimised(panelId, true)}
+          >
+            -
+          </button>
+          {children}
+        </div>
+      );
+    },
+    [minimisedSidebarPanels, setSidebarPanelMinimised],
+  );
+
   if (activePresentationLayout) {
     const shellClassName = `app-shell app-shell--capture app-shell--capture-${activePresentationLayout}${
       showsPresentationToolbar ? ' app-shell--capture-interactive' : ''
@@ -1262,60 +1346,89 @@ export function App() {
         </div>
 
         <aside className="workspace-sidebar">
-          {replay && replaySummary ? <RunSummaryPanel replay={replay} summary={replaySummary} eventCount={eventCount} /> : null}
+          {replay && replaySummary
+            ? renderSidebarPanel(
+                'run-summary',
+                'run summary',
+                'run-summary-panel',
+                <RunSummaryPanel replay={replay} summary={replaySummary} eventCount={eventCount} />,
+              )
+            : null}
           {replay && mode === 'replay' ? (
-            <ComparePanel replay={replay} selectedTick={selectedTick} initialBaselineTick={Math.max(0, selectedTick - 1)} />
+            renderSidebarPanel(
+              'compare',
+              'compare',
+              'compare-panel',
+              <ComparePanel replay={replay} selectedTick={selectedTick} initialBaselineTick={Math.max(0, selectedTick - 1)} />,
+            )
           ) : null}
-          {replay && mode === 'replay' ? <PlannerSchedulerPanel replay={replay} selectedTick={selectedTick} /> : null}
+          {replay && mode === 'replay'
+            ? renderSidebarPanel(
+                'planner-scheduler',
+                'planner and scheduler',
+                'planner-scheduler-panel',
+                <PlannerSchedulerPanel replay={replay} selectedTick={selectedTick} />,
+              )
+            : null}
           {replay && mode === 'replay' && replayDiagnostics ? (
-            <ReplayDiagnosticsPanel
-              eventCount={eventCount}
-              selectedTick={selectedTick}
-              replayIndexed={replayIndexed}
-              lazyActive={replayDiagnostics.lazyActive}
-              sourceKind={replaySourceKind}
-              sourceBytes={replaySourceBytes}
-              loadedBytesEstimate={replayLoadedBytesEstimate}
-              loadedTickCount={replayDiagnostics.loadedTickCount}
-              knownTickCount={replayDiagnostics.knownTickCount}
-              loadedCoveragePercent={replayDiagnostics.loadedCoveragePercent}
-              highestTick={replayDiagnostics.highestTick}
-              pendingTickCount={replayDiagnostics.pendingTickCount}
-              loadWarning={replayLoadWarning}
-              seekStats={replaySeekStats}
-              onHydrateWindow={
-                replayDiagnostics.lazyActive
-                  ? () => {
-                      void hydrateTickWindow(selectedTick);
-                    }
-                  : null
-              }
-              onHydrateAll={
-                replayDiagnostics.lazyActive
-                  ? () => {
-                      void hydrateAllLazyTicks();
-                    }
-                  : null
-              }
-            />
+            renderSidebarPanel(
+              'replay-diagnostics',
+              'replay diagnostics',
+              'replay-diagnostics-panel',
+              <ReplayDiagnosticsPanel
+                eventCount={eventCount}
+                selectedTick={selectedTick}
+                replayIndexed={replayIndexed}
+                lazyActive={replayDiagnostics.lazyActive}
+                sourceKind={replaySourceKind}
+                sourceBytes={replaySourceBytes}
+                loadedBytesEstimate={replayLoadedBytesEstimate}
+                loadedTickCount={replayDiagnostics.loadedTickCount}
+                knownTickCount={replayDiagnostics.knownTickCount}
+                loadedCoveragePercent={replayDiagnostics.loadedCoveragePercent}
+                highestTick={replayDiagnostics.highestTick}
+                pendingTickCount={replayDiagnostics.pendingTickCount}
+                loadWarning={replayLoadWarning}
+                seekStats={replaySeekStats}
+                onHydrateWindow={
+                  replayDiagnostics.lazyActive
+                    ? () => {
+                        void hydrateTickWindow(selectedTick);
+                      }
+                    : null
+                }
+                onHydrateAll={
+                  replayDiagnostics.lazyActive
+                    ? () => {
+                        void hydrateAllLazyTicks();
+                      }
+                    : null
+                }
+              />,
+            )
           ) : null}
           {replay && replaySummary ? (
-            <PresentationPanel
-              currentLayout={presentationLayout}
-              selectedTick={selectedTick}
-              selectedNodeId={selectedNodeId}
-              busy={presentationBusy}
-              statusMessage={presentationStatusMessage}
-              errorMessage={presentationErrorMessage}
-              onOpenLayout={(layout) => {
-                setPresentationStatusMessage(null);
-                setPresentationErrorMessage(null);
-                setPresentationLayout(layout);
-              }}
-              onExportBundle={() => {
-                void exportEvidenceBundle();
-              }}
-            />
+            renderSidebarPanel(
+              'presentation',
+              'presentation',
+              'presentation-panel',
+              <PresentationPanel
+                currentLayout={presentationLayout}
+                selectedTick={selectedTick}
+                selectedNodeId={selectedNodeId}
+                busy={presentationBusy}
+                statusMessage={presentationStatusMessage}
+                errorMessage={presentationErrorMessage}
+                onOpenLayout={(layout) => {
+                  setPresentationStatusMessage(null);
+                  setPresentationErrorMessage(null);
+                  setPresentationLayout(layout);
+                }}
+                onExportBundle={() => {
+                  void exportEvidenceBundle();
+                }}
+              />,
+            )
           ) : null}
 
           {replayLoadProgress !== null ? (
@@ -1367,26 +1480,30 @@ export function App() {
             </section>
           ) : null}
 
-          <section id="live-connection-panel" tabIndex={-1} className="panel detail-panel live-panel keyboard-panel-target">
-            <div className="panel-heading">
-              <div>
-                <p className="panel-kicker">live connection</p>
-                <h2>connection</h2>
-                <p className="panel-copy muted">Connect to a live event stream and inspect incoming activity in the same view.</p>
+          {renderSidebarPanel(
+            'live-connection',
+            'live connection',
+            'live-connection-panel',
+            <section id="live-connection-panel" tabIndex={-1} className="panel detail-panel live-panel keyboard-panel-target">
+              <div className="panel-heading">
+                <div>
+                  <p className="panel-kicker">live connection</p>
+                  <h2>connection</h2>
+                  <p className="panel-copy muted">Connect to a live event stream and inspect incoming activity in the same view.</p>
+                </div>
+                <span className={`status-badge status-badge--${liveStatus}`}>{liveStatus}</span>
               </div>
-              <span className={`status-badge status-badge--${liveStatus}`}>{liveStatus}</span>
-            </div>
 
-            <div className="control-stack">
-              <label className="live-url">
-                <span>endpoint</span>
-                <input
-                  type="url"
-                  value={liveUrl}
-                  onChange={(event) => setLiveUrl(event.target.value)}
-                  placeholder="ws://localhost:8765/events"
-                />
-              </label>
+              <div className="control-stack">
+                <label className="live-url">
+                  <span>endpoint</span>
+                  <input
+                    type="url"
+                    value={liveUrl}
+                    onChange={(event) => setLiveUrl(event.target.value)}
+                    placeholder="ws://localhost:8765/events"
+                  />
+                </label>
 
               <div className="button-row">
                 <button
@@ -1508,38 +1625,49 @@ export function App() {
             {liveCaptureStatusMessage ? <p className="notice-inline notice-inline--success">{liveCaptureStatusMessage}</p> : null}
             {liveCaptureErrorMessage ? <p className="notice-inline notice-inline--error">{liveCaptureErrorMessage}</p> : null}
 
-            <div className="history-list compact">
-              {liveHistory.length === 0 ? (
-                <p className="panel-empty-copy muted">No connection history yet.</p>
-              ) : (
-                <ul className="detail-list">
-                  {liveHistory
-                    .slice(-8)
-                    .reverse()
-                    .map((entry) => (
-                      <li key={`${entry.atUnixMs}:${entry.message}`} className="detail-list-item">
-                        <div className="detail-list-row">
-                          <span className="detail-list-primary">[{new Date(entry.atUnixMs).toLocaleTimeString()}]</span>
-                          <span className={`status-badge status-badge--history-${entry.level}`}>{entry.level}</span>
-                        </div>
-                        <span className="detail-list-secondary">{entry.message}</span>
-                      </li>
-                    ))}
-                </ul>
-              )}
-            </div>
-          </section>
+              <div className="history-list compact">
+                {liveHistory.length === 0 ? (
+                  <p className="panel-empty-copy muted">No connection history yet.</p>
+                ) : (
+                  <ul className="detail-list">
+                    {liveHistory
+                      .slice(-8)
+                      .reverse()
+                      .map((entry) => (
+                        <li key={`${entry.atUnixMs}:${entry.message}`} className="detail-list-item">
+                          <div className="detail-list-row">
+                            <span className="detail-list-primary">[{new Date(entry.atUnixMs).toLocaleTimeString()}]</span>
+                            <span className={`status-badge status-badge--history-${entry.level}`}>{entry.level}</span>
+                          </div>
+                          <span className="detail-list-secondary">{entry.message}</span>
+                        </li>
+                      ))}
+                  </ul>
+                )}
+              </div>
+            </section>,
+          )}
 
           {replay ? (
             <>
-              <NodeInspector replay={replay} selectedNodeId={selectedNodeId} tick={selectedTick} />
-              <BlackboardDiff replay={replay} tick={selectedTick} />
-              <DslEditor
-                replay={replay}
-                onApplyCompiled={applyCompiledTree}
-                onResetCompiled={resetCompiledTree}
-                onEditEvidenceChange={setEditEvidenceArtifact}
-              />
+              {renderSidebarPanel(
+                'node-inspector',
+                'node inspector',
+                'node-inspector-panel',
+                <NodeInspector replay={replay} selectedNodeId={selectedNodeId} tick={selectedTick} />,
+              )}
+              {renderSidebarPanel('blackboard-diff', 'blackboard diff', 'blackboard-diff', <BlackboardDiff replay={replay} tick={selectedTick} />)}
+              {renderSidebarPanel(
+                'dsl-editor',
+                'tree source',
+                'dsl-editor-panel',
+                <DslEditor
+                  replay={replay}
+                  onApplyCompiled={applyCompiledTree}
+                  onResetCompiled={resetCompiledTree}
+                  onEditEvidenceChange={setEditEvidenceArtifact}
+                />,
+              )}
             </>
           ) : (
             <section className="panel detail-panel">

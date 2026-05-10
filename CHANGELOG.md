@@ -8,8 +8,9 @@ All notable changes to this project will be documented in this file.
 
 - added the `docs/studio/v1.0-product-plan.md` source-of-truth plan for the Studio path to `v1.0`.
 - added `docs/studio/evidence-bundles.md` to document the product-facing replay export workflow.
-- added evidence-bundle edit artefacts for current or applied DSL previews, including draft source, structural diff, diagnostics, compiled tree summary, and applied-preview state.
-- added capability-aware DSL preview diagnostics from `cap.*` leaf arguments and loaded run capability metadata.
+- added evidence-bundle edit artefacts for current or applied DSL previews, including draft source, structural diff, diagnostics, compiled tree summary, applied-preview state, capability validation context, and diagnostic counts.
+- added capability-aware DSL preview diagnostics from `cap.*` leaf arguments and normalised loaded run capability metadata.
+- added right-rail panel minimise and restore controls, with secondary replay tools starting minimised to keep the inspector balanced.
 - added a staged DSL editing preview so tree source changes compile into a structural summary before they can be applied to the replay.
 - added a compact structure-aware BT diff for DSL previews, with summary counts and expandable rows for added, removed, renamed, reordered, and changed nodes.
 - added product-level DSL diagnostics and non-blocking replay mismatch warnings when draft previews remove or structurally change nodes with loaded runtime history.

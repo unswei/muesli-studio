@@ -1,6 +1,6 @@
 import type { ReplayStore, RunSummary } from '@muesli/replay';
 
-import type { CompiledBtDefinition, DslDiagnostic } from './dsl-compiler';
+import type { CompiledBtDefinition, DslCapabilityContext, DslDiagnostic } from './dsl-compiler';
 import type { BtStructureDiff } from './dsl-preview';
 
 export const presentationLayouts = ['hero', 'summary', 'node', 'diff', 'compare', 'dsl'] as const;
@@ -38,6 +38,8 @@ export interface EditEvidenceArtifact {
     nodes: CompiledBtDefinition['nodes'];
     edges: CompiledBtDefinition['edges'];
   };
+  capability_context: DslCapabilityContext;
+  diagnostic_counts: Record<string, number>;
   structural_diff: BtStructureDiff;
   diagnostics: DslDiagnostic[];
 }
@@ -275,8 +277,14 @@ export function buildEditEvidenceArtifact(input: {
   compiled: CompiledBtDefinition;
   diff: BtStructureDiff;
   diagnostics: DslDiagnostic[];
+  capabilityContext: DslCapabilityContext;
   appliedPreview: boolean;
 }): EditEvidenceArtifact {
+  const diagnosticCounts: Record<string, number> = {};
+  for (const diagnostic of input.diagnostics) {
+    diagnosticCounts[diagnostic.kind] = (diagnosticCounts[diagnostic.kind] ?? 0) + 1;
+  }
+
   return {
     schema: 'muesli-studio.edit-evidence.v1',
     draft_source: input.compiled.dsl,
@@ -287,6 +295,8 @@ export function buildEditEvidenceArtifact(input: {
       nodes: input.compiled.nodes,
       edges: input.compiled.edges,
     },
+    capability_context: input.capabilityContext,
+    diagnostic_counts: diagnosticCounts,
     structural_diff: input.diff,
     diagnostics: input.diagnostics,
   };

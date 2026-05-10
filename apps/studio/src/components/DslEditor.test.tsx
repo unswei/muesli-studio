@@ -156,6 +156,11 @@ describe('DslEditor', () => {
         schema: 'muesli-studio.edit-evidence.v1',
         draft_source: '(bt (sel (act recover) (act fallback)))',
         applied_preview: false,
+        capability_context: {
+          requiredCapabilities: [],
+          availableCapabilities: [],
+          missingCapabilities: [],
+        },
       }),
     );
     expect(view.container.textContent).toContain('renamed 1');
@@ -390,6 +395,43 @@ describe('DslEditor', () => {
     expect(view.container.textContent).toContain('capability');
     expect(view.container.textContent).toContain('Required capability `cap.motion.v1` is not present.');
     expect(buttonsFor(view.container)[1]?.hasAttribute('disabled')).toBe(false);
+  });
+
+  it('records missing capability context in edit evidence', () => {
+    const onEditEvidenceChange = vi.fn<(artifact: EditEvidenceArtifact | null) => void>();
+    const replay = studioDemoReplayWithCapabilities({ reset: true });
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    act(() => {
+      root.render(
+        <DslEditor
+          replay={replay}
+          onApplyCompiled={vi.fn()}
+          onResetCompiled={vi.fn()}
+          onEditEvidenceChange={onEditEvidenceChange}
+        />,
+      );
+    });
+    rendered.push({ root, container, replay });
+
+    act(() => {
+      setTextAreaValue(container.querySelector('textarea'), '(bt (seq (act drive-to-goal cap.motion.v1)))');
+    });
+    act(() => {
+      buttonsFor(container)[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(onEditEvidenceChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        capability_context: {
+          requiredCapabilities: ['cap.motion.v1'],
+          availableCapabilities: [],
+          missingCapabilities: ['cap.motion.v1'],
+        },
+        diagnostic_counts: expect.objectContaining({ capability: 1 }),
+      }),
+    );
   });
 
   it('clears capability diagnostics when run metadata contains the required capability', () => {

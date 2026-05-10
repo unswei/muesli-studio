@@ -295,6 +295,56 @@ code {
   margin-bottom: 0.9rem;
 }
 
+.minimisable-panel {
+  position: relative;
+}
+
+.minimisable-panel > .panel .panel-heading {
+  padding-right: 2.2rem;
+}
+
+.minimised-panel {
+  padding: 0.75rem 0.9rem;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.minimised-panel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.minimised-panel h2 {
+  font-size: 0.98rem;
+}
+
+.panel-icon-button {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  border-radius: 999px;
+  color: var(--subtle);
+  background: rgba(248, 250, 252, 0.92);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.panel-icon-button:hover:enabled {
+  color: var(--text);
+  background: #eef3f7;
+}
+
+.panel-icon-button--float {
+  position: absolute;
+  z-index: 2;
+  top: 0.85rem;
+  right: 0.85rem;
+}
+
 .panel-heading--tree {
   margin-bottom: 1rem;
 }

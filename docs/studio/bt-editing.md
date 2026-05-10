@@ -42,6 +42,8 @@ Leaf forms can declare capability requirements as extra arguments with `cap.*` n
     (cond scene-ready :cap cap.perception.scene.v1)))
 ```
 
+Studio normalises loaded capability metadata before validation. It accepts flat maps such as `{"cap.motion.v1": true}`, metadata-valued maps such as `{"cap.motion.v1": {"provider": "nav"}}`, and bundle-shaped lists that carry `capability`, `id`, or `name` fields.
+
 If the loaded run metadata does not expose the required capability, preview shows a non-blocking `capability` diagnostic. If the metadata exposes the capability, the diagnostic is cleared.
 
 The deterministic `tools/fixtures/capability_run.jsonl` fixture covers this validation path.
@@ -50,6 +52,8 @@ When a preview exists, evidence bundle export includes:
 
 - `edit/tree-edit.json` with the draft source, compiled tree summary, structural diff, diagnostics, and whether the preview was applied
 - `edit/bt_def.dsl` with the draft tree source
+
+The edit artefact also records required capabilities, available capabilities, missing capabilities, and diagnostic counts by kind.
 
 Studio does not export plain unpreviewed text changes as repair evidence.
 

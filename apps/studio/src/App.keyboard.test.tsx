@@ -95,7 +95,7 @@ describe('App keyboard controls', () => {
     rendered = [];
   });
 
-  async function renderApp(): Promise<void> {
+  async function renderApp(): Promise<HTMLDivElement> {
     const container = document.createElement('div');
     document.body.appendChild(container);
     const root = createRoot(container);
@@ -104,6 +104,8 @@ describe('App keyboard controls', () => {
     await act(async () => {
       root.render(<App />);
     });
+
+    return container;
   }
 
   it('supports keyboard tick navigation, search focus, and panel switching', async () => {
@@ -134,5 +136,29 @@ describe('App keyboard controls', () => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: '4', bubbles: true }));
     });
     expect((document.activeElement as HTMLElement | null)?.id).toBe('run-summary-panel');
+  });
+
+  it('lets right sidebar panels be minimised and restored', async () => {
+    const container = await renderApp();
+
+    expect(container.querySelector('[data-panel-id="compare"][data-panel-state="minimised"]')).toBeTruthy();
+    expect(container.querySelector('#compare-panel')).toBeTruthy();
+
+    const expandCompare = container.querySelector<HTMLButtonElement>('button[aria-label="expand compare panel"]');
+    expect(expandCompare).toBeTruthy();
+
+    await act(async () => {
+      expandCompare?.click();
+    });
+    expect(container.querySelector('[data-panel-id="compare"][data-panel-state="minimised"]')).toBeNull();
+    expect(container.querySelector('[data-panel-id="compare"][data-panel-state="open"] #compare-panel')).toBeTruthy();
+
+    const minimiseCompare = container.querySelector<HTMLButtonElement>('button[aria-label="minimise compare panel"]');
+    expect(minimiseCompare).toBeTruthy();
+
+    await act(async () => {
+      minimiseCompare?.click();
+    });
+    expect(container.querySelector('[data-panel-id="compare"][data-panel-state="minimised"]')).toBeTruthy();
   });
 });

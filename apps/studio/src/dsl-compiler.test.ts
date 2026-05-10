@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { DslCompileError, compileBtDsl, validateDslCapabilities } from './dsl-compiler';
+import {
+  DslCompileError,
+  buildDslCapabilityContext,
+  compileBtDsl,
+  normaliseCapabilityMetadata,
+  validateDslCapabilities,
+} from './dsl-compiler';
 
 function expectCompileError(source: string): DslCompileError {
   try {
@@ -120,6 +126,30 @@ describe('compileBtDsl', () => {
     expect(validateDslCapabilities({ available: ['cap.motion.v1'] })).toEqual([]);
   });
 
+  it('normalises flat and bundle-shaped capability metadata', () => {
+    expect(
+      normaliseCapabilityMetadata({
+        'cap.motion.v1': { version: 1 },
+        'cap.disabled.v1': false,
+        capabilities: [{ id: 'cap.perception.scene.v1' }],
+        bundles: [{ capability: 'cap.echo.v1' }],
+      }),
+    ).toEqual(['cap.echo.v1', 'cap.motion.v1', 'cap.perception.scene.v1']);
+  });
+
+  it('builds stable capability validation context', () => {
+    expect(
+      buildDslCapabilityContext({
+        required: [{ capability: 'cap.motion.v1' }, { capability: 'cap.perception.scene.v1' }],
+        available: { 'cap.motion.v1': { provider: 'test' } },
+      }),
+    ).toEqual({
+      requiredCapabilities: ['cap.motion.v1', 'cap.perception.scene.v1'],
+      availableCapabilities: ['cap.motion.v1'],
+      missingCapabilities: ['cap.perception.scene.v1'],
+    });
+  });
+
   it('reports missing capability requirements without blocking compilation', () => {
     const diagnostics = validateDslCapabilities({
       required: [{ capability: 'cap.motion.v1', nodeName: 'drive-to-goal' }],
@@ -133,6 +163,11 @@ describe('compileBtDsl', () => {
         message: 'Required capability `cap.motion.v1` is not present.',
       }),
     );
-    expect(validateDslCapabilities({ required: [{ capability: 'cap.motion.v1' }], available: ['cap.motion.v1'] })).toEqual([]);
+    expect(
+      validateDslCapabilities({
+        required: [{ capability: 'cap.motion.v1' }],
+        available: { 'cap.motion.v1': { provider: 'test' } },
+      }),
+    ).toEqual([]);
   });
 });

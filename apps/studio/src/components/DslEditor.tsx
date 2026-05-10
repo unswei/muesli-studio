@@ -4,10 +4,11 @@ import type { ReplayStore } from '@muesli/replay';
 
 import {
   DslCompileError,
+  buildDslCapabilityContext,
   compileBtDsl,
-  validateDslCapabilities,
   type CompiledBtDefinition,
   type DslDiagnostic,
+  validateDslCapabilities,
 } from '../dsl-compiler';
 import { buildEditEvidenceArtifact, type EditEvidenceArtifact } from '../evidence';
 import {
@@ -248,13 +249,13 @@ function buildMismatchDiagnostics(diff: BtStructureDiff, replay: ReplayStore): D
   return diagnostics;
 }
 
-function availableCapabilitiesFromReplay(replay: ReplayStore): Iterable<string> | Record<string, unknown> | null {
+function availableCapabilitiesFromReplay(replay: ReplayStore): unknown {
   const data = replay.runStart?.data as Record<string, unknown> | undefined;
   const capabilities = data?.capabilities;
   if (!capabilities || typeof capabilities !== 'object') {
     return null;
   }
-  return capabilities as Record<string, unknown>;
+  return capabilities;
 }
 
 function diagnosticsFromError(error: unknown): DslDiagnostic[] {
@@ -356,6 +357,10 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled, onEditEvid
       const compiled = compileBtDsl(draftDsl);
       const compiledPreview = compiledToPreviewTreeDefinition(compiled);
       const diff = currentDefinition ? buildBtStructureDiff(currentDefinition, compiledPreview) : null;
+      const capabilityContext = buildDslCapabilityContext({
+        required: compiled.capabilityRequirements,
+        available: availableCapabilitiesFromReplay(replay),
+      });
       const diagnostics = [
         ...compiled.diagnostics,
         ...validateDslCapabilities({
@@ -368,7 +373,9 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled, onEditEvid
       setPreviewSource(draftDsl);
       setPreviewDiff(diff);
       setPreviewDiagnostics(diagnostics);
-      onEditEvidenceChange?.(diff ? buildEditEvidenceArtifact({ compiled, diff, diagnostics, appliedPreview: false }) : null);
+      onEditEvidenceChange?.(
+        diff ? buildEditEvidenceArtifact({ compiled, diff, diagnostics, capabilityContext, appliedPreview: false }) : null,
+      );
       setStatusMessage(null);
       setErrorMessage(null);
     } catch (error) {
@@ -392,6 +399,10 @@ export function DslEditor({ replay, onApplyCompiled, onResetCompiled, onEditEvid
           compiled: previewCompiled,
           diff: previewDiff,
           diagnostics: previewDiagnostics,
+          capabilityContext: buildDslCapabilityContext({
+            required: previewCompiled.capabilityRequirements,
+            available: availableCapabilitiesFromReplay(replay),
+          }),
           appliedPreview: true,
         }),
       );

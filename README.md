@@ -201,6 +201,8 @@ Replay mode also includes a compare panel for aligned baseline-versus-selected t
 
 Replay mode also includes a first-class presentation flow in the right rail. Use it to open clean overview, summary, node, diff, compare, or DSL layouts, then export PNG, SVG, or a zipped evidence bundle.
 
+Right-rail tools can be minimised and restored in place. Secondary replay tools start minimised so the summary, selected node, blackboard diff, and live connection stay readable without removing deeper inspection controls.
+
 The demo launcher uses URL query auto-load:
 
 - `demo_fixture=/demo/<fixture>/events.jsonl`
