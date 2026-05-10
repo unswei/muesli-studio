@@ -37,6 +37,11 @@ const coreEventTypes = new Set([
   'vla_submit',
   'vla_poll',
   'vla_result',
+  'vla_cancel',
+  'vla_timeout',
+  'async_cancel_requested',
+  'async_cancel_acknowledged',
+  'async_completion_dropped',
 ]);
 
 function stringFromUnknown(value: unknown): string | null {
@@ -94,9 +99,19 @@ export function RunSummaryPanel({ replay, summary, eventCount }: RunSummaryPanel
   const treeHash = stringFromUnknown(btDefData?.tree_hash) ?? stringFromUnknown(runStartData?.tree_hash) ?? 'unavailable';
   const runId = replay.runStart?.run_id ?? 'unknown';
   const plannerCallCount = summary.event_counts.planner_call_start ?? summary.event_counts.planner_call_end ?? 0;
+  const capabilityCallCount = (summary.event_counts.cap_call_start ?? 0) + (summary.event_counts.cap_call_end ?? 0);
+  const vlaLifecycleCount =
+    (summary.event_counts.vla_submit ?? 0) +
+    (summary.event_counts.vla_poll ?? 0) +
+    (summary.event_counts.vla_cancel ?? 0) +
+    (summary.event_counts.vla_result ?? 0) +
+    (summary.event_counts.vla_timeout ?? 0);
   const asyncCancelCount =
     (summary.event_counts.async_cancel_requested ?? 0) +
     (summary.event_counts.async_cancel_acknowledged ?? 0) +
+    (summary.event_counts.cancel_acknowledged ?? 0) +
+    (summary.event_counts.cancel_late ?? 0) +
+    (summary.event_counts.late_result_dropped ?? 0) +
     summary.async_jobs.sched.cancel +
     summary.async_jobs.vla.cancel;
   const errorCount = summary.event_counts.error ?? 0;
@@ -110,8 +125,25 @@ export function RunSummaryPanel({ replay, summary, eventCount }: RunSummaryPanel
   const warningSignals: SummarySignal[] = [
     { label: 'budget warning', count: summary.warnings.budget_warning_count },
     { label: 'deadline exceeded', count: summary.warnings.deadline_exceeded_count },
+    { label: 'tick deadline missed', count: summary.event_counts.tick_deadline_missed ?? 0 },
+    { label: 'planner timeout', count: summary.event_counts.planner_timeout ?? 0 },
+    { label: 'VLA timeout', count: summary.event_counts.vla_timeout ?? 0 },
+    { label: 'invalid host action', count: summary.event_counts.host_action_invalid ?? 0 },
+    { label: 'fallback used', count: summary.event_counts.fallback_used ?? 0 },
+    { label: 'fallback failed', count: summary.event_counts.fallback_failed ?? 0 },
+    { label: 'late result dropped', count: summary.event_counts.late_result_dropped ?? 0 },
     { label: 'error event', count: errorCount },
   ].filter((signal) => signal.count > 0);
+  const outcomeEventCount =
+    (summary.event_counts.tick_deadline_missed ?? 0) +
+    (summary.event_counts.planner_timeout ?? 0) +
+    (summary.event_counts.vla_timeout ?? 0) +
+    (summary.event_counts.host_action_invalid ?? 0) +
+    (summary.event_counts.fallback_used ?? 0) +
+    (summary.event_counts.fallback_failed ?? 0) +
+    (summary.event_counts.late_result_dropped ?? 0) +
+    (summary.event_counts.cancel_acknowledged ?? 0) +
+    (summary.event_counts.cancel_late ?? 0);
   const unusualEventFamilies = eventFamilies.filter(([type, count]) => count > 0 && !coreEventTypes.has(type));
   const warningEventTotal = warningSignals.reduce((sum, signal) => sum + signal.count, 0);
   const unusualEventTotal = unusualEventFamilies.reduce((sum, [, count]) => sum + count, 0);
@@ -182,7 +214,7 @@ export function RunSummaryPanel({ replay, summary, eventCount }: RunSummaryPanel
                 ))}
               </ul>
             ) : (
-              <p className="panel-empty-copy muted">No budget, deadline, or error signals were recorded.</p>
+              <p className="panel-empty-copy muted">No budget, deadline, outcome, or error signals were recorded.</p>
             )}
           </section>
 
@@ -288,6 +320,24 @@ export function RunSummaryPanel({ replay, summary, eventCount }: RunSummaryPanel
             <div>
               <dt>async cancels</dt>
               <dd>{formatCount(asyncCancelCount)}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section className="summary-section">
+          <h3>model and capability</h3>
+          <dl className="summary-definition-list">
+            <div>
+              <dt>capability lifecycle</dt>
+              <dd>{formatCount(capabilityCallCount)}</dd>
+            </div>
+            <div>
+              <dt>VLA lifecycle</dt>
+              <dd>{formatCount(vlaLifecycleCount)}</dd>
+            </div>
+            <div>
+              <dt>outcome events</dt>
+              <dd>{formatCount(outcomeEventCount)}</dd>
             </div>
           </dl>
         </section>

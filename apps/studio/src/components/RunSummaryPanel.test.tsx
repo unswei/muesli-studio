@@ -22,6 +22,19 @@ function loadStudioDemoReplay(): ReplayStore {
   return replay;
 }
 
+function loadV08OutcomeReplay(): ReplayStore {
+  const raw = readFileSync(
+    path.join(rootDir, 'tests', 'fixtures', 'muesli_bt_v0_8_ros2_preemption', 'events.jsonl'),
+    'utf8',
+  );
+  const parsed = parseJsonlEvents(raw);
+  expect(parsed.errors).toHaveLength(0);
+
+  const replay = new ReplayStore();
+  replay.appendMany(parsed.events);
+  return replay;
+}
+
 describe('RunSummaryPanel', () => {
   it('renders the richer canonical demo summary', () => {
     const replay = loadStudioDemoReplay();
@@ -44,5 +57,24 @@ describe('RunSummaryPanel', () => {
     expect(markup).toContain('attention before scrubbing');
     expect(markup).toContain('unusual event families');
     expect(markup).toContain('bb delete');
+  });
+
+  it('renders v0.8.0 outcome and model-capability summary signals', () => {
+    const replay = loadV08OutcomeReplay();
+    const summary = summariseRun(replay.getAllEvents(), {
+      contractVersion:
+        typeof replay.runStart?.data.contract_version === 'string' ? replay.runStart.data.contract_version : 'unknown',
+      schemaVersion: replay.runStart?.schema ?? 'mbt.evt.v1',
+    });
+
+    const markup = renderToStaticMarkup(
+      <RunSummaryPanel replay={replay} summary={summary} eventCount={replay.getAllEvents().length} />,
+    );
+
+    expect(markup).toContain('model and capability');
+    expect(markup).toContain('outcome events');
+    expect(markup).toContain('invalid host action');
+    expect(markup).toContain('fallback used');
+    expect(markup).toContain('host action invalid');
   });
 });

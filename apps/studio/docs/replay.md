@@ -33,7 +33,8 @@ Use replay mode when you need deterministic post-run inspection, debugging, or r
 - the replay diagnostics panel shows large-log mode, seek timing, lazy coverage, explicit hydration controls, and a rough footprint estimate
 - the right rail includes a dedicated planner and scheduler panel with shared per-tick activity strips and selected-tick execution summaries
 - the timeline surface includes an event explorer with text search, family filters, and jump-to-tick actions across replay and live sessions
-- the same event explorer includes one-click jump controls for first failure, timeout, cancellation, planner activity, VLA activity, and blackboard change
+- the same event explorer includes deliberate lifecycle grouping for planner, model/capability, async/VLA, outcome, and blackboard events
+- the same event explorer includes one-click jump controls for first failure, timeout, cancellation, planner activity, model/capability activity, VLA activity, and blackboard change
 - keyboard-first inspection supports tick scrubbing, panel switching, and search/jump flows without leaving the main canvas
 - the right rail also includes compare mode for aligned baseline-versus-selected tick review, with node divergence, blackboard deltas, and planner/scheduler deltas in one surface
 - demo bootstrapping can auto-load replay files via URL query (`demo_fixture`, optional `demo_sidecar`)
@@ -67,8 +68,8 @@ Replay deep-link parameters:
 Event explorer filters:
 
 - text search matches event type, node id, planner name, blackboard key, status, and message fields
-- family filters: `node`, `planner`, `scheduler`, `blackboard`, `warnings`, `async`, `run/tick`
-- jump controls target the first loaded occurrence of `failure`, `deadline_exceeded`, cancellation lifecycle, planner activity, VLA activity, and blackboard change
+- family filters: `node`, `planner`, `model/capability`, `scheduler`, `blackboard`, `warnings`, `async/VLA`, `run/tick`
+- jump controls target the first loaded occurrence of failure, timeout, cancellation lifecycle, planner activity, model/capability activity, VLA activity, and blackboard change
 
 Keyboard shortcuts:
 
@@ -104,7 +105,7 @@ Then copy the browser URL after scrubbing or changing the focused node to keep t
 
 6. Use the event explorer under the scrubber to search for terms such as `rrt_star`, `nav.replan_reason`, or `Mission complete`, then jump directly to the matching tick.
 
-7. Use the `jump to` controls for quick movement to the first failure, timeout, cancellation, planner, VLA, or blackboard event without typing a search query.
+7. Use the `jump to` controls for quick movement to the first failure, timeout, cancellation, planner, model/capability, VLA, or blackboard event without typing a search query.
 
 8. Use the keyboard shortcuts to scrub ticks, focus the event explorer, and switch directly between major panels while inspecting a run.
 

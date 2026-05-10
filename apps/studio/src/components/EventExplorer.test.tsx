@@ -8,6 +8,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { parseEvent, type ValidatedMbtEvent } from '@muesli/protocol';
 import { parseJsonlEvents, ReplayStore } from '@muesli/replay';
 
 import { buildEventMatch, buildJumpTargets, EventExplorer, filterEventMatches } from './EventExplorer';
@@ -33,6 +34,37 @@ function loadDeadlineCancelReplay(): ReplayStore {
   const replay = new ReplayStore();
   replay.appendMany(parsed.events);
   return replay;
+}
+
+function loadV08OutcomeReplay(): ReplayStore {
+  const raw = readFileSync(
+    path.join(rootDir, 'tests', 'fixtures', 'muesli_bt_v0_8_ros2_preemption', 'events.jsonl'),
+    'utf8',
+  );
+  const parsed = parseJsonlEvents(raw);
+  expect(parsed.errors).toHaveLength(0);
+
+  const replay = new ReplayStore();
+  replay.appendMany(parsed.events);
+  return replay;
+}
+
+function lifecycleEvent(
+  type: ValidatedMbtEvent['type'],
+  seq: number,
+  data: Record<string, unknown>,
+  tick = 1,
+): ValidatedMbtEvent {
+  return parseEvent({
+    schema: 'mbt.evt.v1',
+    contract_version: '1.0.0',
+    type,
+    run_id: 'fixture-model-capability',
+    unix_ms: 1735689600000 + seq,
+    seq,
+    tick,
+    data,
+  });
 }
 
 function setInputValue(input: HTMLInputElement, value: string): void {
@@ -85,6 +117,43 @@ describe('EventExplorer', () => {
     expect(targets.find((target) => target.kind === 'vla')?.match?.event.type).toBe('vla_submit');
     expect(targets.find((target) => target.kind === 'planner')?.match).toBeNull();
     expect(targets.find((target) => target.kind === 'blackboard')?.match).toBeNull();
+  });
+
+  it('groups v0.8.0 outcome events with readable summaries and failure jumps', () => {
+    const replay = loadV08OutcomeReplay();
+    const matches = replay.getAllEvents().map(buildEventMatch);
+    const targets = buildJumpTargets(matches);
+
+    const hostAction = matches.find((match) => match.event.type === 'host_action_invalid');
+    const fallback = matches.find((match) => match.event.type === 'fallback_used');
+    const blackboard = matches.find((match) => match.event.type === 'bb_write' && match.event.tick === 1);
+
+    expect(hostAction?.family).toBe('warning');
+    expect(hostAction?.summary).toContain('ros2');
+    expect(hostAction?.summary).toContain('u_must_be_map');
+    expect(fallback?.summary).toContain('safe_action');
+    expect(blackboard?.summary).toContain('ros2.action.v1');
+    expect(targets.find((target) => target.kind === 'failure')?.match?.event.type).toBe('host_action_invalid');
+    expect(targets.find((target) => target.kind === 'blackboard')?.match?.event.tick).toBe(1);
+  });
+
+  it('surfaces model and capability lifecycle events as their own group and jump target', () => {
+    const events = [
+      lifecycleEvent('cap_call_start', 1, { capability: 'cap.model.world', operation: 'infer' }),
+      lifecycleEvent('cap_call_end', 2, { capability: 'cap.model.world', operation: 'infer', status: 'accepted' }),
+      lifecycleEvent('vla_timeout', 3, { job_id: 'vla-7', reason: 'deadline' }, 2),
+      lifecycleEvent('late_result_dropped', 4, { job_id: 'vla-7', reason: 'stale_result' }, 2),
+    ];
+    const matches = events.map(buildEventMatch);
+    const capabilityMatches = filterEventMatches(matches, 'capability', 'cap.model.world');
+    const targets = buildJumpTargets(matches);
+
+    expect(capabilityMatches).toHaveLength(2);
+    expect(capabilityMatches.every((match) => match.family === 'capability')).toBe(true);
+    expect(targets.find((target) => target.kind === 'capability')?.match?.event.type).toBe('cap_call_start');
+    expect(targets.find((target) => target.kind === 'timeout')?.match?.event.type).toBe('vla_timeout');
+    expect(targets.find((target) => target.kind === 'cancellation')?.match?.event.type).toBe('late_result_dropped');
+    expect(targets.find((target) => target.kind === 'vla')?.match?.event.type).toBe('vla_timeout');
   });
 
   it('filters interactively and jumps to the selected tick and node', () => {

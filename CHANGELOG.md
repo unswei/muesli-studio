@@ -22,6 +22,7 @@ All notable changes to this project will be documented in this file.
 - extended evidence manifests with schema, redaction, and optional edit artefact path fields.
 - advanced the inspector fallback pin to `muesli-bt v0.8.0` at commit `ff4dc9d7e160b2037ad66cac23e9536c48faaa5e` and synced the Studio schema, contract, generated protocol type, and parser coverage for the expanded `mbt.evt.v1` release surface.
 - refreshed the roadmap and current compatibility documentation around the `muesli-bt v0.8.0` capability, model-service, and outcome-event baseline.
+- surfaced `muesli-bt v0.8.0` model/capability lifecycle and outcome events in Event Explorer grouping, jump targets, and run summaries.
 - documented the v0.5.0 editing workflow as a controlled replay validation loop rather than a general BT IDE.
 
 ## [0.4.0] - 2026-04-25

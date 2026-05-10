@@ -3,7 +3,7 @@ import { useDeferredValue, useMemo, useState } from 'react';
 import type { ValidatedMbtEvent } from '@muesli/protocol';
 import type { ReplayStore } from '@muesli/replay';
 
-type EventFamily = 'all' | 'runtime' | 'node' | 'planner' | 'scheduler' | 'blackboard' | 'warning' | 'async';
+type EventFamily = 'all' | 'runtime' | 'node' | 'planner' | 'scheduler' | 'blackboard' | 'warning' | 'capability' | 'async';
 
 interface EventExplorerProps {
   replay: ReplayStore;
@@ -24,7 +24,7 @@ interface EventMatch {
   searchText: string;
 }
 
-type JumpTargetKind = 'failure' | 'timeout' | 'cancellation' | 'planner' | 'vla' | 'blackboard';
+type JumpTargetKind = 'failure' | 'timeout' | 'cancellation' | 'planner' | 'capability' | 'vla' | 'blackboard';
 
 interface JumpTarget {
   kind: JumpTargetKind;
@@ -37,15 +37,16 @@ const eventFamilies: ReadonlyArray<{ id: EventFamily; label: string }> = [
   { id: 'all', label: 'all' },
   { id: 'node', label: 'node' },
   { id: 'planner', label: 'planner' },
+  { id: 'capability', label: 'model/capability' },
   { id: 'scheduler', label: 'scheduler' },
   { id: 'blackboard', label: 'blackboard' },
   { id: 'warning', label: 'warnings' },
-  { id: 'async', label: 'async' },
+  { id: 'async', label: 'async/VLA' },
   { id: 'runtime', label: 'run/tick' },
 ];
 
 const RESULT_LIMIT = 12;
-const jumpTargetOrder: readonly JumpTargetKind[] = ['failure', 'timeout', 'cancellation', 'planner', 'vla', 'blackboard'];
+const jumpTargetOrder: readonly JumpTargetKind[] = ['failure', 'timeout', 'cancellation', 'planner', 'capability', 'vla', 'blackboard'];
 
 function normaliseNodeId(value: unknown): string | null {
   if (typeof value === 'string' && value.trim().length > 0) {
@@ -88,9 +89,11 @@ function eventFamilyForType(type: ValidatedMbtEvent['type']): Exclude<EventFamil
     return 'warning';
   }
 
+  if (type === 'cap_call_start' || type === 'cap_call_end') {
+    return 'capability';
+  }
+
   if (
-    type === 'cap_call_start' ||
-    type === 'cap_call_end' ||
     type === 'vla_submit' ||
     type === 'vla_poll' ||
     type === 'vla_cancel' ||
@@ -152,6 +155,57 @@ function appendScalarStrings(parts: string[], value: unknown, depth = 0): void {
   }
 }
 
+function stringField(data: Record<string, unknown>, ...keys: string[]): string | null {
+  for (const key of keys) {
+    const value = data[key];
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed.length > 0) {
+        return trimmed;
+      }
+    }
+  }
+
+  return null;
+}
+
+function numericField(data: Record<string, unknown>, ...keys: string[]): number | null {
+  for (const key of keys) {
+    const value = data[key];
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function previewText(value: unknown): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  try {
+    const encoded = JSON.stringify(value);
+    if (!encoded) {
+      return null;
+    }
+
+    return encoded.length > 120 ? `${encoded.slice(0, 117)}...` : encoded;
+  } catch {
+    return null;
+  }
+}
+
 function summaryForEvent(event: ValidatedMbtEvent, nodeId: string | null): string {
   const data = event.data as Record<string, unknown>;
 
@@ -185,6 +239,54 @@ function summaryForEvent(event: ValidatedMbtEvent, nodeId: string | null): strin
     return [planner, status, usedMs].filter((value): value is string => Boolean(value)).join(' · ');
   }
 
+  if (event.type === 'planner_timeout') {
+    const planner = stringField(data, 'planner', 'planner_id', 'backend') ?? 'planner';
+    const reason = stringField(data, 'reason', 'message');
+    const budgetMs = numericField(data, 'budget_ms', 'deadline_ms');
+    return [planner, reason, budgetMs !== null ? `${budgetMs} ms budget` : null]
+      .filter((value): value is string => Boolean(value))
+      .join(' · ');
+  }
+
+  if (event.type === 'cap_call_start' || event.type === 'cap_call_end') {
+    const capability =
+      stringField(data, 'capability', 'capability_id', 'capability_name', 'service', 'backend') ?? 'capability';
+    const operation = stringField(data, 'operation', 'op', 'method');
+    const status = stringField(data, 'status', 'outcome', 'state');
+    const reason = stringField(data, 'reason', 'message');
+    return [capability, operation, status, reason].filter((value): value is string => Boolean(value)).join(' · ');
+  }
+
+  if (
+    event.type === 'vla_submit' ||
+    event.type === 'vla_poll' ||
+    event.type === 'vla_cancel' ||
+    event.type === 'vla_result' ||
+    event.type === 'vla_timeout'
+  ) {
+    const jobId = stringField(data, 'job_id', 'id') ?? (typeof data.job_id === 'number' ? String(data.job_id) : null);
+    const status = stringField(data, 'status', 'state', 'outcome');
+    const reason = stringField(data, 'reason', 'message');
+    const backend = stringField(data, 'backend', 'service');
+    return [jobId ? `job ${jobId}` : null, status, reason, backend].filter((value): value is string => Boolean(value)).join(' · ');
+  }
+
+  if (
+    event.type === 'host_action_invalid' ||
+    event.type === 'fallback_used' ||
+    event.type === 'fallback_failed' ||
+    event.type === 'late_result_dropped' ||
+    event.type === 'cancel_acknowledged' ||
+    event.type === 'cancel_late' ||
+    event.type === 'tick_deadline_missed'
+  ) {
+    const backend = stringField(data, 'backend', 'service');
+    const reason = stringField(data, 'reason', 'message', 'code');
+    const fallback = stringField(data, 'fallback', 'fallback_action');
+    const status = stringField(data, 'status', 'state', 'outcome');
+    return [backend, fallback, status, reason].filter((value): value is string => Boolean(value)).join(' · ');
+  }
+
   if (event.type === 'sched_submit' || event.type === 'sched_start' || event.type === 'sched_finish' || event.type === 'sched_cancel') {
     const jobId = typeof data.job_id === 'number' || typeof data.job_id === 'string' ? `job ${data.job_id}` : null;
     const status = typeof data.status === 'string' ? data.status : null;
@@ -195,7 +297,7 @@ function summaryForEvent(event: ValidatedMbtEvent, nodeId: string | null): strin
 
   if (event.type === 'bb_write') {
     const key = typeof data.key === 'string' ? data.key : 'blackboard write';
-    const preview = typeof data.preview === 'string' ? data.preview : null;
+    const preview = previewText(data.preview);
     return [key, preview].filter((value): value is string => Boolean(value)).join(' · ');
   }
 
@@ -278,7 +380,11 @@ export function filterEventMatches(matches: readonly EventMatch[], family: Event
 function isFailureMatch(match: EventMatch): boolean {
   const data = match.event.data as Record<string, unknown>;
 
-  if (match.event.type === 'error') {
+  if (
+    match.event.type === 'error' ||
+    match.event.type === 'host_action_invalid' ||
+    match.event.type === 'fallback_failed'
+  ) {
     return true;
   }
 
@@ -294,20 +400,37 @@ function isFailureMatch(match: EventMatch): boolean {
 }
 
 function isTimeoutMatch(match: EventMatch): boolean {
-  return match.event.type === 'deadline_exceeded';
+  return (
+    match.event.type === 'deadline_exceeded' ||
+    match.event.type === 'tick_deadline_missed' ||
+    match.event.type === 'planner_timeout' ||
+    match.event.type === 'vla_timeout'
+  );
 }
 
 function isCancellationMatch(match: EventMatch): boolean {
   return (
     match.event.type === 'async_cancel_requested' ||
     match.event.type === 'async_cancel_acknowledged' ||
+    match.event.type === 'cancel_acknowledged' ||
+    match.event.type === 'cancel_late' ||
+    match.event.type === 'late_result_dropped' ||
     match.event.type === 'sched_cancel' ||
     match.event.type === 'vla_cancel'
   );
 }
 
 function isPlannerMatch(match: EventMatch): boolean {
-  return match.event.type === 'planner_call_start' || match.event.type === 'planner_call_end' || match.event.type === 'planner_v1';
+  return (
+    match.event.type === 'planner_call_start' ||
+    match.event.type === 'planner_call_end' ||
+    match.event.type === 'planner_v1' ||
+    match.event.type === 'planner_timeout'
+  );
+}
+
+function isCapabilityMatch(match: EventMatch): boolean {
+  return match.event.type === 'cap_call_start' || match.event.type === 'cap_call_end';
 }
 
 function isVlaMatch(match: EventMatch): boolean {
@@ -315,7 +438,8 @@ function isVlaMatch(match: EventMatch): boolean {
     match.event.type === 'vla_submit' ||
     match.event.type === 'vla_poll' ||
     match.event.type === 'vla_cancel' ||
-    match.event.type === 'vla_result'
+    match.event.type === 'vla_result' ||
+    match.event.type === 'vla_timeout'
   );
 }
 
@@ -341,6 +465,9 @@ export function buildJumpTargets(matches: readonly EventMatch[]): JumpTarget[] {
     }
     if (byKind.get('planner') === null && isPlannerMatch(match)) {
       byKind.set('planner', match);
+    }
+    if (byKind.get('capability') === null && isCapabilityMatch(match)) {
+      byKind.set('capability', match);
     }
     if (byKind.get('vla') === null && isVlaMatch(match)) {
       byKind.set('vla', match);
@@ -372,8 +499,14 @@ export function buildJumpTargets(matches: readonly EventMatch[]): JumpTarget[] {
     {
       kind: 'planner',
       label: 'planner activity',
-      description: 'Jump to the first planner call recorded in the run.',
+      description: 'Jump to the first planner lifecycle event recorded in the run.',
       match: byKind.get('planner') ?? null,
+    },
+    {
+      kind: 'capability',
+      label: 'model/capability',
+      description: 'Jump to the first model-service or host capability lifecycle event in the run.',
+      match: byKind.get('capability') ?? null,
     },
     {
       kind: 'vla',
@@ -455,7 +588,9 @@ export function EventExplorer({
         <div>
           <p className="panel-kicker">timeline search</p>
           <h2>event explorer</h2>
-          <p className="panel-copy muted">Search by event type, node, planner, blackboard key, or message, then jump straight to the matching tick.</p>
+          <p className="panel-copy muted">
+            Search by event type, node, planner, model or capability context, blackboard key, or message, then jump straight to the matching tick.
+          </p>
         </div>
         <div className="tree-summary-badges">
           <span className="status-badge status-badge--subtle">{mode === 'live' ? 'live stream' : 'replay log'}</span>
@@ -467,7 +602,9 @@ export function EventExplorer({
         <div className="summary-section summary-section--full jump-targets-section">
           <div className="summary-section-heading">
             <h3>jump to</h3>
-            <p className="panel-empty-copy muted">Use the quickest path to the first failure, timeout, cancellation, planner, VLA, or blackboard event.</p>
+            <p className="panel-empty-copy muted">
+              Use the quickest path to the first failure, timeout, cancellation, planner, model/capability, VLA, or blackboard event.
+            </p>
           </div>
           <div className="jump-target-grid">
             {jumpTargets.map((target) => {
@@ -518,7 +655,7 @@ export function EventExplorer({
                 }
               }
             }}
-            placeholder="Search type, node, planner, key, or message"
+            placeholder="Search type, node, planner, capability, key, or message"
           />
         </label>
 
