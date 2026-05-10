@@ -32,6 +32,11 @@
         "bt_def",
         "tick_begin",
         "tick_end",
+        "tick_audit",
+        "tick_ok",
+        "tick_deadline_missed",
+        "gc_begin",
+        "gc_end",
         "node_enter",
         "node_exit",
         "node_status",
@@ -46,7 +51,17 @@
         "sched_cancel",
         "planner_call_start",
         "planner_call_end",
+        "cap_call_start",
+        "cap_call_end",
         "planner_v1",
+        "planner_timeout",
+        "vla_timeout",
+        "host_action_invalid",
+        "fallback_used",
+        "fallback_failed",
+        "late_result_dropped",
+        "cancel_acknowledged",
+        "cancel_late",
         "vla_submit",
         "vla_poll",
         "vla_cancel",
@@ -170,6 +185,12 @@
                 "type": "string"
               },
               "tree_hash": {
+                "type": "string"
+              },
+              "source_hash": {
+                "type": "string"
+              },
+              "canonical_dsl_hash": {
                 "type": "string"
               },
               "nodes": {

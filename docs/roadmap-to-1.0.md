@@ -21,9 +21,9 @@ As of `v0.4.0`, `muesli-studio` already has a serious base:
 - presentation mode and export paths for figures and evidence bundles
 - pinned live inspection, live capture bundles, and replay-bundle reopening
 
-The current development compatibility target is `muesli-bt v0.6.0` at commit `654a1e43cdea4bfc2e0a5e4e15e472193ca32f94`. That target keeps the Studio-facing runtime contract at `runtime-contract-v1.0.0` and the event schema at `mbt.evt.v1`. The synced schema and contract copies are byte-identical to the previous Studio copy, so the compatibility change is an additive runtime and documentation baseline rather than a schema migration.
+The current development compatibility target is `muesli-bt v0.8.0` at commit `ff4dc9d7e160b2037ad66cac23e9536c48faaa5e`. That target keeps the Studio-facing runtime contract at `runtime-contract-v1.0.0` and the event schema at `mbt.evt.v1`, while adding model-service, host-capability, outcome, tick-audit, and GC lifecycle event variants within the same schema family.
 
-The important new upstream material for the roadmap is the `muesli-bt` host capability bundle boundary. `v0.6.0` documents bundles such as `cap.motion.v1` and `cap.perception.scene.v1`, and includes the minimal `cap.list`, `cap.describe`, and `cap.call` API path with deterministic `cap.echo.v1` coverage. For Studio, this should first appear as provenance, validation, and comparison context. It should not become a broad robot-control interface.
+The important upstream material for the roadmap is the `muesli-bt` capability and model-service boundary. `v0.8.0` includes the host capability bundle baseline from `v0.6.0` plus optional model-service bridge evidence, `cap.call` lifecycle events, runtime outcome events, and DSL definition hashes. For Studio, this should first appear as provenance, validation, lifecycle inspection, and comparison context. It should not become a broad robot-control interface.
 
 ## strategic thesis
 

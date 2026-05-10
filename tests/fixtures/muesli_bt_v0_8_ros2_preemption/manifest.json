@@ -1,0 +1,11 @@
+{
+  "contract_id": "runtime-contract-v1.0.0",
+  "contract_version": "1.0.0",
+  "fixture_name": "ros2-preemption-fallback-case",
+  "generated_from_commit_time_utc": "2026-04-26T23:26:59Z",
+  "generator": "tools/fixtures/update_fixture.py",
+  "git_sha": "4e08b3146ea1aa042a34151b5558d1203825f957",
+  "provenance_model": "deterministic-from-git",
+  "schema": "mbt.evt.v1",
+  "schema_path": "schemas/event_log/v1/mbt.evt.v1.schema.json"
+}

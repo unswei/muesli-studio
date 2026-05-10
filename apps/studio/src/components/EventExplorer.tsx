@@ -64,7 +64,7 @@ function eventFamilyForType(type: ValidatedMbtEvent['type']): Exclude<EventFamil
     return 'node';
   }
 
-  if (type === 'planner_call_start' || type === 'planner_call_end' || type === 'planner_v1') {
+  if (type === 'planner_call_start' || type === 'planner_call_end' || type === 'planner_v1' || type === 'planner_timeout') {
     return 'planner';
   }
 
@@ -76,15 +76,29 @@ function eventFamilyForType(type: ValidatedMbtEvent['type']): Exclude<EventFamil
     return 'blackboard';
   }
 
-  if (type === 'budget_warning' || type === 'deadline_exceeded' || type === 'error') {
+  if (
+    type === 'budget_warning' ||
+    type === 'deadline_exceeded' ||
+    type === 'tick_deadline_missed' ||
+    type === 'host_action_invalid' ||
+    type === 'fallback_used' ||
+    type === 'fallback_failed' ||
+    type === 'error'
+  ) {
     return 'warning';
   }
 
   if (
+    type === 'cap_call_start' ||
+    type === 'cap_call_end' ||
     type === 'vla_submit' ||
     type === 'vla_poll' ||
     type === 'vla_cancel' ||
     type === 'vla_result' ||
+    type === 'vla_timeout' ||
+    type === 'late_result_dropped' ||
+    type === 'cancel_acknowledged' ||
+    type === 'cancel_late' ||
     type === 'async_cancel_requested' ||
     type === 'async_cancel_acknowledged' ||
     type === 'async_completion_dropped'

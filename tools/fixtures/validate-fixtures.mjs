@@ -15,6 +15,7 @@ const fixtureFiles = [
   'tools/fixtures/minimal_run.jsonl',
   'tools/fixtures/planner_run.jsonl',
   'tools/fixtures/scheduler_run.jsonl',
+  'tests/fixtures/muesli_bt_v0_8_ros2_preemption/events.jsonl',
 ];
 
 const schema = JSON.parse(await readFile(schemaPath, 'utf8'));

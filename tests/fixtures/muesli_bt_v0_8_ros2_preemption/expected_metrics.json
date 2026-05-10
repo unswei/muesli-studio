@@ -1,0 +1,26 @@
+{
+  "absent_types": [
+    "async_cancel_requested",
+    "async_cancel_acknowledged",
+    "planner_call_start"
+  ],
+  "event_count": 10,
+  "events_sha256": "d425cf8bde15568e3e8a21e88c8424a374c5716a92620159422593c8ca60cf27",
+  "required_types": [
+    "run_start",
+    "tick_begin",
+    "bb_write",
+    "host_action_invalid",
+    "fallback_used",
+    "error",
+    "tick_end"
+  ],
+  "type_counts": {
+    "bb_write": 2,
+    "error": 1,
+    "fallback_used": 1,
+    "host_action_invalid": 1,
+    "tick_begin": 2,
+    "tick_end": 2
+  }
+}

@@ -10,6 +10,11 @@ export const eventTypeValues = [
   'bt_def',
   'tick_begin',
   'tick_end',
+  'tick_audit',
+  'tick_ok',
+  'tick_deadline_missed',
+  'gc_begin',
+  'gc_end',
   'node_enter',
   'node_exit',
   'node_status',
@@ -24,7 +29,17 @@ export const eventTypeValues = [
   'sched_cancel',
   'planner_call_start',
   'planner_call_end',
+  'cap_call_start',
+  'cap_call_end',
   'planner_v1',
+  'planner_timeout',
+  'vla_timeout',
+  'host_action_invalid',
+  'fallback_used',
+  'fallback_failed',
+  'late_result_dropped',
+  'cancel_acknowledged',
+  'cancel_late',
   'vla_submit',
   'vla_poll',
   'vla_cancel',
@@ -137,6 +152,31 @@ const tickEndSchema = envelopeSchema.extend({
   data: z.record(z.unknown()),
 });
 
+const tickAuditSchema = envelopeSchema.extend({
+  type: z.literal('tick_audit'),
+  data: z.record(z.unknown()),
+});
+
+const tickOkSchema = envelopeSchema.extend({
+  type: z.literal('tick_ok'),
+  data: z.record(z.unknown()),
+});
+
+const tickDeadlineMissedSchema = envelopeSchema.extend({
+  type: z.literal('tick_deadline_missed'),
+  data: z.record(z.unknown()),
+});
+
+const gcBeginSchema = envelopeSchema.extend({
+  type: z.literal('gc_begin'),
+  data: z.record(z.unknown()),
+});
+
+const gcEndSchema = envelopeSchema.extend({
+  type: z.literal('gc_end'),
+  data: z.record(z.unknown()),
+});
+
 const nodeStatusSchema = envelopeSchema.extend({
   type: z.literal('node_status'),
   tick: z.number().int().nonnegative(),
@@ -194,10 +234,7 @@ const bbWriteSchema = envelopeSchema.extend({
       value_digest: z.string().min(1).optional(),
       preview: z.unknown().optional(),
     })
-    .passthrough()
-    .refine((data) => data.digest !== undefined || data.value_digest !== undefined, {
-      message: 'bb_write requires digest or value_digest',
-    }),
+    .passthrough(),
 });
 
 const bbDeleteSchema = envelopeSchema.extend({
@@ -257,8 +294,58 @@ const plannerCallEndSchema = envelopeSchema.extend({
   data: z.record(z.unknown()),
 });
 
+const capCallStartSchema = envelopeSchema.extend({
+  type: z.literal('cap_call_start'),
+  data: z.record(z.unknown()),
+});
+
+const capCallEndSchema = envelopeSchema.extend({
+  type: z.literal('cap_call_end'),
+  data: z.record(z.unknown()),
+});
+
 const plannerV1Schema = envelopeSchema.extend({
   type: z.literal('planner_v1'),
+  data: z.record(z.unknown()),
+});
+
+const plannerTimeoutSchema = envelopeSchema.extend({
+  type: z.literal('planner_timeout'),
+  data: z.record(z.unknown()),
+});
+
+const vlaTimeoutSchema = envelopeSchema.extend({
+  type: z.literal('vla_timeout'),
+  data: z.record(z.unknown()),
+});
+
+const hostActionInvalidSchema = envelopeSchema.extend({
+  type: z.literal('host_action_invalid'),
+  data: z.record(z.unknown()),
+});
+
+const fallbackUsedSchema = envelopeSchema.extend({
+  type: z.literal('fallback_used'),
+  data: z.record(z.unknown()),
+});
+
+const fallbackFailedSchema = envelopeSchema.extend({
+  type: z.literal('fallback_failed'),
+  data: z.record(z.unknown()),
+});
+
+const lateResultDroppedSchema = envelopeSchema.extend({
+  type: z.literal('late_result_dropped'),
+  data: z.record(z.unknown()),
+});
+
+const cancelAcknowledgedSchema = envelopeSchema.extend({
+  type: z.literal('cancel_acknowledged'),
+  data: z.record(z.unknown()),
+});
+
+const cancelLateSchema = envelopeSchema.extend({
+  type: z.literal('cancel_late'),
   data: z.record(z.unknown()),
 });
 
@@ -301,7 +388,7 @@ const errorSchema = envelopeSchema.extend({
   type: z.literal('error'),
   data: z
     .object({
-      severity: z.union([z.enum(severityValues), z.string().min(1)]),
+      severity: z.union([z.enum(severityValues), z.string().min(1)]).optional(),
       message: z.string().min(1),
       code: z.string().optional(),
       component: z.string().optional(),
@@ -318,6 +405,11 @@ export const mbtEventSchema = z.discriminatedUnion('type', [
   btDefSchema,
   tickBeginSchema,
   tickEndSchema,
+  tickAuditSchema,
+  tickOkSchema,
+  tickDeadlineMissedSchema,
+  gcBeginSchema,
+  gcEndSchema,
   nodeEnterSchema,
   nodeExitSchema,
   nodeStatusSchema,
@@ -332,7 +424,17 @@ export const mbtEventSchema = z.discriminatedUnion('type', [
   schedCancelSchema,
   plannerCallStartSchema,
   plannerCallEndSchema,
+  capCallStartSchema,
+  capCallEndSchema,
   plannerV1Schema,
+  plannerTimeoutSchema,
+  vlaTimeoutSchema,
+  hostActionInvalidSchema,
+  fallbackUsedSchema,
+  fallbackFailedSchema,
+  lateResultDroppedSchema,
+  cancelAcknowledgedSchema,
+  cancelLateSchema,
   vlaSubmitSchema,
   vlaPollSchema,
   vlaCancelSchema,

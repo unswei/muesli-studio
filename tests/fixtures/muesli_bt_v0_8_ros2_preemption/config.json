@@ -1,0 +1,7 @@
+{
+  "backend": "ros2",
+  "control_hz": 5,
+  "deterministic_mode": true,
+  "reset_mode": "stub",
+  "scenario": "ros2_safe_action_preemption_reuses_runtime_outcomes"
+}

@@ -15,7 +15,7 @@ Use this workflow when you want a tagged release that includes:
 - `.sha256` checksum files for every published archive
 - detached ASCII-armoured signatures (`.asc`) for every published archive
 
-Current development compatibility target: `muesli-bt v0.6.0`.
+Current development compatibility target: `muesli-bt v0.8.0`.
 
 First published release using this artefact set: `v0.1.0`.
 

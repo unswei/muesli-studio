@@ -44,6 +44,15 @@ describe('parseJsonlEvents', () => {
     expect(result.errors).toHaveLength(0);
     expect(result.events.length).toBeGreaterThan(20);
   });
+
+  it('parses a released muesli-bt v0.8.0 outcome fixture without errors', async () => {
+    const text = await loadBundleFixture('muesli_bt_v0_8_ros2_preemption');
+    const result = parseJsonlEvents(text);
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.events.map((event) => event.type)).toContain('host_action_invalid');
+    expect(result.events.map((event) => event.type)).toContain('fallback_used');
+  });
 });
 
 describe('ReplayStore', () => {
@@ -121,6 +130,19 @@ describe('ReplayStore', () => {
     const tick4Diff = store.getBlackboardDiff(4);
     expect(tick4Diff.writes.map((entry) => entry.key)).toEqual(['nav.command', 'mission.status']);
     expect(tick4Diff.deletes).toEqual(['nav.controller_job', 'nav.replan_reason']);
+  });
+
+  it('indexes v0.8.0 preview-only blackboard writes with stable fallback digests', async () => {
+    const text = await loadBundleFixture('muesli_bt_v0_8_ros2_preemption');
+    const { events, errors } = parseJsonlEvents(text);
+    expect(errors).toHaveLength(0);
+
+    const store = new ReplayStore();
+    store.appendMany(events);
+
+    const tickOneAction = store.getBlackboardDiff(1).writes.find((entry) => entry.key === 'action');
+    expect(tickOneAction?.digest.startsWith('preview:')).toBe(true);
+    expect(tickOneAction?.preview).toContain('ros2.action.v1');
   });
 
   it('supports bt_def override apply/reset without mutating source events', () => {

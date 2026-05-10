@@ -11,6 +11,15 @@ const rootDir = path.resolve(__dirname, '..', '..', '..');
 
 async function readJsonlFixture(fileName: string): Promise<unknown[]> {
   const raw = await readFile(path.join(rootDir, 'tools', 'fixtures', fileName), 'utf8');
+  return parseJsonlRecords(raw);
+}
+
+async function readJsonlPath(...segments: string[]): Promise<unknown[]> {
+  const raw = await readFile(path.join(rootDir, ...segments), 'utf8');
+  return parseJsonlRecords(raw);
+}
+
+function parseJsonlRecords(raw: string): unknown[] {
   return raw
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -150,6 +159,15 @@ describe('protocol fixtures', () => {
         data: { outcome: 'ok', event_count: 12 },
       },
     ];
+
+    for (const event of events) {
+      expect(() => parseEvent(event)).not.toThrow();
+    }
+  });
+
+  it('accepts the released muesli-bt v0.8.0 outcome fixture', async () => {
+    const events = await readJsonlPath('tests', 'fixtures', 'muesli_bt_v0_8_ros2_preemption', 'events.jsonl');
+    expect(events.length).toBe(10);
 
     for (const event of events) {
       expect(() => parseEvent(event)).not.toThrow();

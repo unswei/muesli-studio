@@ -42,6 +42,7 @@ If hard requirements are missing, studio fails fast with actionable diagnostics.
   - preferred: `node_enter`, `node_exit`
   - compatibility: `node_status` is accepted when present
 - async lifecycle events:
+  - `cap_call_start`, `cap_call_end` for runtime-affecting host capability calls
   - `vla_submit`, `vla_poll`, `vla_cancel`, `vla_result`
   - cancellation lifecycle: `async_cancel_requested`, `async_cancel_acknowledged`
 - planner lifecycle events:
@@ -50,6 +51,13 @@ If hard requirements are missing, studio fails fast with actionable diagnostics.
 - timing diagnostics:
   - `budget_warning`
   - `deadline_exceeded`
+  - `tick_audit`, `tick_ok`, `tick_deadline_missed`
+- runtime outcome events:
+  - `planner_timeout`, `vla_timeout`
+  - `host_action_invalid`, `fallback_used`, `fallback_failed`
+  - `late_result_dropped`, `cancel_acknowledged`, `cancel_late`
+- GC lifecycle events:
+  - `gc_begin`, `gc_end`
 
 ### required ordering assumptions
 

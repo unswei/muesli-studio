@@ -20,8 +20,8 @@ All notable changes to this project will be documented in this file.
 
 - reframed the roadmap, README links, TODO, export docs, bundle names, bundle README text, and presentation UI around evidence bundles instead of publication-specific wording.
 - extended evidence manifests with schema, redaction, and optional edit artefact path fields.
-- advanced the inspector fallback pin to `muesli-bt v0.6.0` at commit `654a1e43cdea4bfc2e0a5e4e15e472193ca32f94`; the synced Studio schema and contract copies remain byte-identical on the existing `runtime-contract-v1.0.0` and `mbt.evt.v1` lines.
-- refreshed the roadmap and current compatibility documentation around the `muesli-bt v0.6.0` capability-bundle baseline.
+- advanced the inspector fallback pin to `muesli-bt v0.8.0` at commit `ff4dc9d7e160b2037ad66cac23e9536c48faaa5e` and synced the Studio schema, contract, generated protocol type, and parser coverage for the expanded `mbt.evt.v1` release surface.
+- refreshed the roadmap and current compatibility documentation around the `muesli-bt v0.8.0` capability, model-service, and outcome-event baseline.
 - documented the v0.5.0 editing workflow as a controlled replay validation loop rather than a general BT IDE.
 
 ## [0.4.0] - 2026-04-25

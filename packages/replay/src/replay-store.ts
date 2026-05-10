@@ -332,10 +332,7 @@ export class ReplayStore {
   }
 
   private applyBlackboardWrite(event: BlackboardWriteEvent): void {
-    const digest = event.data.digest ?? event.data.value_digest;
-    if (!digest || digest.length === 0) {
-      return;
-    }
+    const digest = event.data.digest ?? event.data.value_digest ?? stableDigestFromUnknown(event.data.preview);
 
     const value: BlackboardValue = {
       digest,
